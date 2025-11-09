@@ -10,22 +10,22 @@
 (require 'package)
 (package-initialize)
 
-(unless (package-installed-p 'quelpa)
-  (with-temp-buffer
-    (url-insert-file-contents "https://raw.githubusercontent.com/quelpa/quelpa/master/quelpa.el")
-    (eval-buffer)
-    (quelpa-self-upgrade)))
+;; (unless (package-installed-p 'quelpa)
+;;   (with-temp-buffer
+;;     (url-insert-file-contents "https://raw.githubusercontent.com/quelpa/quelpa/master/quelpa.el")
+;;     (eval-buffer)
+;;     (quelpa-self-upgrade)))
 
-(quelpa 'use-package)
+; (quelpa 'use-package)
 
-(quelpa
- '(quelpa-use-package
-   :fetcher git
-   :url "https://github.com/quelpa/quelpa-use-package.git"))
-(require 'quelpa-use-package)
-                                        ;(require 'use-package)
+;; (quelpa
+;;  '(quelpa-use-package
+;;    :fetcher git
+;;    :url "https://github.com/quelpa/quelpa-use-package.git"))
+;; (require 'quelpa-use-package)
+                                        (require 'use-package)
 
-(use-package use-package-ensure-system-package :ensure t :demand t)
+;(use-package use-package-ensure-system-package :ensure t :demand t)
 (setq use-package-always-pin "melpa-stable")
 (setq use-package-always-ensure t)
 
@@ -67,3 +67,6 @@
 (put 'dired-find-alternate-file 'disabled nil)
 (put 'downcase-region 'disabled nil)
 (put 'upcase-region 'disabled nil)
+
+                                        ;(setq org-gtd-update-ack "3.0.0")
+;(use-package org-gtd :after org)

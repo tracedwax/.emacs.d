@@ -38,8 +38,9 @@ I set a [[*Bookmarks][bookmark]] with =C-x r m= and I can get back here with =C-
 #+END_SRC
 ** Themes
 #+BEGIN_SRC emacs-lisp
-(add-to-list 'custom-theme-load-path "~/.emacs.d/themes")
-;; (load-theme 'mejelly t)
+  (add-to-list 'custom-theme-load-path "~/.emacs.d/themes")
+  (load-theme 'modus-vivendi t)
+  ;; (load-theme 'mejelly t)
 #+END_SRC
 ** Secrets & personal information
 API keys, passwords, etc are kept in here. This file is .gitignored.
@@ -364,43 +365,43 @@ avy is kinda badass.
 ** GenAI
 *** claude-code-ide
 #+begin_src elisp
-  (use-package claude-code-ide
-    :straight (:type git :host github :repo "manzaltu/claude-code-ide.el")
-    :bind ("C-c C-'" . claude-code-ide-menu) ; Set your favorite keybinding
-    :custom
-    (claude-code-ide-cli-path "~/.asdf/shims/claude")
-    :config
-    (claude-code-ide-emacs-tools-setup)) ;; Optionally enable Emacs MCP tools
+;  (use-package claude-code-ide
+;    :straight (:type git :host github :repo "manzaltu/claude-code-ide.el")
+;    :bind ("C-c C-'" . claude-code-ide-menu) ; Set your favorite keybinding
+;    :custom
+;    (claude-code-ide-cli-path "~/.asdf/shims/claude")
+;    :config
+;    (claude-code-ide-emacs-tools-setup)) ;; Optionally enable Emacs MCP tools
 #+end_src
 *** gptel
 #+begin_src elisp
-  (use-package gptel
-    :quelpa (gptel :fetcher github :repo "karthink/gptel")
-    :config
-    (setq gptel-model 'gemma2:9b-instruct-q6_K)
-    (setq gptel-backend (gptel-make-ollama "Ollama"
-                     :host "localhost:11434"
-                     :stream t
-                     :models '(mistral-small))))
+  ;(use-package gptel
+  ;  :quelpa (gptel :fetcher github :repo "karthink/gptel")
+  ;  :config
+  ;  (setq gptel-model 'gemma2:9b-instruct-q6_K)
+  ;  (setq gptel-backend (gptel-make-ollama "Ollama"
+  ;                   :host "localhost:11434"
+  ;                   :stream t
+  ;                   :models '(mistral-small))))
 #+end_src
 *** MCP - model context
 #+begin_src elisp
-  (use-package mcp
-    :vc (:url "https://github.com/lizqwerscott/mcp.el" :branch "master")
-    :custom
-    (mcp-hub-servers '()))
+;  (use-package mcp
+;    :vc (:url "https://github.com/lizqwerscott/mcp.el" :branch "master")
+;    :custom
+;    (mcp-hub-servers '()))
 #+end_src
 ** combobulate (tree-sitter-based navigation)
 #+begin_src elisp
-(use-package combobulate
-   :custom
+;(use-package combobulate
+;   :custom
    ;; You can customize Combobulate's key prefix here.
    ;; Note that you may have to restart Emacs for this to take effect!
-   (combobulate-key-prefix "C-c o")
-   :hook ((prog-mode . combobulate-mode))
+;   (combobulate-key-prefix "C-c o")
+;   :hook ((prog-mode . combobulate-mode))
    ;; Amend this to the directory where you keep Combobulate's source
    ;; code.
-   :load-path ("/home/stag/src/vendor/combobulate"))
+;   :load-path ("/home/stag/src/vendor/combobulate"))
 #+end_src
 ** evil-mode
 Because sometimes, vim.
@@ -450,14 +451,14 @@ Because sometimes, vim.
 #+end_src
 *** UI
 #+begin_src elisp
-  (use-package nano-minibuffer
-    :ensure nil
-    :quelpa (nano-minibuffer
-             :fetcher github
-             :repo "rougier/nano-minibuffer")
+  ;(use-package nano-minibuffer
+  ;  :ensure nil
+  ;  :quelpa (nano-minibuffer
+  ;           :fetcher github
+  ;           :repo "rougier/nano-minibuffer")
     ;:config
     ;(nano-minibuffer-mode)
-    )
+  ;  )S
 #+end_src
 ** Command completion
 #+BEGIN_SRC emacs-lisp
@@ -516,15 +517,15 @@ https://github.com/Crandel/tempel-collection
           :ensure nil
           :demand)
 
-        (use-package consult-eglot
-          :pin "melpa"
-          :after (consult eglot))
+        ;(use-package consult-eglot
+        ;  :pin "melpa"
+        ;  :after (consult eglot))
 
-        (use-package consult-eglot-embark
-          :pin "melpa"
-          :after (consult-eglot embark)
-          :config
-        (consult-eglot-embark-mode))
+        ;(use-package consult-eglot-embark
+        ;  :pin "melpa"
+        ;  :after (consult-eglot embark)
+        ;  :config
+        ;(consult-eglot-embark-mode))
 
         (use-package flycheck-eglot
           :pin "melpa"
@@ -656,28 +657,45 @@ I've been having some issues exporting, so I'm actively loading libraries here.
 * GTD (Getting Things Done)
 ** Org-gtd
 #+BEGIN_SRC emacs-lisp
-    (use-package org-gtd
-      :after org
-      :quelpa ((org-gtd :fetcher github :repo "trevoke/org-gtd.el")
-               :upgrade t)
-      :demand t
-      :init
-      (setq org-gtd-update-ack "3.0.0")
-      :custom
-      (org-gtd-directory stag-org-gtd-directory)
-      (org-agenda-property-position 'next-line)
-      (org-edna-use-inheritance t)
-      :config
-      (org-edna-mode 1)
-      :bind
-      (("C-c d c" . org-gtd-capture)
-       ("C-c d e" . org-gtd-engage)
-       ("C-c d p" . org-gtd-process-inbox)
-       ("C-c d n" . org-gtd-show-all-next)
-       ("C-c d s" . org-gtd-show-stuck-projects)
-       :map org-gtd-clarify-map
-       ("C-c c" . org-gtd-choose)))
-  (require 'org-gtd)
+      (use-package org-gtd
+        :after org
+        ;:vc (:url "https://github.com/trevoke/org-gtd.el")
+        ;:quelpa ((org-gtd :fetcher github :repo "trevoke/org-gtd.el")
+  ;	       :upgrade t)
+        :demand t
+        :init
+        (setq org-gtd-update-ack "3.0.0")
+        :custom
+        (org-priority-highest ?A)
+        (org-priority-lowest ?D)
+        (org-priority-default ?C)
+        (org-gtd-directory stag-org-gtd-directory)
+        (org-agenda-property-position 'next-line)
+        (org-edna-use-inheritance t)
+        (org-gtd-organize-hooks '(org-gtd-set-area-of-focus))
+        (org-gtd-clarify-show-horizons 'right)
+        (org-gtd-areas-of-focus '("AI AppMod"
+                                  "BFC"
+                                  "BFC Sales"
+                                  "Columbia"
+                                  "GCA Admin"
+                                  "GCA Delivery"
+                                  "GCA Incubation"
+                                  "GCA Product"
+                                  "GCA Sales"
+                                  "Personal"))
+        :config
+        (org-edna-mode 1)
+        (org-gtd-mode 1)
+        :bind
+        (("C-c d c" . org-gtd-capture)
+         ("C-c d e" . org-gtd-engage)
+         ("C-c d p" . org-gtd-process-inbox)
+         ("C-c d n" . org-gtd-show-all-next)
+         ("C-c d s" . org-gtd-show-stuck-projects)
+         :map org-gtd-clarify-map
+         ("C-c c" . org-gtd-organize)))
+    (require 'org-gtd)
 #+END_SRC
 ** Diary
 #+BEGIN_SRC emacs-lisp
@@ -770,12 +788,12 @@ These are tags to add to tasks, such as types of action, mindset I need to be in
 
 A quick and pretty agenda view
 #+begin_src elisp
-  (use-package nano-agenda
-    :after org-agenda
-    :ensure nil
-    :quelpa (nano-agenda
-             :fetcher github
-             :repo "rougier/nano-agenda"))
+;  (use-package nano-agenda
+;    :after org-agenda
+;    :ensure nil
+;    :quelpa (nano-agenda
+;             :fetcher github
+;             :repo "rougier/nano-agenda"))
 #+end_src
 * Calendar, dates, times
 #+BEGIN_SRC emacs-lisp
@@ -945,7 +963,7 @@ We need ~aspell~ installed on the local machine - and I just have to do ~C-x i d
   (use-package ispell
     :ensure nil
     :demand t
-    :ensure-system-package aspell
+    ;:ensure-system-package aspell
     :config
     (setq ispell-program-name "aspell")
     (setq ispell-dictionary "english"))
