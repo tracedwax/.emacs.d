@@ -696,6 +696,28 @@ I've been having some issues exporting, so I'm actively loading libraries here.
          :map org-gtd-clarify-map
          ("C-c c" . org-gtd-organize)))
     (require 'org-gtd)
+  (defun tdw/org-gtd-engage-priority-a ()
+    "Display `org-agenda' showing scheduled, Priority A NEXT, and WAIT items."
+    (interactive)
+    (org-gtd-core-prepare-agenda-buffers)
+    (with-org-gtd-context
+        (let ((org-agenda-custom-commands
+               `(("g" "Scheduled today and Priority A NEXT items"
+                  ((agenda ""
+                           ((org-agenda-span 1)
+                            (org-agenda-start-day nil)
+                            (org-agenda-skip-additional-timestamps-same-entry t)))
+                   (tags-todo ,(concat "TODO=\"" org-gtd-next "\"+PRIORITY=\"A\"")
+                         ((org-agenda-overriding-header "Priority A NEXT actions")
+                          (org-agenda-prefix-format
+                           '((todo . " %i %-12:(org-gtd-agenda--prefix-format)")))))
+                   (todo org-gtd-wait
+                         ((org-agenda-todo-ignore-with-date t)
+                          (org-agenda-overriding-header "Delegated/Blocked items")
+                          (org-agenda-prefix-format
+                           '((todo . " %i %-12 (org-gtd-agenda--prefix-format)"))))))))))
+          (org-agenda nil "g")
+         (goto-char (point-min)))))
 #+END_SRC
 ** Diary
 #+BEGIN_SRC emacs-lisp
