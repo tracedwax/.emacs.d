@@ -406,7 +406,9 @@ avy is kinda badass.
 ** evil-mode
 Because sometimes, vim.
 #+BEGIN_SRC emacs-lisp
-(use-package evil)
+(use-package evil
+  :config
+  (evil-mode 1))
 #+END_SRC
 ** TODO Modeline (use nano-modeline?)
 #+begin_src elisp
