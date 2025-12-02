@@ -676,7 +676,6 @@ I've been having some issues exporting, so I'm actively loading libraries here.
           (setq org-gtd-update-ack "3.0.0")
           :custom
           (org-todo-keywords '((sequence "TODO" "NEXT" "WAIT" "|" "DONE" "CNCL")))
-          (org-agenda-files (list org-gtd-directory))
           (org-gtd-keyword-mapping
           '((todo . "TODO")      ;; tasks not ready to be acted upon
             (next . "NEXT")      ;; tasks ready to act on immediately
@@ -687,6 +686,7 @@ I've been having some issues exporting, so I'm actively loading libraries here.
           (org-priority-lowest ?E)
           (org-priority-default ?C)
           (org-gtd-directory stag-org-gtd-directory)
+          (org-agenda-files (list org-gtd-directory))
           (org-agenda-property-position 'next-line)
           (org-edna-use-inheritance t)
           (org-gtd-organize-hooks '(org-set-tags-command))
