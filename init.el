@@ -10,20 +10,8 @@
 (require 'package)
 (package-initialize)
 
-;; (unless (package-installed-p 'quelpa)
-;;   (with-temp-buffer
-;;     (url-insert-file-contents "https://raw.githubusercontent.com/quelpa/quelpa/master/quelpa.el")
-;;     (eval-buffer)
-;;     (quelpa-self-upgrade)))
 
-; (quelpa 'use-package)
-
-;; (quelpa
-;;  '(quelpa-use-package
-;;    :fetcher git
-;;    :url "https://github.com/quelpa/quelpa-use-package.git"))
-;; (require 'quelpa-use-package)
-                                        (require 'use-package)
+(require 'use-package)
 
 ;(use-package use-package-ensure-system-package :ensure t :demand t)
 (setq use-package-always-pin "melpa-stable")
@@ -48,6 +36,9 @@
       (goto-char (point-max))
       (eval-print-last-sexp)))
   (load bootstrap-file nil 'nomessage))
+
+(straight-use-package 'use-package)
+
 
 (use-package org
   :pin elpa
