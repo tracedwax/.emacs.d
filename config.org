@@ -753,10 +753,8 @@ I've been having some issues exporting, so I'm actively loading libraries here.
 ** Action Tags
 These are tags to add to tasks, such as types of action, mindset I need to be in, tool Ι need to have, emotional reward I'll get from doing the action, etc. Whatever helps me pick a task to accomplish.
 #+BEGIN_SRC emacs-lisp
-  (setq org-tag-alist '(("@home" . ?h)
-                        ("@work" . ?w)
-                        ("@nonet" . ?n)
-                        ("code")))
+  (setq org-tag-alist '(("hsbc" . ?h)
+                        ("manhattan" . ?m)))
 #+END_SRC
 ** Captures
 #+BEGIN_SRC emacs-lisp
