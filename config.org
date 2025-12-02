@@ -761,7 +761,8 @@ These are tags to add to tasks, such as types of action, mindset I need to be in
                         ("manhattan" . ?m)
                         ("nvidia" . ?n)
                         ("panw" . ?p)
-                        ("sales" . ?s)))
+                        ("sales" . ?s)
+                        ("tdw" . ?t)))
 #+END_SRC
 ** Captures
 #+BEGIN_SRC emacs-lisp
