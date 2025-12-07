@@ -660,86 +660,87 @@ I've been having some issues exporting, so I'm actively loading libraries here.
 ** Org-gtd
 #+BEGIN_SRC emacs-lisp
 
-    ;; (use-package org-ql :after org :straight t)
+  ;; (use-package org-ql :after org :straight t)
 
-      (package-vc-install
-     '(org-gtd :url "https://github.com/Trevoke/org-gtd.el"
-               :branch "org-gtd-4"))
+    (package-vc-install
+   '(org-gtd :url "https://github.com/Trevoke/org-gtd.el"
+             :branch "org-gtd-4"))
 
-        (use-package org-gtd
-          :after org ;; '(org org-ql)
-          ;:vc (:url "https://github.com/trevoke/org-gtd.el")
-          ;; :straight (org-gtd :fetcher github :repo "trevoke/org-gtd.el" :branch "org-gtd-4")
-          :demand t
-          :init
-          (setq org-gtd-prop-refile "ORG_GTD_REFILE")
-          (setq org-gtd-update-ack "3.0.0")
-          :custom
-          (org-todo-keywords '((sequence "TODO" "NEXT" "WAIT" "|" "DONE" "CNCL")))
-          (org-gtd-keyword-mapping
-          '((todo . "TODO")      ;; tasks not ready to be acted upon
-            (next . "NEXT")      ;; tasks ready to act on immediately
-            (wait . "WAIT")      ;; tasks blocked or delegated
-            (done . "DONE")      ;; tasks successfully completed
-            (canceled . "CNCL"))) ;; tasks that won't be completed
-          (org-priority-highest ?A)
-          (org-priority-lowest ?E)
-          (org-priority-default ?C)
-          (org-gtd-directory stag-org-gtd-directory)
-          (org-agenda-files (list org-gtd-directory))
-          (org-agenda-property-position 'next-line)
-          (org-edna-use-inheritance t)
-          (org-gtd-organize-hooks '(org-set-tags-command))
-          (org-gtd-clarify-show-horizons 'right)
-          (org-gtd-areas-of-focus '("AI AppMod"
-                                    "BFC"
-                                    "BFC Sales"
-                                    "Columbia"
-                                    "Education"
-                                    "GCA Admin"
-                                    "GCA Delivery"
-                                    "GCA Incubation"
-                                    "GCA Product"
-                                    "GCA Sales"
-                                    "Personal"))
-          :config
-          (org-edna-mode 1)
-          (org-gtd-mode 1)
-          :bind
-          (("C-c d c" . org-gtd-capture)
-           ("C-c d e" . org-gtd-engage)
-           ("C-c d p" . org-gtd-process-inbox)
-           ("C-c d n" . org-gtd-show-all-next)
-           ("C-c d s" . org-gtd-show-stuck-projects)
-           ("C-c d ?" . org-gtd-command-center)
-           ("C-c d g" . org-gtd-show-project-graph)
-           :map org-gtd-clarify-map
-           ("C-c c" . org-gtd-organize)
-           :map org-agenda-mode-map
-           ("C-c ?" . org-gtd-agenda-transient)))
-      (require 'org-gtd)
-    (defun tdw/org-gtd-engage-priority-a ()
-      "Display `org-agenda' showing scheduled, Priority A NEXT, and WAIT items."
-      (interactive)
-      (org-gtd-core-prepare-agenda-buffers)
-      (with-org-gtd-context
-          (let ((org-agenda-custom-commands
-                 `(("g" "Scheduled today and Priority A NEXT items"
-                    ((agenda ""
-                             ((org-agenda-span 1)
-                              (org-agenda-start-day nil)
-                              (org-agenda-skip-additional-timestamps-same-entry t)))
-                     (tags-todo ,(concat "TODO=\"" org-gtd-next "\"+PRIORITY=\"A\"")
-                           ((org-agenda-overriding-header "Priority A NEXT actions")
-                            (org-agenda-prefix-format
-                             '((todo . " %i %-12:(org-gtd-agenda--prefix-format)")))))
-                     (todo org-gtd-wait
-                           ((org-agenda-todo-ignore-with-date t)
-                            (org-agenda-overriding-header "Delegated/Blocked items")
-                            (org-agenda-prefix-format
-                             '((todo . " %i %-12 (org-gtd-agenda--prefix-format)"))))))))))
-            (org-agenda nil "g")
-           (goto-char (point-min)))))
+      (use-package org-gtd
+        :after org ;; '(org org-ql)
+        ;:vc (:url "https://github.com/trevoke/org-gtd.el")
+        ;; :straight (org-gtd :fetcher github :repo "trevoke/org-gtd.el" :branch "org-gtd-4")
+        :demand t
+        :init
+        (setq org-gtd-prop-refile "ORG_GTD_REFILE")
+        (setq org-gtd-update-ack "3.0.0")
+        :custom
+        (org-todo-keywords '((sequence "TODO" "NEXT" "WAIT" "|" "DONE" "CNCL")))
+        (org-gtd-keyword-mapping
+        '((todo . "TODO")      ;; tasks not ready to be acted upon
+          (next . "NEXT")      ;; tasks ready to act on immediately
+          (wait . "WAIT")      ;; tasks blocked or delegated
+          (done . "DONE")      ;; tasks successfully completed
+          (canceled . "CNCL"))) ;; tasks that won't be completed
+        (org-priority-highest ?A)
+        (org-priority-lowest ?E)
+        (org-priority-default ?C)
+        (org-gtd-directory stag-org-gtd-directory)
+        (org-agenda-files (list org-gtd-directory))
+        (org-agenda-property-position 'next-line)
+        (org-edna-use-inheritance t)
+        (org-gtd-refile-to-any-target nil)
+        (org-gtd-organize-hooks '(org-set-tags-command))
+        (org-gtd-clarify-show-horizons 'right)
+        (org-gtd-areas-of-focus '("AI AppMod"
+                                  "BFC"
+                                  "BFC Sales"
+                                  "Columbia"
+                                  "Education"
+                                  "GCA Admin"
+                                  "GCA Delivery"
+                                  "GCA Incubation"
+                                  "GCA Product"
+                                  "GCA Sales"
+                                  "Personal"))
+        :config
+        (org-edna-mode 1)
+        (org-gtd-mode 1)
+        :bind
+        (("C-c d c" . org-gtd-capture)
+         ("C-c d e" . org-gtd-engage)
+         ("C-c d p" . org-gtd-process-inbox)
+         ("C-c d n" . org-gtd-show-all-next)
+         ("C-c d s" . org-gtd-show-stuck-projects)
+         ("C-c d ?" . org-gtd-command-center)
+         ("C-c d g" . org-gtd-show-project-graph)
+         :map org-gtd-clarify-map
+         ("C-c c" . org-gtd-organize)
+         :map org-agenda-mode-map
+         ("C-c ?" . org-gtd-agenda-transient)))
+    (require 'org-gtd)
+  (defun tdw/org-gtd-engage-priority-a ()
+    "Display `org-agenda' showing scheduled, Priority A NEXT, and WAIT items."
+    (interactive)
+    (org-gtd-core-prepare-agenda-buffers)
+    (with-org-gtd-context
+        (let ((org-agenda-custom-commands
+               `(("g" "Scheduled today and Priority A NEXT items"
+                  ((agenda ""
+                           ((org-agenda-span 1)
+                            (org-agenda-start-day nil)
+                            (org-agenda-skip-additional-timestamps-same-entry t)))
+                   (tags-todo ,(concat "TODO=\"" org-gtd-next "\"+PRIORITY=\"A\"")
+                         ((org-agenda-overriding-header "Priority A NEXT actions")
+                          (org-agenda-prefix-format
+                           '((todo . " %i %-12:(org-gtd-agenda--prefix-format)")))))
+                   (todo org-gtd-wait
+                         ((org-agenda-todo-ignore-with-date t)
+                          (org-agenda-overriding-header "Delegated/Blocked items")
+                          (org-agenda-prefix-format
+                           '((todo . " %i %-12 (org-gtd-agenda--prefix-format)"))))))))))
+          (org-agenda nil "g")
+         (goto-char (point-min)))))
 #+END_SRC
 ** Diary
 #+BEGIN_SRC emacs-lisp
@@ -753,16 +754,17 @@ I've been having some issues exporting, so I'm actively loading libraries here.
 ** Action Tags
 These are tags to add to tasks, such as types of action, mindset I need to be in, tool Ι need to have, emotional reward I'll get from doing the action, etc. Whatever helps me pick a task to accomplish.
 #+BEGIN_SRC emacs-lisp
-  (setq org-tag-alist '(("ai appmod" . ?a)
-                        ("bfc" . ?b)
-                        ("gca sales" . ?g)
-                        ("hsbc" . ?h)
-                        ("incubation" . ?i)
-                        ("manhattan" . ?m)
-                        ("nvidia" . ?n)
-                        ("panw" . ?p)
-                        ("sales" . ?s)
-                        ("tdw" . ?t)))
+(setq org-tag-alist '(("ai_appmod" . ?a)
+                      ("bfc" . ?b)
+                      ("gca_sales" . ?g)
+                      ("hsbc" . ?h)
+                      ("incubation" . ?i)
+                      ("manhattan" . ?m)
+                      ("menlo_security" . ?e)
+                      ("nvidia" . ?n)
+                      ("panw" . ?p)
+                      ("sales" . ?s)
+                      ("tdw" . ?t)))
 #+END_SRC
 ** Captures
 #+BEGIN_SRC emacs-lisp
