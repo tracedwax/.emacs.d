@@ -689,8 +689,7 @@ I've been having some issues exporting, so I'm actively loading libraries here.
         (org-agenda-files (list org-gtd-directory))
         (org-agenda-property-position 'next-line)
         (org-edna-use-inheritance t)
-        (org-gtd-refile-to-any-target nil)
-        (setq org-gtd-refile-prompt-for-types '(someday))
+        (org-gtd-refile-to-any-target t)
         (org-gtd-organize-hooks '(org-set-tags-command))
         (org-gtd-clarify-show-horizons 'right)
         (org-gtd-areas-of-focus '("AI AppMod"
