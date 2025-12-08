@@ -690,8 +690,7 @@ I've been having some issues exporting, so I'm actively loading libraries here.
         (org-agenda-property-position 'next-line)
         (org-edna-use-inheritance t)
         (org-gtd-refile-to-any-target nil)
-        (setq org-gtd-refile-prompt-for-types
-          '(single-action project-heading project-task calendar someday delegated tickler habit))
+        (setq org-gtd-refile-prompt-for-types '(someday))
         (org-gtd-organize-hooks '(org-set-tags-command))
         (org-gtd-clarify-show-horizons 'right)
         (org-gtd-areas-of-focus '("AI AppMod"
