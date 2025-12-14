@@ -31,6 +31,8 @@ I set a [[*Bookmarks][bookmark]] with =C-x r m= and I can get back here with =C-
         stag-cite-export-processors '((t . (csl "/home/trevoke/my-life/orgnotes/references/modern-language-association.csl")))
         stag-ledger-journal "~/my-life/accounting-personal/2025.ledger"
         )
+  ;; CRITICAL: Set org-gtd-directory here so it is defined BEFORE custom-file loads org-gtd-mode
+  (setq org-gtd-directory stag-org-gtd-directory)
 #+end_src
 ** Packages (without package management)
 #+BEGIN_SRC emacs-lisp
