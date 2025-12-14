@@ -720,50 +720,39 @@ I've been having some issues exporting, so I'm actively loading libraries here.
           :map org-agenda-mode-map
           ("C-c ?" . org-gtd-agenda-transient)))
      (require 'org-gtd)
-  (defun tdw/skip-unless-habit ()
-    "Skip everything that is not a GTD Habit."
-    (let ((gtd-val (org-entry-get (point) "ORG_GTD")))
-      (if (and (equal gtd-val "Habit")
-               (not (org-entry-is-done-p)))
-          nil ;; It's a habit, keep it!
-        (org-entry-end-position))))
-
   (defun tdw-sanity-view ()
    "A focused GTD view: Habits -> Priority A -> Overdue/Today Delegated -> Priority B."
    (interactive)
-   (require 'org-habit)
-   (let ((org-agenda-custom-commands
-          `(("z" "Sanity View"
-             (
-              ;; 1. Habits (The "Pretty" Graph)
-              (agenda "" ((org-agenda-span 1)
-                          (org-agenda-start-day nil)
-                          (org-agenda-skip-function 'tdw/skip-unless-habit)
-                          (org-agenda-overriding-header "Habits")))
+   (let ((org-habit-graph-column 100))
+     (org-gtd-view-show
+      '((name . "Sanity View")
+        (prefix . (project "—"))
+        (blocks . (
+                   ;; 1. Habits (Using calendar-day block type to enable habit graph)
+                   ((name . "Habits")
+                    (block-type . calendar-day)
+                    (type . habit))
 
-              ;; 2. Must Do (Priority A)
-              (tags-todo "ORG_GTD=\"Actions\"/NEXT"
-                         ((org-agenda-overriding-header "Must Do (Priority A)")
-                          (org-agenda-skip-function '(org-agenda-skip-entry-if 'notregexp "\\[#A\\]"))))
+                   ;; 2. "A" Items
+                   ((name . "Must Do (Priority A)")
+                    (type . next-action)
+                    (priority . A))
 
-              ;; 3a. Waiting On (Overdue)
-              (tags-todo "ORG_GTD=\"Delegated\"/WAIT"
-                         ((org-agenda-overriding-header "Waiting On (Overdue)")
-                          (org-agenda-skip-function '(org-agenda-skip-entry-if 'scheduled 'future))))
+                   ;; 3a. Delegated: Overdue (Past)
+                   ((name . "Waiting On (Overdue)")
+                    (type . delegated)
+                    (when . past))
 
-              ;; 3b. Waiting On (Today)
-              (tags-todo "ORG_GTD=\"Delegated\"/WAIT"
-                         ((org-agenda-overriding-header "Waiting On (Today)")
-                          (org-agenda-skip-function '(org-agenda-skip-entry-if 'not-scheduled 'today))))
+                   ;; 3b. Delegated: Today
+                   ((name . "Waiting On (Today)")
+                    (type . delegated)
+                    (when . today))
 
-              ;; 4. Should Do (Priority B)
-              (tags-todo "ORG_GTD=\"Actions\"/NEXT"
-                         ((org-agenda-overriding-header "Should Do (Priority B)")
-                          (org-agenda-skip-function '(org-agenda-skip-entry-if 'notregexp "\\[#B\\]"))))
-             ))))
-         ;; Adjust habit graph column to the right (approx 15 chars right of default ~45)
-         (org-habit-graph-column 60))
-     (org-agenda nil "z")))
+                   ;; 4. "B" Items
+                   ((name . "Should Do (Priority B)")
+                    (type . next-action)
+                    (priority . B))
+                   ))))))
 #+END_SRC
 ** Diary
 #+BEGIN_SRC emacs-lisp
