@@ -687,7 +687,7 @@ I've been having some issues exporting, so I'm actively loading libraries here.
         (org-priority-default ?C)
         (org-gtd-directory stag-org-gtd-directory)
         (org-agenda-files (list org-gtd-directory))
-        (org-agenda-property-position 'next-line)
+        (org-gtd-agenda-property-position 'next-line)
         (org-edna-use-inheritance t)
         (org-gtd-refile-to-any-target t)
         (org-gtd-organize-hooks '(org-set-tags-command))
