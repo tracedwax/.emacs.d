@@ -235,10 +235,7 @@ Also, ibuffer is nicer than plain-old buffer window
 (setq mouse-wheel-follow-mouse t) ;; scroll window under mouse
 #+END_SRC
 * Frame management
-** Transparency
-#+BEGIN_SRC emacs-lisp
-(use-package seethru :pin "melpa")
-#+END_SRC
+
 ** text scaling
 This handy little package increases the size of the font in the whole frame.
 #+BEGIN_SRC emacs-lisp
@@ -362,47 +359,7 @@ avy is kinda badass.
            ("C-x j" . avy-po-mark)))
 #+END_SRC
 * Engines
-** GenAI
-*** claude-code-ide
-#+begin_src elisp
-;  (use-package claude-code-ide
-;    :straight (:type git :host github :repo "manzaltu/claude-code-ide.el")
-;    :bind ("C-c C-'" . claude-code-ide-menu) ; Set your favorite keybinding
-;    :custom
-;    (claude-code-ide-cli-path "~/.asdf/shims/claude")
-;    :config
-;    (claude-code-ide-emacs-tools-setup)) ;; Optionally enable Emacs MCP tools
-#+end_src
-*** gptel
-#+begin_src elisp
-  ;(use-package gptel
-  ;  :quelpa (gptel :fetcher github :repo "karthink/gptel")
-  ;  :config
-  ;  (setq gptel-model 'gemma2:9b-instruct-q6_K)
-  ;  (setq gptel-backend (gptel-make-ollama "Ollama"
-  ;                   :host "localhost:11434"
-  ;                   :stream t
-  ;                   :models '(mistral-small))))
-#+end_src
-*** MCP - model context
-#+begin_src elisp
-;  (use-package mcp
-;    :vc (:url "https://github.com/lizqwerscott/mcp.el" :branch "master")
-;    :custom
-;    (mcp-hub-servers '()))
-#+end_src
-** combobulate (tree-sitter-based navigation)
-#+begin_src elisp
-;(use-package combobulate
-;   :custom
-   ;; You can customize Combobulate's key prefix here.
-   ;; Note that you may have to restart Emacs for this to take effect!
-;   (combobulate-key-prefix "C-c o")
-;   :hook ((prog-mode . combobulate-mode))
-   ;; Amend this to the directory where you keep Combobulate's source
-   ;; code.
-;   :load-path ("/home/stag/src/vendor/combobulate"))
-#+end_src
+
 ** evil-mode
 Because sometimes, vim.
 #+BEGIN_SRC emacs-lisp
@@ -410,28 +367,7 @@ Because sometimes, vim.
   :config
   (evil-mode 1))
 #+END_SRC
-** TODO Modeline (use nano-modeline?)
-#+begin_src elisp
-  ;; (use-package nano-modeline
-  ;;   :ensure nil
-  ;;   :quelpa (nano-modeline
-  ;;            :fetcher github
-  ;;            :repo "rougier/nano-modeline")
-  ;;   :hook
-  ;;   (prog-mode . nano-modeline-prog-mode)
-  ;;   (text-mode . nano-modeline-text-mode)
-  ;;   (org-mode . nano-modeline-org-mode)
-  ;;   (pdf-view-mode . nano-modeline-pdf-mode)
-  ;;   (mu4e-headers-mode . nano-modeline-mu4e-headers-mode)
-  ;;   (mu4e-view-mode . nano-modeline-mu4e-message-mode)
-  ;;   (elfeed-show-mode . nano-modeline-elfeed-entry-mode)
-  ;;   (elfeed-search-mode . nano-modeline-elfeed-search-mode)
-  ;;   (term-mode . nano-modeline-term-mode)
-  ;;   (xwidget-webkit-mode . nano-modeline-xwidget-mode)
-  ;;   (messages-buffer-mode . nano-modeline-message-mode)
-  ;;   (org-capture-mode . nano-modeline-org-capture-mode)
-  ;;   (org-agenda-mode . nano-modeline-org-agenda-mode))
-#+end_src
+
 ** Minibuffer
 #+begin_src elisp
   (use-package minibuffer
@@ -502,11 +438,7 @@ Because sometimes, vim.
   (use-package company
     :hook (prog-mode . company-mode))
 #+END_SRC
-*** Snippets
-I don't use snippets at the moment but I should look into tempel:
-https://github.com/minad/tempel
-https://github.com/fejfighter/eglot-tempel
-https://github.com/Crandel/tempel-collection
+
 ** Linting
 #+begin_src elisp
   (use-package flycheck)
@@ -566,27 +498,6 @@ I forget the basic keybindings all the time: After a search using =ag=, use C-c 
     :init  (add-hook 'ag-mode-hook 'wgrep-ag-setup)
     :config (autoload 'wgrep-ag-setup "wgrep-ag"))
 #+END_SRC
-** Code Projects (is this the right place for this?)
-*** Project navigation
-Projectile is pretty sweet.
-#+BEGIN_SRC emacs-lisp
-  (use-package projectile
-    :diminish projectile-mode
-    :init
-    (setq projectile-known-projects-file "~/.emacs.d/local-files/projectile-bookmarks.eld")
-    (setq projectile-cache-file "~/.emacs.d/local-files/projectile.cache")
-    :config
-    (projectile-global-mode)
-    (setq projectile-completion-system 'default)
-    (projectile-register-project-type 'emacs-eask-buttercup '("Eask" "tests")
-                                  :project-file "Eask"
-                                  :compile "eask compile"
-                                  :test "eask test buttercup"
-                                  :test-suffix "-test")
-
-    :bind (("C-c p" . projectile-command-map)))
-#+END_SRC
-
 ** File (text/code) Structure
 #+begin_src elisp
 (use-package imenu
@@ -815,22 +726,6 @@ These are tags to add to tasks, such as types of action, mindset I need to be in
     ("C-c n i" . org-roam-node-insert)
     ("C-c n g" . org-roam-graph))
 
-  (use-package org-roam-ui
-    :pin "melpa"
-    :ensure t
-    :after org-roam
-    ;; uncomment if you want this to be turned on at emacs boot time.
-    ; :hook (after-init . org-roam-ui-mode)
-    :config
-    (setq org-roam-ui-sync-theme t
-          org-roam-ui-follow t
-          org-roam-ui-update-on-save t
-          org-roam-ui-open-on-start t))
-
-  (use-package org-roam-timestamps
-    :pin "melpa"
-    :after org-roam
-    :config (org-roam-timestamps-mode))
 #+END_SRC
 
 * Agenda
@@ -843,7 +738,7 @@ These are tags to add to tasks, such as types of action, mindset I need to be in
     (org-agenda-diary-file 'diary-file)
     (org-agenda-include-diary t)
     (org-agenda-restore-windows-after-quit t)
-    (org-agenda-sticky t)
+    (org-agenda-sticky nil)
     (org-agenda-window-setup 'other-window)
     (org-agenda-skip-deadline-if-done t)
     (org-agenda-skip-scheduled-if-done t)
@@ -864,42 +759,8 @@ A quick and pretty agenda view
   (setq calendar-week-start-day 1) ;; Monday
   (add-hook 'today-visible-calendar-hook 'calendar-mark-today)
 
-  (use-package org-gcal
-    :pin "melpa"
-    :after (org-agenda)
-    :init
-    (setq org-gcal-dir "~/.emacs.d/local-files/org-gcal/")
-    (setq org-gcal-cancelled-todo-keyword "CNCL"))
-
-  (use-package calfw-gcal :pin "melpa"
-    :after calfw-org)
-
-  (use-package calfw-org
-    :after (org-gcal calfw)
-    :demand t)
-
-  (use-package calfw
-    :config
-    (setq cfw:fchar-junction ?╋
-          cfw:fchar-vertical-line ?┃
-          cfw:fchar-horizontal-line ?━
-          cfw:fchar-left-junction ?┣
-          cfw:fchar-right-junction ?┫
-          cfw:fchar-top-junction ?┯
-          cfw:fchar-top-left-corner ?┏
-          cfw:fchar-top-right-corner ?┓))
 #+END_SRC
-And a pretty calendar which, among other things, tells you how busy a given day is based on what's in your org-agenda-files.
-Note this is on hold due to a dependency on nano-theme.
-#+begin_src elisp
-  ;; (use-package nano-calendar
-  ;;   :ensure nil
-  ;;   :quelpa (nano-calendar
-  ;;            :fetcher github
-  ;;            :repo "rougier/nano-calendar")
-  ;;   :custom
-  ;;   (nano-calendar-show-busy t))
-#+end_src
+
 * File system browsing
 ** Dired
 dired-jump is awesome (=C-x C-j= in any buffer)
@@ -952,264 +813,10 @@ It's also nice to have dired with M-< and M-> take you to first and last file
 #+begin_src emacs-lisp
 (use-package vterm :pin melpa)
 #+end_src
-* Email
-** BBDB
-#+begin_src emacs-lisp
-(use-package bbdb
-  :after org
-  :config
-  (setq bbdb-file stag-bbdb-file)
-  (require 'ol-bbdb))
-#+end_src
-** Sending email
-#+BEGIN_SRC emacs-lisp
-(setq mail-user-agent 'message-user-agent)
-
-(setq smtpmail-stream-type 'ssl
-      smtpmail-smtp-server "smtp.gmail.com"
-      smtpmail-smtp-service 465)
-#+END_SRC
-
-smtpmail-multi
-#+BEGIN_SRC emacs-lisp
-  (use-package smtpmail-multi
-    :pin "melpa"
-    :config
-    (setq smtpmail-auth-credentials "~/.authinfo.gpg")
-    (setq smtpmail-multi-accounts
-          `((home . (,user-mail-address
-                     "smtp.gmail.com"
-                     587
-                     ,user-mail-address
-                     starttls
-                     nil nil nil))))
-
-    (setq smtpmail-multi-associations
-          `((,user-mail-address home)))
-
-    (setq smtpmail-multi-default-account 'home)
-
-    (setq message-send-mail-function 'smtpmail-multi-send-it)
-
-    (setq smtpmail-debug-info t)
-    (setq smtpmail-debug-verbose t))
-#+END_SRC
-** Encrypting email
-#+begin_src elisp
-  (defun stag-email-hook ()
-      (epa-mail-mode))
-  (add-hook 'message-mode-hook 'stag-email-hook)
-#+end_src
-** Reading email
-orgstruct++ was removed in org 9.2
-It seems I may want to use orgalist.
-#+BEGIN_SRC emacs-lisp
-  (defun stag-trash-email ()
-    (interactive)
-    (notmuch-search-tag '("-inbox" "+trash")))
-  (use-package notmuch
-    :after org
-    :bind (:map notmuch-search-mode-map
-    ("C-c d" . stag-trash-email))
-    :config
-    (add-hook 'notmuch-message-mode-hook 'stag-email-hook))
-
-  (use-package notmuch-transient
-    :after (transient notmuch))
-#+END_SRC
-* Writing
-** TODO Symbols
-=C-x 8 RET=
-Or =M-x set-input-method RET tex= then things like =\beta= or =\triangle= will work: β, ▵.
-** TODO Multiple languages
-We need ~aspell~ installed on the local machine - and I just have to do ~C-x i d~ to change the dictionary to the correct language.
-#+begin_src emacs-lisp
-  (use-package ispell
-    :ensure nil
-    :demand t
-    ;:ensure-system-package aspell
-    :config
-    (setq ispell-program-name "aspell")
-    (setq ispell-dictionary "english"))
-#+end_src
-** Fixing typos
-
-Whenever I make a typo:
-
-1. Hit C-x C-i, instead of erasing the mistake;
-2. Select the appropriate correction (thanks to Ispell);
-3. Sleep easier at night knowing I'll never see that mistake again (thanks to abbrev).
-
-This is not intended to be a good way to work on multiple languages -- but using a spellchecker for the correct language tends to help.
-
-Source: http://endlessparentheses.com/ispell-and-abbrev-the-perfect-auto-correct.html
-
-#+BEGIN_SRC emacs-lisp
-  (define-key ctl-x-map "\C-i"
-    #'stag/ispell-word-then-abbrev)
-
-  (defun stag/ispell-word-then-abbrev (p)
-    "Call `ispell-word', then create an abbrev for it.
-  With prefix P, create local abbrev. Otherwise it will
-  be global.
-  If there's nothing wrong with the word at point, keep
-  looking for a typo until the beginning of buffer. You can
-  skip typos you don't want to fix with `SPC', and you can
-  abort completely with `C-g'."
-    (interactive "P")
-    (let (bef aft)
-      (save-excursion
-        (while (if (setq bef (thing-at-point 'word))
-                   ;; Word was corrected or used quit.
-                   (if (ispell-word nil 'quiet)
-                       nil ; End the loop.
-                     ;; Also end if we reach `bob'.
-                     (not (bobp)))
-                 ;; If there's no word at point, keep looking
-                 ;; until `bob'.
-                 (not (bobp)))
-          (backward-word))
-        (setq aft (thing-at-point 'word)))
-      (if (and aft bef (not (equal aft bef)))
-          (let ((aft (downcase aft))
-                (bef (downcase bef)))
-            (define-abbrev
-              (if p local-abbrev-table global-abbrev-table)
-              bef aft)
-            (message "\"%s\" now expands to \"%s\" %sally"
-                     bef aft (if p "loc" "glob")))
-        (user-error "No typo at or before point"))))
-
-  (setq abbrev-file-name "~/.emacs.d/local-files/abbrev_defs")
-  (setq save-abbrevs 'silently)
-  (setq-default abbrev-mode t)
-#+END_SRC
-** TeX
-#+BEGIN_SRC emacs-lisp
-  (require 'flymake)
-
-  (defun flymake-get-tex-args (file-name)
-    (list "pdflatex"
-          (list "-file-line-error" "-draftmode" "-interaction=nonstopmode" file-name)))
 
 
-  (setq TeX-auto-save t)
-  (setq TeX-parse-self t)
-  (setq TeX-save-query nil)
 
-  (add-hook 'LaTeX-mode-hook 'flymake-mode)
 
-  (add-hook 'LaTeX-mode-hook 'flyspell-mode)
-  (add-hook 'LaTeX-mode-hook 'flyspell-buffer)
-
-  (defun stag-turn-on-outline-minor-mode ()
-    (outline-minor-mode 1))
-
-  (add-hook 'LaTeX-mode-hook 'stag-turn-on-outline-minor-mode)
-  (add-hook 'latex-mode-hook 'stag-turn-on-outline-minor-mode)
-  (setq outline-minor-mode-prefix "\C-c \C-o") ; Or something else
-#+END_SRC
-** Markdown
-#+BEGIN_SRC emacs-lisp
-  (use-package markdown-mode
-    :init
-    (add-hook 'markdown-mode-hook 'turn-on-orgtbl))
-#+END_SRC
-*** TODO Github-Flavored Markdown (requires backend config?)
-#+BEGIN_SRC emacs-lisp
-  (use-package ox-md
-    :ensure nil
-    :after ox)
-#+END_SRC
-*** TODO My orgtbl-to-gfm conversion (obsoleted by above?)
-It's quite nice to use an orgtbl, but GFM is weird. This converts to a GFM table. use C-c C-c to generate / update GFM table.
-#+BEGIN_SRC emacs-lisp
-;;; orgtbl-to-gfm conversion function
-;; Usage Example:
-;;
-;; <!-- BEGIN RECEIVE ORGTBL ${1:YOUR_TABLE_NAME} -->
-;; <!-- END RECEIVE ORGTBL $1 -->
-;;
-;; <!--
-;; #+ORGTBL: SEND $1 orgtbl-to-gfm
-;; | $0 |
-;; -->
-
-(defun orgtbl-to-gfm (table params)
-  "Convert the Orgtbl mode TABLE to GitHub Flavored Markdown."
-  (let* ((alignment (mapconcat (lambda (x) (if x "|--:" "|---"))
-                               org-table-last-alignment ""))
-         (params2
-          (list
-           :splice t
-           :hline (concat alignment "|")
-           :lstart "| " :lend " |" :sep " | ")))
-           (orgtbl-to-generic table (org-combine-plists params2 params))))
-
-(defun stag-insert-org-to-gfm-table (table-name)
-  (interactive "*sEnter table name: ")
-  (insert "<!---
-#+ORGTBL: SEND " table-name " orgtbl-to-gfm
-
--->
-<!--- BEGIN RECEIVE ORGTBL " table-name " -->
-<!--- END RECEIVE ORGTBL " table-name " -->")
-  (previous-line)
-  (previous-line)
-  (previous-line))
-
-  (global-set-key (kbd "C-c t") 'stag-insert-org-to-gfm-table)
-#+END_SRC
-** mermaidjs
-#+begin_src elisp
-  (defun stag-preview-mermaid ()
-    "Render region inside a webkit embedded browser."
-    (interactive)
-    (unless (region-active-p)
-      (user-error "Select a region first"))
-    (let* ((path (concat (make-temp-file (temporary-file-directory)) ".html"))
-           (mermaid-code (buffer-substring-no-properties (region-beginning) (region-end))))
-      (save-excursion
-        (with-temp-buffer
-          (insert "<body>
-    <pre class=\"mermaid\">")
-          (insert mermaid-code)
-          ;; js script copied from mermaid documentation
-          (insert "</pre>
-    <script type=\"module\">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ startOnLoad: true });
-    </script>
-  </body>")
-          (write-file path)))
-      (xwidget-webkit-browse-url (format "file://%s" path))))
-#+end_src
-* Presentations
-** TODO Slides
-*** revealjs
-#+BEGIN_SRC emacs-lisp
-  (use-package htmlize)
-  (use-package ox-reveal
-    :after (htmlize ox)
-    :pin "melpa"
-    :config
-    (setq org-reveal-root stag-org-reveal-root))
-#+END_SRC
-* Blogging
-#+BEGIN_SRC emacs-lisp
-  (use-package easy-hugo
-    :after org
-    :init
-    (setq easy-hugo-org-header t)
-    (setq easy-hugo-default-ext ".org")
-    (setq easy-hugo-basedir stag-easy-hugo-basedir)
-    (setq easy-hugo-url "http://blog.trevoke.net")
-    (setq easy-hugo-root stag-easy-hugo-root)
-    (setq easy-hugo-previewtime "300"))
-#+END_SRC
-#+begin_src elisp
-  (use-package ox-hugo)
-#+end_src
 * Version control
 ** Git
 *** Walking through a file's history
@@ -1232,94 +839,5 @@ With this configuration, using C-f in a status buffer will trigger the gitflow s
   :after magit
   :config (add-hook 'magit-mode-hook 'turn-on-magit-gitflow))
 #+END_SRC
-* Communication Clients
-** IRC
-#+BEGIN_SRC emacs-lisp
-(setq erc-lurker-hide-list '("JOIN" "PART" "QUIT"))
-#+END_SRC
 
-* Accounting
-#+begin_src elisp
-  (use-package hledger-mode :pin melpa
-    :after company
-    :mode "\\.ledger\\'"
-    :custom
-    (hledger-jfile stag-ledger-journal)
-    (hledger-currency-string "$")
-    (hledger-life-expectancy 100)
-    (hledger-year-of-birth user-birth-year)
-    :hook
-    (hledger-mode . company-mode)
-    (hledger-mode . flycheck-mode)
-    :config
-    (add-to-list 'company-backends 'hledger-company)
-    :bind (("C-c a e" . hledger-jentry)
-         ("C-c a r" . hledger-run-command)
-         :map hledger-mode-map
-         ("<kp-add>" . hledger-increment-entry-date)
-         ("<kp-subtract>" . hledger-decrement-entry-date)))
-  (use-package flycheck-hledger
-    :after (flycheck hledger-mode)
-    :custom
-    (flycheck-hledger-strict t))
-#+end_src
 
-* Programming
-** Generally, a code buffer
-Let's make it all spaces, and clean themup on save.
-#+begin_src elisp
-  (defun stag-code-mode-tweaks ()
-    (add-hook 'before-save-hook 'whitespace-cleanup)
-    (setq-local indent-tabs-mode nil)
-    (setq-local backward-delete-char-untabify-method 'untabify))
-
-  (add-hook 'prog-mode-hook 'stag-code-mode-tweaks)
-#+end_src
-** Quick docs
-#+begin_src elisp
-  (add-hook 'prog-mode-hook 'turn-on-eldoc-mode)
-#+end_src
-** Line numbers
-#+begin_src elisp
-  (add-hook 'prog-mode-hook 'display-line-numbers-mode)
-#+end_src
-** Balanced parens
-#+begin_src elisp
-(use-package smartparens
-  :ensure smartparens  ;; install the package
-  :hook (prog-mode . smartparens-strict-mode) ;; add `smartparens-mode` to these hooks
-  :config
-  ;; load default config
-  (require 'smartparens-config))
-#+end_src
-** 80-column limit
-#+BEGIN_SRC emacs-lisp
-(use-package fill-column-indicator
-  :config
-  (setq fci-rule-column 80)
-  (add-hook 'prog-mode-hook 'fci-mode))
-#+END_SRC
-** Elisp
-#+BEGIN_SRC emacs-lisp
-  (use-package paredit
-    :hook ((lisp-mode emacs-lisp-mode) . enable-paredit-mode))
-
-  (add-hook 'lisp-interaction-mode-hook 'turn-on-eldoc-mode)
-  (add-hook 'ielm-mode-hook 'turn-on-eldoc-mode)
-#+END_SRC
-** Rust
-#+begin_src elisp
-    (use-package cargo :after rust-mode)
-    (use-package cargo-transient :after rust-mode :pin melpa)
-    (use-package cargo-mode :after rust-mode)
-    (use-package rust-mode :after eglot
-      :hook ((rust-mode .  eglot)))
-    (use-package rust-playground :after rust-mode)
-    (use-package flycheck-rust
-      :after rust-mode
-      :hook ((flycheck-mode-hook . flycheck-rust-setup)))
-
-    (use-package ob-rust :after org :pin melpa)
-
-    (use-package rust-auto-use :after rust-mode :pin melpa)
-#+end_src
