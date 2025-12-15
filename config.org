@@ -632,7 +632,9 @@ I've been having some issues exporting, so I'm actively loading libraries here.
           :map org-gtd-clarify-map
           ("C-c c" . org-gtd-organize)
           :map org-agenda-mode-map
-          ("C-c ?" . org-gtd-agenda-transient)))
+          ("C-c ?" . org-gtd-agenda-transient)
+          :map org-gtd-engage-map
+          ("C-c p" . org-gtd-engage-reprocess-item)))
      (require 'org-gtd)
   (defun tdw-sanity-view ()
    "A focused GTD view: Habits -> Priority A -> Overdue/Today Delegated -> Priority B."
