@@ -360,6 +360,16 @@ avy is kinda badass.
     :bind (("C-c j" . avy-goto-char-2)
            ("C-x j" . avy-po-mark)))
 #+END_SRC
+* GenAI
+#+begin_src emacs-lisp
+  (use-package claude-code-ide
+    :straight (:type git :host github :repo "manzaltu/claude-code-ide.el")
+    :bind ("C-c C-'" . claude-code-ide-menu) ; Set your favorite keybinding
+    :config
+    (claude-code-ide-emacs-tools-setup)
+    :custom
+    (claude-code-ide-cli-path "/Users/trace/.local/share/mise/installs/node/20.19.2/bin/claude"))
+#+end_src
 * Engines
 
 ** evil-mode
@@ -572,101 +582,90 @@ I've been having some issues exporting, so I'm actively loading libraries here.
 * GTD (Getting Things Done)
 ** Org-gtd
 #+BEGIN_SRC emacs-lisp
-
-   ;; (use-package org-ql :after org :straight t)
-
-     (package-vc-install
-    '(org-gtd :url "https://github.com/Trevoke/org-gtd.el"
-              :branch "org-gtd-4"))
-
-       (use-package org-gtd
-         :after org ;; '(org org-ql)
-         ;:vc (:url "https://github.com/trevoke/org-gtd.el")
-         ;; :straight (org-gtd :fetcher github :repo "trevoke/org-gtd.el" :branch "org-gtd-4")
-         :demand t
-         :init
-         (setq org-gtd-prop-refile "ORG_GTD_REFILE")
-         (setq org-gtd-update-ack "3.0.0")
-         :custom
-         (org-todo-keywords '((sequence "TODO(t)" "NEXT(n)" "WAIT(w)" "|" "DONE(d)" "CNCL(c)")))
-         (org-gtd-keyword-mapping
-         '((todo . "TODO")      ;; tasks not ready to be acted upon
-           (next . "NEXT")      ;; tasks ready to act on immediately
-           (wait . "WAIT")      ;; tasks blocked or delegated
-           (done . "DONE")      ;; tasks successfully completed
-           (canceled . "CNCL"))) ;; tasks that won't be completed
-         (org-priority-highest ?A)
-         (org-priority-lowest ?E)
-         (org-priority-default ?C)
-         (org-gtd-directory stag-org-gtd-directory)
-         (org-agenda-files (list org-gtd-directory))
-         (org-gtd-agenda-property-position 'next-line)
-         (org-edna-use-inheritance t)
-         (org-gtd-refile-to-any-target t)
-         (org-gtd-organize-hooks '(org-set-tags-command))
-         (org-gtd-clarify-show-horizons 'right)
-         (org-gtd-areas-of-focus '("AI AppMod"
-                                   "BFC"
-                                   "BFC Sales"
-                                   "Columbia"
-                                   "Education"
-                                   "GCA Admin"
-                                   "GCA Delivery"
-                                   "GCA Incubation"
-                                   "GCA Product"
-                                   "GCA Sales"
-                                   "Personal"))
-         (org-habit-graph-column 100) ;; Moved from tdw-sanity-view let-binding
-         :config
-         (org-edna-mode 1)
-         (org-gtd-mode 1)
-         :bind
-         (("C-c d c" . org-gtd-capture)
-          ("C-c d e" . org-gtd-engage)
-          ("C-c d a" . tdw-sanity-view)
-          ("C-c d p" . org-gtd-process-inbox)
-          ("C-c d n" . org-gtd-show-all-next)
-          ("C-c d s" . org-gtd-show-stuck-projects)
-          ("C-c d ?" . org-gtd-command-center)
-          ("C-c d g" . org-gtd-show-project-graph)
-          :map org-gtd-clarify-map
-          ("C-c c" . org-gtd-organize)
-          :map org-agenda-mode-map
-          ("C-c ?" . org-gtd-agenda-transient)
-          ("C-c c" . org-gtd-clarify-agenda-item)))
-     (require 'org-gtd)
+  (use-package org-gtd
+    :after org ;; '(org org-ql)
+    :demand t
+    :init
+    (setq org-gtd-update-ack "4.0.0")
+    :custom
+    (org-todo-keywords '((sequence "TODO(t)" "NEXT(n)" "WAIT(w)" "|" "DONE(d)" "CNCL(c)")))
+    (org-gtd-keyword-mapping
+     '((todo . "TODO")      ;; tasks not ready to be acted upon
+       (next . "NEXT")      ;; tasks ready to act on immediately
+       (wait . "WAIT")      ;; tasks blocked or delegated
+       (done . "DONE")      ;; tasks successfully completed
+       (canceled . "CNCL"))) ;; tasks that won't be completed
+    (org-priority-highest ?A)
+    (org-priority-lowest ?E)
+    (org-priority-default ?C)
+    (org-gtd-directory stag-org-gtd-directory)
+    (org-agenda-files (list org-gtd-directory))
+    (org-gtd-agenda-property-position 'next-line)
+    (org-edna-use-inheritance t)
+    (org-gtd-refile-to-any-target t)
+    (org-gtd-organize-hooks '(org-set-tags-command))
+    (org-gtd-clarify-show-horizons 'right)
+    (org-gtd-areas-of-focus '("AI AppMod"
+                              "BFC"
+                              "BFC Sales"
+                              "Columbia"
+                              "Education"
+                              "GCA Admin"
+                              "GCA Delivery"
+                              "GCA Incubation"
+                              "GCA Product"
+                              "GCA Sales"
+                              "Personal"))
+    (org-habit-graph-column 100) ;; Moved from tdw-sanity-view let-binding
+    :config
+    (org-edna-mode 1)
+    (org-gtd-mode 1)
+    :bind
+    (("C-c d c" . org-gtd-capture)
+     ("C-c d e" . org-gtd-engage)
+     ("C-c d a" . tdw-sanity-view)
+     ("C-c d p" . org-gtd-process-inbox)
+     ("C-c d n" . org-gtd-show-all-next)
+     ("C-c d s" . org-gtd-show-stuck-projects)
+     ("C-c d ?" . org-gtd-command-center)
+     ("C-c d g" . org-gtd-show-project-graph)
+     :map org-gtd-clarify-map
+     ("C-c c" . org-gtd-organize)
+     :map org-agenda-mode-map
+     ("C-c ?" . org-gtd-agenda-transient)
+     ("C-c c" . org-gtd-clarify-agenda-item)))
   (defun tdw-sanity-view ()
-   "A focused GTD view: Habits -> Priority A -> Overdue/Today Delegated -> Priority B."
-   (interactive)
-     (org-gtd-view-show
-      '((name . "Sanity View")
-        (prefix . (project "—"))
-        (blocks . (
-                   ;; 1. Habits (Using calendar-day block type to enable habit graph)
-                   ((name . "Habits")
-                    (block-type . calendar-day)
-                    (type . habit))
+    "A focused GTD view: Habits -> Priority A -> Overdue/Today Delegated -> Priority B."
+    (interactive)
+    (org-gtd-view-show
+     '((name . "Sanity View")
+       (prefix . (project "—"))
+       (blocks . (
+                  ;; 1. Habits (Using calendar-day block type to enable habit graph)
+                  ((name . "Habits")
+                   (block-type . calendar-day)
+                   (type . habit))
 
-                   ;; 2. "A" Items
-                   ((name . "Must Do (Priority A)")
-                    (type . next-action)
-                    (priority . A))
+                  ;; 2. "A" Items
+                  ((name . "Must Do (Priority A)")
+                   (type . next-action)
+                   (priority . A))
 
-                   ;; 3a. Delegated: Overdue (Past)
-                   ((name . "Waiting On (Overdue)")
-                    (type . delegated)
-                    (when . past))
+                  ;; 3a. Delegated: Overdue (Past)
+                  ((name . "Waiting On (Overdue)")
+                   (type . delegated)
+                   (when . past))
 
-                   ;; 3b. Delegated: Today
-                   ((name . "Waiting On (Today)")
-                    (type . delegated)
-                    (when . today))
+                  ;; 3b. Delegated: Today
+                  ((name . "Waiting On (Today)")
+                   (type . delegated)
+                   (when . today))
 
-                   ;; 4. "B" Items
-                   ((name . "Should Do (Priority B)")
-                    (type . next-action)
-                    (priority . B))
-                   ))))))
+                  ;; 4. "B" Items
+                  ((name . "Should Do (Priority B)")
+                   (type . next-action)
+                   (priority . B))
+                  )))))
 #+END_SRC
 ** Diary
 #+BEGIN_SRC emacs-lisp
@@ -838,9 +837,9 @@ Magit is a pretty amazing interface to git.
 **** Magit + gitflow
 With this configuration, using C-f in a status buffer will trigger the gitflow selectors.
 #+BEGIN_SRC emacs-lisp
-(use-package magit-gitflow
-  :after magit
-  :config (add-hook 'magit-mode-hook 'turn-on-magit-gitflow))
+  ;; (use-package magit-gitflow
+  ;;   :after magit
+  ;;   :config (add-hook 'magit-mode-hook 'turn-on-magit-gitflow))
 #+END_SRC
 
 
