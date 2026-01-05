@@ -679,17 +679,17 @@ I've been having some issues exporting, so I'm actively loading libraries here.
 ** Action Tags
 These are tags to add to tasks, such as types of action, mindset I need to be in, tool Ι need to have, emotional reward I'll get from doing the action, etc. Whatever helps me pick a task to accomplish.
 #+BEGIN_SRC emacs-lisp
-(setq org-tag-alist '(("ai_appmod" . ?a)
-                      ("bfc" . ?b)
-                      ("gca_sales" . ?g)
-                      ("hsbc" . ?h)
-                      ("incubation" . ?i)
-                      ("manhattan" . ?m)
-                      ("menlo_security" . ?e)
-                      ("nvidia" . ?n)
-                      ("panw" . ?p)
-                      ("sales" . ?s)
-                      ("tdw" . ?t)))
+  ;; (setq org-tag-alist '(("ai_appmod" . ?a)
+  ;;                       ("bfc" . ?b)
+  ;;                       ("gca_sales" . ?g)
+  ;;                       ("hsbc" . ?h)
+  ;;                       ("incubation" . ?i)
+  ;;                       ("manhattan" . ?m)
+  ;;                       ("menlo_security" . ?e)
+  ;;                       ("nvidia" . ?n)
+  ;;                       ("panw" . ?p)
+  ;;                       ("sales" . ?s)
+  ;;                       ("tdw" . ?t)))
 #+END_SRC
 ** Captures
 #+BEGIN_SRC emacs-lisp
