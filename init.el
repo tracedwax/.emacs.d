@@ -59,5 +59,3 @@
 (put 'downcase-region 'disabled nil)
 (put 'upcase-region 'disabled nil)
 
-                                        ;(setq org-gtd-update-ack "3.0.0")
-;(use-package org-gtd :after org)
