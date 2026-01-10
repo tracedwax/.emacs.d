@@ -580,6 +580,69 @@ I've been having some issues exporting, so I'm actively loading libraries here.
   (org-defkey org-mode-map "\C-cr" 'org-refile)
 #+END_SRC
 * GTD (Getting Things Done)
+** Priority and tag inheritance for projects
+#+BEGIN_SRC emacs-lisp
+  ;;; org-gtd priority and tag inheritance for projects
+
+  (defgroup my/org-gtd-inherit nil
+    "Customization for org-gtd priority and tag inheritance."
+    :group 'org-gtd
+    :prefix "my/org-gtd-inherit-")
+
+  (defcustom my/org-gtd-inherit-priority t
+    "Whether to inherit priority from parent project.
+When non-nil, project tasks automatically inherit the priority
+from their parent project heading."
+    :type 'boolean
+    :group 'my/org-gtd-inherit)
+
+  (defcustom my/org-gtd-inherit-tags t
+    "Whether to inherit tags from parent project.
+When non-nil, project tasks automatically inherit the tags
+from their parent project heading."
+    :type 'boolean
+    :group 'my/org-gtd-inherit)
+
+  (defun my/org-gtd-inherit-parent-metadata ()
+    "Inherit priority and tags from parent when processing project tasks.
+For project tasks, auto-copy priority and tags from parent heading
+based on customization variables.  For project headings and other
+item types, fall back to normal tag prompting.
+
+Respects `my/org-gtd-inherit-priority' and `my/org-gtd-inherit-tags'
+customization variables for selective inheritance."
+    (cond
+     ;; Case 1: Processing a project task - inherit from parent
+     ((org-gtd-organize-type-member-p '(project-task))
+      (let ((parent-priority nil)
+            (parent-tags nil))
+        ;; Save current position, widen to see parent, navigate up, get metadata
+        (save-excursion
+          (save-restriction
+            (widen)  ; CRITICAL: Widen to see parent heading outside narrow region
+            (when (org-up-heading-safe)
+              (when my/org-gtd-inherit-priority
+                (setq parent-priority (org-entry-get (point) "PRIORITY")))
+              (when my/org-gtd-inherit-tags
+                (setq parent-tags (org-get-tags nil t)))))) ; t = local tags only
+
+        ;; Apply priority if parent has one and inheritance enabled
+        (when (and my/org-gtd-inherit-priority parent-priority)
+          (org-priority (string-to-char parent-priority)))
+
+        ;; Apply tags if parent has any and inheritance enabled
+        (when (and my/org-gtd-inherit-tags parent-tags)
+          (org-set-tags parent-tags))))
+
+     ;; Case 2: Processing project heading - prompt normally for tags
+     ;; This allows user to set tags on the project itself
+     ((org-gtd-organize-type-member-p '(project-heading))
+      (call-interactively #'org-set-tags-command))
+
+     ;; Case 3: All other item types - prompt normally
+     (t
+      (call-interactively #'org-set-tags-command))))
+#+END_SRC
 ** Org-gtd
 #+BEGIN_SRC emacs-lisp
   (use-package org-gtd
@@ -603,7 +666,7 @@ I've been having some issues exporting, so I'm actively loading libraries here.
     (org-gtd-agenda-property-position 'next-line)
     (org-edna-use-inheritance t)
     (org-gtd-refile-to-any-target t)
-    (org-gtd-organize-hooks '(org-set-tags-command))
+    (org-gtd-organize-hooks '(my/org-gtd-inherit-parent-metadata))
     (org-gtd-clarify-show-horizons 'right)
     (org-gtd-areas-of-focus '("AI AppMod"
                               "BFC"
