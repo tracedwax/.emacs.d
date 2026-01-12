@@ -610,7 +610,7 @@ Handles buffer narrowing automatically."
     (save-excursion
       (save-restriction
         (widen)
-        (when (org-up-heading-safe)
+        (when (org-up-heading-safe) ;; it's a dag so have to find the project heading for the org-gtd project property
           (list :priority (org-entry-get (point) "PRIORITY")
                 :tags (org-get-tags nil t))))))
 
