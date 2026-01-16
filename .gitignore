@@ -28,3 +28,4 @@ ellama-sessions/
 eln-cache/
 elpy/
 nix-buffer/
+.DS_Store
