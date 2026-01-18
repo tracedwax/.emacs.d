@@ -633,15 +633,21 @@ Only applies values that are configured for inheritance via customize vars."
 
 For project tasks, auto-copy priority and tags from parent heading.
 For project headings and other item types, prompt for tags normally.
+For someday items, skip tag prompting.
 
 Inheritance respects `my/org-gtd-inherit-priority' and
 `my/org-gtd-inherit-tags' customization variables."
-    (if (org-gtd-organize-type-member-p '(project-task))
-        ;; Project task: inherit from parent
-        (when-let ((metadata (my/org-gtd-inherit--get-parent-metadata)))
-          (my/org-gtd-inherit--apply-metadata metadata))
+    (cond
+     ((org-gtd-organize-type-member-p '(project-task))
+      ;; Project task: inherit from parent
+      (when-let ((metadata (my/org-gtd-inherit--get-parent-metadata)))
+        (my/org-gtd-inherit--apply-metadata metadata)))
+     ((org-gtd-organize-type-member-p '(someday))
+      ;; Someday: do nothing (skip tags)
+      nil)
+     (t
       ;; Everything else: prompt for tags
-      (my/org-gtd-inherit--prompt-for-tags)))
+      (my/org-gtd-inherit--prompt-for-tags))))
 #+END_SRC
 ** Org-gtd
 #+BEGIN_SRC emacs-lisp
