@@ -666,7 +666,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
        (canceled . "CNCL"))) ;; tasks that won't be completed
     (org-priority-highest ?A)
     (org-priority-lowest ?E)
-    (org-priority-default ?C)
+    (org-priority-default ?B)
     (org-gtd-agenda-property-list '("DELEGATED_TO"))
     (org-gtd-agenda-property-position 'where-it-fits)
     (org-gtd-directory stag-org-gtd-directory)
