@@ -697,6 +697,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
      ("C-c d p" . org-gtd-process-inbox)
      ("C-c d n" . org-gtd-show-all-next)
      ("C-c d s" . org-gtd-show-stuck-projects)
+     ("C-c d S" . tdw-someday-priority-view)
      ("C-c d ?" . org-gtd-command-center)
      ("C-c d g" . org-gtd-show-project-graph)
      :map org-gtd-clarify-map
@@ -704,6 +705,20 @@ Inheritance respects `my/org-gtd-inherit-priority' and
      :map org-agenda-mode-map
      ("C-c ?" . org-gtd-agenda-transient)
      ("C-c c" . org-gtd-clarify-agenda-item)))
+  (defun tdw-someday-priority-view ()
+    "An Engage-style view for Someday/Maybe items with priorities C and D."
+    (interactive)
+    (org-gtd-view-show
+     '((name . "Someday/Maybe Priority Review")
+       (prefix . (project "—"))
+       (blocks . (
+                  ((name . "Priority C Items")
+                   (type . someday)
+                   (priority . C))
+                  ((name . "Priority D Items")
+                   (type . someday)
+                   (priority . D))
+                  )))))
   (defun tdw-sanity-view ()
     "A focused GTD view: Habits -> Priority A -> Overdue/Today Delegated -> Priority B."
     (interactive)
