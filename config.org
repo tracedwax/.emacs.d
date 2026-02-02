@@ -665,8 +665,8 @@ Inheritance respects `my/org-gtd-inherit-priority' and
        (done . "DONE")      ;; tasks successfully completed
        (canceled . "CNCL"))) ;; tasks that won't be completed
     (org-priority-highest ?A)
-    (org-priority-lowest ?E)
-    (org-priority-default ?B)
+    (org-priority-lowest ?F)
+    (org-priority-default ?C)
     (org-gtd-agenda-property-list '("DELEGATED_TO"))
     (org-gtd-agenda-property-position 'where-it-fits)
     (org-gtd-directory stag-org-gtd-directory)
@@ -720,34 +720,19 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                    (priority . D))
                   )))))
   (defun tdw-sanity-view ()
-    "A focused GTD view: Habits -> Priority A -> Overdue/Today Delegated -> Priority B."
+    "A focused GTD view: Priority A ('hot tickets') and Priority B ('for today')."
     (interactive)
     (org-gtd-view-show
      '((name . "Sanity View")
        (prefix . (project "—"))
        (blocks . (
-                  ;; 1. Habits (Using calendar-day block type to enable habit graph)
-                  ((name . "Habits")
-                   (block-type . calendar-day)
-                   (type . habit))
-
-                  ;; 2. "A" Items
-                  ((name . "Must Do (Priority A)")
+                  ;; 1. "A" Items
+                  ((name . "Hot Tickets (Priority A)")
                    (type . next-action)
                    (priority . A))
 
-                  ;; 3a. Delegated: Overdue (Past)
-                  ((name . "Waiting On (Overdue)")
-                   (type . delegated)
-                   (when . past))
-
-                  ;; 3b. Delegated: Today
-                  ((name . "Waiting On (Today)")
-                   (type . delegated)
-                   (when . today))
-
-                  ;; 4. "B" Items
-                  ((name . "Should Do (Priority B)")
+                  ;; 2. "B" Items
+                  ((name . "For Today (Priority B)")
                    (type . next-action)
                    (priority . B))
                   )))))
