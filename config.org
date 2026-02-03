@@ -742,7 +742,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                   (let ((priority (org-entry-get (point) "PRIORITY"))
                         (todo (org-get-todo-state)))
                     (when (and (member priority priorities)
-                               (string= todo "NEXT"))
+                               (member todo '("NEXT" "TODO")))
                       (setq total-minutes (+ total-minutes (tdw/get-subtree-effort-minutes))))))
                 nil nil))))))
       (format "%d:%02d" (/ total-minutes 60) (% total-minutes 60))))
@@ -809,10 +809,11 @@ Inheritance respects `my/org-gtd-inherit-priority' and
   (with-eval-after-load 'org-gtd-agenda
     (defun org-gtd-agenda--resolve-effort ()
       "Return sum of EFFORT for item at point and its children."
-      (let ((total (tdw/get-subtree-effort-minutes)))
-        (if (> total 0)
-            (format "%d:%02d" (/ total 60) (% total 60))
-          (org-entry-get (point) "EFFORT"))))
+      (let* ((total (tdw/get-subtree-effort-minutes))
+             (effort (if (> total 0)
+                         (format "%d:%02d" (/ total 60) (% total 60))
+                       (org-entry-get (point) "EFFORT"))))
+        (or effort "0:00")))
 
     (defun org-gtd-agenda--resolve-prefix-element (element)
       "Resolve ELEMENT to a string value at point, or nil if unavailable.
@@ -852,16 +853,18 @@ ELEMENT can be:
            (total-effort (tdw/calculate-total-effort '("A" "B"))))
       (org-gtd-view-show
        `((name . ,(format "Sanity View (Total Effort: %s)" total-effort))
-         (prefix . (project effort "—"))
+         (prefix . (effort "—"))
          (blocks . (
                     ;; 1. "A" Items
                     ((name . ,(format "Hot Tickets (Priority A - %s)" effort-a))
                      (type . next-action)
+                     (todo . ("NEXT" "TODO"))
                      (priority . A))
 
                     ;; 2. "B" Items
                     ((name . ,(format "For Today (Priority B - %s)" effort-b))
                      (type . next-action)
+                     (todo . ("NEXT" "TODO"))
                      (priority . B))
                     ))))))
 #+END_SRC
