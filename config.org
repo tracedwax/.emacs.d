@@ -767,6 +767,45 @@ Inheritance respects `my/org-gtd-inherit-priority' and
 
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
 
+  (defun tdw/agenda-adjust-effort (&optional delta)
+    "Adjust effort of agenda item at point by DELTA minutes (defaults to 15)."
+    (interactive "P")
+    (require 'org-duration)
+    (let ((delta-mins (cond ((numberp delta) (round delta))
+                            ((and (listp delta) (numberp (car delta))) (round (car delta)))
+                            (t 15))))
+      (if-let ((marker (org-get-at-bol 'org-marker)))
+          (let* ((current (org-with-point-at marker (org-entry-get nil "Effort")))
+                 (current-mins (condition-case nil
+                                   (if (and (stringp current) (not (string-empty-p current)))
+                                       (round (org-duration-to-minutes current))
+                                     0)
+                                 (error 0)))
+                 (new-mins (max 0 (+ current-mins delta-mins)))
+                 (new-effort (org-duration-from-minutes new-mins)))
+            (org-with-point-at marker
+              (org-entry-put nil "Effort" new-effort))
+            (org-agenda-redo)
+            (message "Effort: %s" new-effort))
+        (message "No task at point"))))
+
+  (defun tdw-agenda-effort-increment () (interactive) (tdw/agenda-adjust-effort 15))
+  (defun tdw-agenda-effort-decrement () (interactive) (tdw/agenda-adjust-effort -15))
+
+  (defvar tdw-agenda-comma-map (make-sparse-keymap)
+    "Keymap for quick adjustments in org-agenda.")
+
+  (define-key tdw-agenda-comma-map (kbd "A") (lambda () (interactive) (org-agenda-priority ?A)))
+  (define-key tdw-agenda-comma-map (kbd "B") (lambda () (interactive) (org-agenda-priority ?B)))
+  (define-key tdw-agenda-comma-map (kbd "C") (lambda () (interactive) (org-agenda-priority ?C)))
+  (define-key tdw-agenda-comma-map (kbd ",") #'org-agenda-priority)
+
+  (with-eval-after-load 'org-agenda
+    (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
+    (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
+    (define-key org-agenda-mode-map (kbd "=") #'tdw-agenda-effort-increment)
+    (define-key org-agenda-mode-map (kbd "-") #'tdw-agenda-effort-decrement))
+
   (with-eval-after-load 'org-gtd-agenda
     (defun org-gtd-agenda--resolve-effort ()
       "Return sum of EFFORT for item at point and its children."
