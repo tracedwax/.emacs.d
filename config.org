@@ -728,9 +728,10 @@ Inheritance respects `my/org-gtd-inherit-priority' and
             (outline-next-heading))))
       total))
 
-  (defun tdw/calculate-total-effort (priorities)
-    "Sum effort for tasks with PRIORITIES (list of strings like 'A', 'B')."
-    (let ((total-minutes 0))
+  (defun tdw/get-sanity-effort-totals ()
+    "Return a list (TOTAL EFFORT-A EFFORT-B) formatted as H:MM."
+    (let ((mins-a 0)
+          (mins-b 0))
       (dolist (file (org-agenda-files))
         (let ((expanded-file (expand-file-name file)))
           (when (file-exists-p expanded-file)
@@ -741,29 +742,35 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                 (lambda ()
                   (let ((priority (org-entry-get (point) "PRIORITY"))
                         (todo (org-get-todo-state)))
-                    (when (and (member priority priorities)
-                               (member todo '("NEXT" "TODO")))
-                      (setq total-minutes (+ total-minutes (tdw/get-subtree-effort-minutes))))))
+                    (when (member todo '("NEXT" "TODO"))
+                      (let ((effort (tdw/get-subtree-effort-minutes)))
+                        (cond ((string= priority "A") (setq mins-a (+ mins-a effort)))
+                              ((string= priority "B") (setq mins-b (+ mins-b effort))))))))
                 nil nil))))))
-      (format "%d:%02d" (/ total-minutes 60) (% total-minutes 60))))
+      (let ((fmt (lambda (m) (format "%d:%02d" (/ m 60) (% m 60)))))
+        (list (funcall fmt (+ mins-a mins-b))
+              (funcall fmt mins-a)
+              (funcall fmt mins-b)))))
 
   (defun tdw/update-sanity-view-headers ()
     "Update headers in the current agenda buffer with fresh effort totals."
-    (when (string-match-p "Sanity View" (or org-agenda-overriding-header ""))
-      (let* ((effort-a (tdw/calculate-total-effort '("A")))
-             (effort-b (tdw/calculate-total-effort '("B")))
-             (total-effort (tdw/calculate-total-effort '("A" "B")))
-             (inhibit-read-only t))
-        (save-excursion
-          (goto-char (point-min))
-          (while (re-search-forward "Sanity View (Total Effort: [^)]*)" nil t)
-            (replace-match (format "Sanity View (Total Effort: %s)" total-effort)))
-          (goto-char (point-min))
-          (while (re-search-forward "Hot Tickets (Priority A - [^)]*)" nil t)
-            (replace-match (format "Hot Tickets (Priority A - %s)" effort-a)))
-          (goto-char (point-min))
-          (while (re-search-forward "For Today (Priority B - [^)]*)" nil t)
-            (replace-match (format "For Today (Priority B - %s)" effort-b)))))))
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (point-min))
+        ;; Detect if we are in Sanity View by looking for our header markers
+        (when (or (re-search-forward "Sanity View" nil t)
+                  (re-search-forward "Hot Tickets" nil t)
+                  (re-search-forward "For Today" nil t))
+          (pcase-let ((`(,total ,effort-a ,effort-b) (tdw/get-sanity-effort-totals)))
+            (goto-char (point-min))
+            (while (re-search-forward "\\(Sanity View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
+              (replace-match (format "Sanity View (Total Effort: %s)" total) t t nil 1))
+            (goto-char (point-min))
+            (while (re-search-forward "\\(Hot Tickets\\( (Priority A - [^)]*)\\)?\\)" nil t)
+              (replace-match (format "Hot Tickets (Priority A - %s)" effort-a) t t nil 1))
+            (goto-char (point-min))
+            (while (re-search-forward "\\(For Today\\( (Priority B - [^)]*)\\)?\\) " nil t)
+              (replace-match (format "For Today (Priority B - %s)" effort-b) t t nil 1)))))))
 
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
 
@@ -848,11 +855,9 @@ ELEMENT can be:
   (defun tdw-sanity-view ()
     "A focused GTD view: Priority A ('hot tickets') and Priority B ('for today')."
     (interactive)
-    (let* ((effort-a (tdw/calculate-total-effort '("A")))
-           (effort-b (tdw/calculate-total-effort '("B")))
-           (total-effort (tdw/calculate-total-effort '("A" "B"))))
+    (pcase-let ((`(,total ,effort-a ,effort-b) (tdw/get-sanity-effort-totals)))
       (org-gtd-view-show
-       `((name . ,(format "Sanity View (Total Effort: %s)" total-effort))
+       `((name . ,(format "Sanity View (Total Effort: %s)" total))
          (prefix . (effort "—"))
          (blocks . (
                     ;; 1. "A" Items
