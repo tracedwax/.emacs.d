@@ -705,6 +705,92 @@ Inheritance respects `my/org-gtd-inherit-priority' and
      :map org-agenda-mode-map
      ("C-c ?" . org-gtd-agenda-transient)
      ("C-c c" . org-gtd-clarify-agenda-item)))
+
+  (defun tdw/get-effort-minutes (effort-str)
+    "Convert EFFORT-STR (H:MM) to minutes."
+    (when (and effort-str (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
+      (+ (* 60 (string-to-number (match-string 1 effort-str)))
+         (string-to-number (match-string 2 effort-str)))))
+
+  (defun tdw/get-subtree-effort-minutes ()
+    "Sum effort of current entry and all its children in minutes."
+    (let ((total 0))
+      (save-excursion
+        (org-back-to-heading t)
+        (let ((effort (org-entry-get (point) "EFFORT")))
+          (when effort (setq total (tdw/get-effort-minutes effort))))
+        (let ((end (save-excursion (org-end-of-subtree t) (point))))
+          (outline-next-heading)
+          (while (and (< (point) end) (not (eobp)))
+            (let ((effort (org-entry-get (point) "EFFORT")))
+              (when effort
+                (setq total (+ total (or (tdw/get-effort-minutes effort) 0)))))
+            (outline-next-heading))))
+      total))
+
+  (defun tdw/calculate-total-effort (priorities)
+    "Sum effort for tasks with PRIORITIES (list of strings like 'A', 'B')."
+    (let ((total-minutes 0))
+      (dolist (file (org-agenda-files))
+        (let ((expanded-file (expand-file-name file)))
+          (when (file-exists-p expanded-file)
+            (with-current-buffer (find-file-noselect expanded-file)
+              (org-with-wide-buffer
+               (goto-char (point-min))
+               (org-map-entries
+                (lambda ()
+                  (let ((priority (org-entry-get (point) "PRIORITY"))
+                        (todo (org-get-todo-state)))
+                    (when (and (member priority priorities)
+                               (string= todo "NEXT"))
+                      (setq total-minutes (+ total-minutes (tdw/get-subtree-effort-minutes))))))
+                nil nil))))))
+      (format "%d:%02d" (/ total-minutes 60) (% total-minutes 60))))
+
+  (defun tdw/update-sanity-view-headers ()
+    "Update headers in the current agenda buffer with fresh effort totals."
+    (when (string-match-p "Sanity View" (or org-agenda-overriding-header ""))
+      (let* ((effort-a (tdw/calculate-total-effort '("A")))
+             (effort-b (tdw/calculate-total-effort '("B")))
+             (total-effort (tdw/calculate-total-effort '("A" "B")))
+             (inhibit-read-only t))
+        (save-excursion
+          (goto-char (point-min))
+          (while (re-search-forward "Sanity View (Total Effort: [^)]*)" nil t)
+            (replace-match (format "Sanity View (Total Effort: %s)" total-effort)))
+          (goto-char (point-min))
+          (while (re-search-forward "Hot Tickets (Priority A - [^)]*)" nil t)
+            (replace-match (format "Hot Tickets (Priority A - %s)" effort-a)))
+          (goto-char (point-min))
+          (while (re-search-forward "For Today (Priority B - [^)]*)" nil t)
+            (replace-match (format "For Today (Priority B - %s)" effort-b)))))))
+
+  (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
+
+  (with-eval-after-load 'org-gtd-agenda
+    (defun org-gtd-agenda--resolve-effort ()
+      "Return sum of EFFORT for item at point and its children."
+      (let ((total (tdw/get-subtree-effort-minutes)))
+        (if (> total 0)
+            (format "%d:%02d" (/ total 60) (% total 60))
+          (org-entry-get (point) "EFFORT"))))
+
+    (defun org-gtd-agenda--resolve-prefix-element (element)
+      "Resolve ELEMENT to a string value at point, or nil if unavailable.
+ELEMENT can be:
+- \\='project - parent project headline
+- \\='area-of-focus - CATEGORY property
+- \\='file-name - buffer file base name
+- \\='effort - EFFORT property
+- a string - returned as-is (literal)"
+      (pcase element
+        ('project (org-gtd-agenda--resolve-project))
+        ('area-of-focus (org-gtd-agenda--resolve-area-of-focus))
+        ('file-name (org-gtd-agenda--resolve-file-name))
+        ('effort (org-gtd-agenda--resolve-effort))
+        ((pred stringp) element)
+        (_ nil))))
+
   (defun tdw-someday-priority-view ()
     "An Engage-style view for Someday/Maybe items with priorities C and D."
     (interactive)
@@ -722,20 +808,23 @@ Inheritance respects `my/org-gtd-inherit-priority' and
   (defun tdw-sanity-view ()
     "A focused GTD view: Priority A ('hot tickets') and Priority B ('for today')."
     (interactive)
-    (org-gtd-view-show
-     '((name . "Sanity View")
-       (prefix . (project "—"))
-       (blocks . (
-                  ;; 1. "A" Items
-                  ((name . "Hot Tickets (Priority A)")
-                   (type . next-action)
-                   (priority . A))
+    (let* ((effort-a (tdw/calculate-total-effort '("A")))
+           (effort-b (tdw/calculate-total-effort '("B")))
+           (total-effort (tdw/calculate-total-effort '("A" "B"))))
+      (org-gtd-view-show
+       `((name . ,(format "Sanity View (Total Effort: %s)" total-effort))
+         (prefix . (project effort "—"))
+         (blocks . (
+                    ;; 1. "A" Items
+                    ((name . ,(format "Hot Tickets (Priority A - %s)" effort-a))
+                     (type . next-action)
+                     (priority . A))
 
-                  ;; 2. "B" Items
-                  ((name . "For Today (Priority B)")
-                   (type . next-action)
-                   (priority . B))
-                  )))))
+                    ;; 2. "B" Items
+                    ((name . ,(format "For Today (Priority B - %s)" effort-b))
+                     (type . next-action)
+                     (priority . B))
+                    ))))))
 #+END_SRC
 ** Diary
 #+BEGIN_SRC emacs-lisp
