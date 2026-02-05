@@ -693,6 +693,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     :bind
     (("C-c d c" . org-gtd-capture)
      ("C-c d e" . org-gtd-engage)
+     ("C-c d b" . tdw-decision-view)
      ("C-c d a" . tdw-sanity-view)
      ("C-c d p" . org-gtd-process-inbox)
      ("C-c d n" . org-gtd-show-all-next)
@@ -729,10 +730,11 @@ Inheritance respects `my/org-gtd-inherit-priority' and
       total))
 
   (defun tdw/get-sanity-effort-totals ()
-    "Return a list (TOTAL EFFORT-A EFFORT-B EFFORT-C) formatted as H:MM."
+    "Return a list (TOTAL EFFORT-A EFFORT-B EFFORT-C EFFORT-D) formatted as H:MM."
     (let ((mins-a 0)
           (mins-b 0)
-          (mins-c 0))
+          (mins-c 0)
+          (mins-d 0))
       (dolist (file (org-agenda-files))
         (let ((expanded-file (expand-file-name file)))
           (when (file-exists-p expanded-file)
@@ -747,28 +749,35 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                       (let ((effort (tdw/get-subtree-effort-minutes)))
                         (cond ((string= priority "A") (setq mins-a (+ mins-a effort)))
                               ((string= priority "B") (setq mins-b (+ mins-b effort)))
-                              ((string= priority "C") (setq mins-c (+ mins-c effort))))))))
+                              ((string= priority "C") (setq mins-c (+ mins-c effort)))
+                              ((string= priority "D") (setq mins-d (+ mins-d effort))))))))
                 nil nil))))))
       (let ((fmt (lambda (m) (format "%d:%02d" (/ m 60) (% m 60)))))
-        (list (funcall fmt (+ mins-a mins-b mins-c))
+        (list (funcall fmt (+ mins-a mins-b mins-c mins-d))
               (funcall fmt mins-a)
               (funcall fmt mins-b)
-              (funcall fmt mins-c)))))
+              (funcall fmt mins-c)
+              (funcall fmt mins-d)))))
 
   (defun tdw/update-sanity-view-headers ()
     "Update headers in the current agenda buffer with fresh effort totals."
     (let ((inhibit-read-only t))
       (save-excursion
         (goto-char (point-min))
-        ;; Detect if we are in Sanity View by looking for our header markers
+        ;; Detect if we are in Sanity/Decision View by looking for our header markers
         (when (or (re-search-forward "Sanity View" nil t)
+                  (re-search-forward "Decision View" nil t)
                   (re-search-forward "Hot Tickets" nil t)
                   (re-search-forward "For Today" nil t)
-                  (re-search-forward "After today" nil t))
-          (pcase-let ((`(,total ,effort-a ,effort-b ,effort-c) (tdw/get-sanity-effort-totals)))
+                  (re-search-forward "Priority C" nil t)
+                  (re-search-forward "Priority D" nil t))
+          (pcase-let ((`(,total ,effort-a ,effort-b ,effort-c ,effort-d) (tdw/get-sanity-effort-totals)))
             (goto-char (point-min))
             (while (re-search-forward "\\(Sanity View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
               (replace-match (format "Sanity View (Total Effort: %s)" total) t t nil 1))
+            (goto-char (point-min))
+            (while (re-search-forward "\\(Decision View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
+              (replace-match (format "Decision View (Total Effort: %s)" total) t t nil 1))
             (goto-char (point-min))
             (while (re-search-forward "\\(Hot Tickets\\( (Priority A - [^)]*)\\)?\\)" nil t)
               (replace-match (format "Hot Tickets (Priority A - %s)" effort-a) t t nil 1))
@@ -776,8 +785,11 @@ Inheritance respects `my/org-gtd-inherit-priority' and
             (while (re-search-forward "\\(For Today\\( (Priority B - [^)]*)\\)?\\)" nil t)
               (replace-match (format "For Today (Priority B - %s)" effort-b) t t nil 1))
             (goto-char (point-min))
-            (while (re-search-forward "\\(After today - Priority C\\( ([^)]*)\\)?\\)" nil t)
-              (replace-match (format "After today - Priority C (%s)" effort-c) t t nil 1)))))))
+            (while (re-search-forward "\\(Priority C\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "Priority C (%s)" effort-c) t t nil 1))
+            (goto-char (point-min))
+            (while (re-search-forward "\\(Priority D\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "Priority D (%s)" effort-d) t t nil 1)))))))
 
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
 
@@ -812,6 +824,9 @@ Inheritance respects `my/org-gtd-inherit-priority' and
   (define-key tdw-agenda-comma-map (kbd "A") (lambda () (interactive) (org-agenda-priority ?A)))
   (define-key tdw-agenda-comma-map (kbd "B") (lambda () (interactive) (org-agenda-priority ?B)))
   (define-key tdw-agenda-comma-map (kbd "C") (lambda () (interactive) (org-agenda-priority ?C)))
+  (define-key tdw-agenda-comma-map (kbd "D") (lambda () (interactive) (org-agenda-priority ?D)))
+  (define-key tdw-agenda-comma-map (kbd "E") (lambda () (interactive) (org-agenda-priority ?E)))
+  (define-key tdw-agenda-comma-map (kbd "F") (lambda () (interactive) (org-agenda-priority ?F)))
   (define-key tdw-agenda-comma-map (kbd ",") #'org-agenda-priority)
 
   (with-eval-after-load 'org-agenda
@@ -860,9 +875,9 @@ ELEMENT can be:
                    (priority . D))
                   )))))
   (defun tdw-sanity-view ()
-    "A focused GTD view: Priority A ('hot tickets'), Priority B ('for today'), and Priority C ('after today')."
+    "A highly focused GTD view: Priority A ('hot tickets') and Priority B ('for today') only."
     (interactive)
-    (pcase-let ((`(,total ,effort-a ,effort-b ,effort-c) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-a ,effort-b ,effort-c ,effort-d) (tdw/get-sanity-effort-totals)))
       (org-gtd-view-show
        `((name . ,(format "Sanity View (Total Effort: %s)" total))
          (prefix . (effort "—"))
@@ -878,12 +893,39 @@ ELEMENT can be:
                      (type . next-action)
                      (todo . ("NEXT" "TODO"))
                      (priority . B))
+                    ))))))
+
+  (defun tdw-decision-view ()
+    "A broad GTD view for decision making: Priority A, B, C, and D."
+    (interactive)
+    (pcase-let ((`(,total ,effort-a ,effort-b ,effort-c ,effort-d) (tdw/get-sanity-effort-totals)))
+      (org-gtd-view-show
+       `((name . ,(format "Decision View (Total Effort: %s)" total))
+         (prefix . (effort "—"))
+         (blocks . (
+                    ;; 1. "A" Items
+                    ((name . ,(format "Hot Tickets (Priority A - %s)" effort-a))
+                     (type . next-action)
+                     (todo . ("NEXT" "TODO"))
+                     (priority . A))
+
+                    ;; 2. "B" Items
+                    ((name . ,(format "For Today (Priority B - %s)" effort-b))
+                     (type . next-action)
+                     (todo . ("NEXT" "TODO"))
+                     (priority . B))
 
                     ;; 3. "C" Items
-                    ((name . ,(format "After today - Priority C (%s)" effort-c))
+                    ((name . ,(format "Priority C (%s)" effort-c))
                      (type . next-action)
                      (todo . ("NEXT" "TODO"))
                      (priority . C))
+
+                    ;; 4. "D" Items
+                    ((name . ,(format "Priority D (%s)" effort-d))
+                     (type . next-action)
+                     (todo . ("NEXT" "TODO"))
+                     (priority . D))
                     ))))))
 #+END_SRC
 ** Diary
