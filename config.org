@@ -169,6 +169,29 @@ And I'm not super-worried about old backups and other such things, so I'll just 
   (setq auto-save-list-file-prefix
         "~/.emacs.d/local-files/auto-save-list/.saves-")
 #+END_SRC
+
+** Auto-saving
+I keep losing work, so let's make Emacs auto-save frequently. We'll use the `super-save` package to save buffers when we switch buffers or windows, plus an aggressive automatic save on idle or losing focus.
+#+begin_src emacs-lisp
+  (use-package super-save
+    :ensure t
+    :pin "melpa"
+    :config
+    ;; Save on window/buffer movements
+    (add-to-list 'super-save-triggers 'other-window)
+    (add-to-list 'super-save-triggers 'windmove-up)
+    (add-to-list 'super-save-triggers 'windmove-down)
+    (add-to-list 'super-save-triggers 'windmove-left)
+    (add-to-list 'super-save-triggers 'windmove-right)
+    
+    (super-save-mode +1)
+    (setq super-save-auto-save-when-idle t)
+    (setq super-save-idle-duration 1)) ;; save after 1 second of idle
+
+  ;; Also save unconditionally when Emacs loses focus
+  (add-hook 'focus-out-hook (lambda () (save-some-buffers t)))
+#+end_src
+
 ** Quality of life
 *** Yes/No => y/n
 #+BEGIN_SRC emacs-lisp
