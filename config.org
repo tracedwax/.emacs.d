@@ -944,13 +944,17 @@ ELEMENT can be:
                    (priority . D))
                   )))))
   (defun tdw-sanity-view ()
-    "A highly focused GTD view: Priority A ('hot tickets') and Priority B ('for today') only."
+    "A highly focused GTD view: Today's schedule/habits, Priority A ('hot tickets') and Priority B ('for today') only."
     (interactive)
     (pcase-let ((`(,total ,effort-a ,effort-b ,effort-c ,effort-d) (tdw/get-sanity-effort-totals)))
       (org-gtd-view-show
        `((name . ,(format "Sanity View (Total Effort: %s)" total))
          (prefix . (effort "—"))
          (blocks . (
+                    ;; 0. Today's Schedule (Calendar + Habits) — identical to engage view
+                    ((name . "Today's Schedule")
+                     (block-type . calendar-day))
+
                     ;; 1. "A" Items
                     ((name . ,(format "Hot Tickets (Priority A - %s)" effort-a))
                      (type . next-action)
