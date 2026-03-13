@@ -111,6 +111,11 @@ This is first because nano-theme, while providing a gorgeous UI, has lots of opi
   (setq system-uses-terminfo nil)
 #+END_SRC
 
+** Default font
+#+begin_src elisp
+  (set-face-attribute 'default nil :font "FiraMono Nerd Font" :height 180)
+#+end_src
+
 This shows the file path in the GUI header
 #+BEGIN_SRC emacs-lisp
   (setq-default frame-title-format
