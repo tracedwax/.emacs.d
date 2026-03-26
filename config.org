@@ -960,13 +960,23 @@ ELEMENT can be:
                     ((name . "Today's Schedule")
                      (block-type . calendar-day))
 
-                    ;; 1. "A" Items
+                    ;; 1. Overdue Delegated check-ins
+                    ((name . "Overdue Delegated")
+                     (type . delegated)
+                     (when . past))
+
+                    ;; 2. Delegated check-ins due today
+                    ((name . "Delegated Due Today")
+                     (type . delegated)
+                     (when . today))
+
+                    ;; 3. "A" Items
                     ((name . ,(format "Hot Tickets (Priority A - %s)" effort-a))
                      (type . next-action)
                      (todo . ("NEXT" "TODO"))
                      (priority . A))
 
-                    ;; 2. "B" Items
+                    ;; 4. "B" Items
                     ((name . ,(format "For Today (Priority B - %s)" effort-b))
                      (type . next-action)
                      (todo . ("NEXT" "TODO"))
