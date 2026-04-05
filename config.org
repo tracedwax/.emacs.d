@@ -1081,7 +1081,8 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
     "Tag-based GTD view: Calendar/Habits, On Fire, Big Rocks, Quick Wins, Other Rocks, Delegated."
     (interactive)
     (pcase-let ((`(,total ,effort-fire ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
-      (org-gtd-view-show
+      (let ((org-agenda-todo-keyword-format ""))
+       (org-gtd-view-show
        `((name . ,(format "Sanity View (Total Effort: %s)" total))
          (prefix . (effort " " score " — "))
          (blocks . (
@@ -1195,7 +1196,7 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
                                               (or (not effort-mins) (<= effort-mins 0)))
                                          nil
                                        end)))))))
-                    ))))))
+                    )))))))
 
   (defun tdw-decision-view ()
     "A broad GTD view for decision making: Priority A, B, C, and D."
