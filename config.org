@@ -1006,7 +1006,10 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
     (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
     (define-key org-agenda-mode-map (kbd "=") #'tdw-agenda-effort-increment)
-    (define-key org-agenda-mode-map (kbd "-") #'tdw-agenda-effort-decrement))
+    (define-key org-agenda-mode-map (kbd "-") #'tdw-agenda-effort-decrement)
+    (define-key org-agenda-mode-map (kbd "u") #'tdw/agenda-cycle-urgency)
+    (define-key org-agenda-mode-map (kbd "i") #'tdw/agenda-cycle-impact)
+    (define-key org-agenda-mode-map (kbd "I") #'org-agenda-diary-entry))
 
   (with-eval-after-load 'org-gtd-agenda
     (defun org-gtd-agenda--resolve-effort ()
@@ -1153,12 +1156,13 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
             ((< sa sb) -1)
             (t nil))))
 
+  (setq org-agenda-cmp-user-defined #'tdw/agenda-cmp-score)
+
   (defun tdw-sanity-view ()
     "Tag-based GTD view: Calendar/Habits, On Fire, Big Rocks, Quick Wins, Other Rocks, Delegated."
     (interactive)
     (pcase-let ((`(,total ,effort-fire ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
-      (let ((org-agenda-todo-keyword-format "")
-            (org-agenda-cmp-user-defined #'tdw/agenda-cmp-score))
+      (let ((org-agenda-todo-keyword-format ""))
        (org-gtd-view-show
        `((name . ,(format "Sanity View (Total Effort: %s)" total))
          (prefix-width . 20)
