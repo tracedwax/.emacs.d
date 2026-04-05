@@ -1033,7 +1033,17 @@ ELEMENT can be:
         ('effort (org-gtd-agenda--resolve-effort))
         ('score (org-gtd-agenda--resolve-score))
         ((pred stringp) element)
-        (_ nil))))
+        (_ nil)))
+
+    (defun org-gtd-agenda--resolve-prefix-chain (elements width)
+      "Concatenate all resolved ELEMENTS, truncated to WIDTH.
+Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
+      (let ((result (mapconcat
+                     (lambda (el)
+                       (or (org-gtd-agenda--resolve-prefix-element el) ""))
+                     elements
+                     "")))
+        (truncate-string-to-width (or result "") width nil ?\s org-gtd-agenda-truncate-ellipsis))))
 
   (defun org-gtd-agenda--resolve-score ()
     "Return compact urgency/impact string like 'U:vh I:h' from tags at point."
