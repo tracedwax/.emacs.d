@@ -1077,6 +1077,36 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
 
   ;;; ——— Sanity View ———
 
+
+  (defun tdw/agenda-score-at-marker (marker)
+    "Compute urgency/impact score at MARKER: 2*urgency + impact.
+vh=3, h=2, m=1, l=0."
+    (or (org-with-point-at marker
+          (let* ((tags (org-get-tags nil t))
+                 (urg (cond ((member "vh_urgency" tags) 3)
+                            ((member "h_urgency" tags) 2)
+                            ((member "m_urgency" tags) 1)
+                            (t 0)))
+                 (imp (cond ((member "vh_impact" tags) 3)
+                            ((member "h_impact" tags) 2)
+                            ((member "m_impact" tags) 1)
+                            (t 0))))
+            (+ (* 2 urg) imp)))
+        0))
+
+  (defun tdw/agenda-cmp-score (a b)
+    "Compare agenda entries A and B by urgency/impact score.
+Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
+    (let* ((ma (or (get-text-property 1 'org-marker a)
+                   (get-text-property 1 'org-hd-marker a)))
+           (mb (or (get-text-property 1 'org-marker b)
+                   (get-text-property 1 'org-hd-marker b)))
+           (sa (if ma (tdw/agenda-score-at-marker ma) 0))
+           (sb (if mb (tdw/agenda-score-at-marker mb) 0)))
+      (cond ((> sa sb) +1)
+            ((< sa sb) -1)
+            (t nil))))
+
   (defun tdw-sanity-view ()
     "Tag-based GTD view: Calendar/Habits, On Fire, Big Rocks, Quick Wins, Other Rocks, Delegated."
     (interactive)
