@@ -757,12 +757,44 @@ Inheritance respects `my/org-gtd-inherit-priority' and
             (outline-next-heading))))
       total))
 
+  ;;; ——— Sanity View: Tag-based helpers ———
+
+  (defun tdw/has-tag-p (tag)
+    "Return non-nil if current entry has TAG."
+    (member tag (org-get-tags nil t)))
+
+  (defun tdw/on-fire-p ()
+    "Return non-nil if current entry is tagged :on_fire:."
+    (tdw/has-tag-p "on_fire"))
+
+  (defun tdw/big-rock-p ()
+    "Return non-nil if current entry has any high urgency or impact tag."
+    (let ((tags (org-get-tags nil t)))
+      (cl-some (lambda (tag)
+                 (member tag '("h_urgency" "vh_urgency" "h_impact" "vh_impact")))
+               tags)))
+
+  (defun tdw/quick-win-p ()
+    "Return non-nil if current entry has effort > 0 and <= 30 minutes."
+    (let* ((effort-str (org-entry-get (point) "EFFORT"))
+           (mins (when effort-str (tdw/get-effort-minutes effort-str))))
+      (and mins (> mins 0) (<= mins 30))))
+
+  (defun tdw/unestimated-p ()
+    "Return non-nil if current entry has no effort or effort = 0."
+    (let* ((effort-str (org-entry-get (point) "EFFORT"))
+           (mins (when effort-str (tdw/get-effort-minutes effort-str))))
+      (or (not effort-str) (not mins) (<= mins 0))))
+
+  ;;; ——— Sanity View: Effort totals by section ———
+
   (defun tdw/get-sanity-effort-totals ()
-    "Return a list (TOTAL EFFORT-A EFFORT-B EFFORT-C EFFORT-D) formatted as H:MM."
-    (let ((mins-a 0)
-          (mins-b 0)
-          (mins-c 0)
-          (mins-d 0))
+    "Return a list (TOTAL ON-FIRE BIG-ROCKS QUICK-WINS OTHER) formatted as H:MM."
+    (let ((mins-fire 0)
+          (mins-big 0)
+          (mins-quick 0)
+          (mins-other 0)
+          (n-unestimated 0))
       (dolist (file (org-agenda-files))
         (let ((expanded-file (expand-file-name file)))
           (when (file-exists-p expanded-file)
@@ -771,53 +803,120 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                (goto-char (point-min))
                (org-map-entries
                 (lambda ()
-                  (let ((priority (org-entry-get (point) "PRIORITY"))
-                        (todo (org-get-todo-state)))
+                  (let ((todo (org-get-todo-state)))
                     (when (member todo '("NEXT" "TODO"))
                       (let ((effort (tdw/get-subtree-effort-minutes)))
-                        (cond ((string= priority "A") (setq mins-a (+ mins-a effort)))
-                              ((string= priority "B") (setq mins-b (+ mins-b effort)))
-                              ((string= priority "C") (setq mins-c (+ mins-c effort)))
-                              ((string= priority "D") (setq mins-d (+ mins-d effort))))))))
+                        (cond ((tdw/on-fire-p) (setq mins-fire (+ mins-fire effort)))
+                              ((tdw/big-rock-p) (setq mins-big (+ mins-big effort)))
+                              ((tdw/unestimated-p) (cl-incf n-unestimated))
+                              ((tdw/quick-win-p) (setq mins-quick (+ mins-quick effort)))
+                              (t (setq mins-other (+ mins-other effort))))))))
                 nil nil))))))
       (let ((fmt (lambda (m) (format "%d:%02d" (/ m 60) (% m 60)))))
-        (list (funcall fmt (+ mins-a mins-b mins-c mins-d))
-              (funcall fmt mins-a)
-              (funcall fmt mins-b)
-              (funcall fmt mins-c)
-              (funcall fmt mins-d)))))
+        (list (funcall fmt (+ mins-fire mins-big mins-quick mins-other))
+              (funcall fmt mins-fire)
+              (funcall fmt mins-big)
+              (funcall fmt mins-quick)
+              (funcall fmt mins-other)
+              n-unestimated))))
+
+  ;;; ——— Sanity View: Capacity warnings ———
+
+  (defun tdw/sanity-view-warnings ()
+    "Return alist of (SECTION . WARNING-STRING) for capacity violations."
+    (let ((n-fire 0) (n-vh-urg 0) (n-h-urg 0) (n-vh-imp 0) (n-h-imp 0)
+          (warnings nil))
+      (dolist (file (org-agenda-files))
+        (let ((expanded-file (expand-file-name file)))
+          (when (file-exists-p expanded-file)
+            (with-current-buffer (find-file-noselect expanded-file)
+              (org-with-wide-buffer
+               (goto-char (point-min))
+               (org-map-entries
+                (lambda ()
+                  (let ((todo (org-get-todo-state))
+                        (tags (org-get-tags nil t)))
+                    (when (member todo '("NEXT" "TODO"))
+                      (when (member "on_fire" tags) (cl-incf n-fire))
+                      (when (member "vh_urgency" tags) (cl-incf n-vh-urg))
+                      (when (member "h_urgency" tags) (cl-incf n-h-urg))
+                      (when (member "vh_impact" tags) (cl-incf n-vh-imp))
+                      (when (member "h_impact" tags) (cl-incf n-h-imp)))))
+                nil nil))))))
+      (when (> n-fire 5)
+        (push (cons "On Fire"
+                     (format " *** WARNING: %d on-fire items — remove %d ***" n-fire (- n-fire 5)))
+              warnings))
+      (when (or (> n-vh-urg 1) (> n-h-urg 2) (> n-vh-imp 1) (> n-h-imp 2))
+        (let ((parts nil))
+          (when (> n-vh-urg 1) (push (format "%d vh_urgency (max 1)" n-vh-urg) parts))
+          (when (> n-h-urg 2) (push (format "%d h_urgency (max 2)" n-h-urg) parts))
+          (when (> n-vh-imp 1) (push (format "%d vh_impact (max 1)" n-vh-imp) parts))
+          (when (> n-h-imp 2) (push (format "%d h_impact (max 2)" n-h-imp) parts))
+          (push (cons "Big Rocks"
+                       (format " *** WARNING: %s ***" (string-join (nreverse parts) ", ")))
+                warnings)))
+      warnings))
+
+  ;;; ——— Sanity View: Header updater ———
 
   (defun tdw/update-sanity-view-headers ()
-    "Update headers in the current agenda buffer with fresh effort totals."
+    "Update headers in the current agenda buffer with fresh effort totals and warnings."
     (let ((inhibit-read-only t))
       (save-excursion
         (goto-char (point-min))
-        ;; Detect if we are in Sanity/Decision View by looking for our header markers
+        ;; Detect if we are in Sanity/Decision View
         (when (or (re-search-forward "Sanity View" nil t)
                   (re-search-forward "Decision View" nil t)
+                  (re-search-forward "On Fire" nil t)
+                  (re-search-forward "Big Rocks" nil t)
                   (re-search-forward "Hot Tickets" nil t)
                   (re-search-forward "For Today" nil t)
                   (re-search-forward "Priority C" nil t)
                   (re-search-forward "Priority D" nil t))
-          (pcase-let ((`(,total ,effort-a ,effort-b ,effort-c ,effort-d) (tdw/get-sanity-effort-totals)))
+          (pcase-let ((`(,total ,effort-fire ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
+            ;; Update Sanity View total
             (goto-char (point-min))
             (while (re-search-forward "\\(Sanity View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
               (replace-match (format "Sanity View (Total Effort: %s)" total) t t nil 1))
+            ;; Decision View total (kept for backward compat)
             (goto-char (point-min))
             (while (re-search-forward "\\(Decision View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
               (replace-match (format "Decision View (Total Effort: %s)" total) t t nil 1))
+            ;; On Fire effort
+            (goto-char (point-min))
+            (while (re-search-forward "\\(On Fire\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "On Fire (%s)" effort-fire) t t nil 1))
+            ;; Big Rocks effort
+            (goto-char (point-min))
+            (while (re-search-forward "\\(Big Rocks\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "Big Rocks (%s)" effort-big) t t nil 1))
+            ;; Quick Wins effort
+            (goto-char (point-min))
+            (while (re-search-forward "\\(Quick Wins\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "Quick Wins (%s)" effort-quick) t t nil 1))
+            ;; Other Rocks effort
+            (goto-char (point-min))
+            (while (re-search-forward "\\(Other Rocks\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "Other Rocks (%s)" effort-other) t t nil 1))
+            ;; Hot Tickets / For Today / Priority C / Priority D (Decision View compat)
             (goto-char (point-min))
             (while (re-search-forward "\\(Hot Tickets\\( (Priority A - [^)]*)\\)?\\)" nil t)
-              (replace-match (format "Hot Tickets (Priority A - %s)" effort-a) t t nil 1))
+              (replace-match (format "Hot Tickets (Priority A - %s)" effort-fire) t t nil 1))
+            ;; Unestimated count
+            (goto-char (point-min))
+            (while (re-search-forward "\\(Unestimated\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "Unestimated (%d items)" n-unest) t t nil 1))
             (goto-char (point-min))
             (while (re-search-forward "\\(For Today\\( (Priority B - [^)]*)\\)?\\)" nil t)
-              (replace-match (format "For Today (Priority B - %s)" effort-b) t t nil 1))
-            (goto-char (point-min))
-            (while (re-search-forward "\\(Priority C\\( ([^)]*)\\)?\\)" nil t)
-              (replace-match (format "Priority C (%s)" effort-c) t t nil 1))
-            (goto-char (point-min))
-            (while (re-search-forward "\\(Priority D\\( ([^)]*)\\)?\\)" nil t)
-              (replace-match (format "Priority D (%s)" effort-d) t t nil 1)))))))
+              (replace-match (format "For Today (Priority B - %s)" effort-big) t t nil 1))
+            ;; Inject capacity warnings
+            (let ((warnings (tdw/sanity-view-warnings)))
+              (dolist (w warnings)
+                (goto-char (point-min))
+                (when (re-search-forward (regexp-quote (car w)) nil t)
+                  (end-of-line)
+                  (insert (cdr w))))))))))
 
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
 
@@ -843,8 +942,8 @@ Inheritance respects `my/org-gtd-inherit-priority' and
             (message "Effort: %s" new-effort))
         (message "No task at point"))))
 
-  (defun tdw-agenda-effort-increment () (interactive) (tdw/agenda-adjust-effort 15))
-  (defun tdw-agenda-effort-decrement () (interactive) (tdw/agenda-adjust-effort -15))
+  (defun tdw-agenda-effort-increment () (interactive) (tdw/agenda-adjust-effort 5))
+  (defun tdw-agenda-effort-decrement () (interactive) (tdw/agenda-adjust-effort -5))
 
   (defvar tdw-agenda-comma-map (make-sparse-keymap)
     "Keymap for quick adjustments in org-agenda.")
@@ -948,39 +1047,127 @@ ELEMENT can be:
                    (type . someday)
                    (priority . D))
                   )))))
+
+  ;;; ——— Sanity View ———
+
   (defun tdw-sanity-view ()
-    "A highly focused GTD view: Today's schedule/habits, Priority A ('hot tickets') and Priority B ('for today') only."
+    "Tag-based GTD view: Calendar/Habits, On Fire, Big Rocks, Quick Wins, Other Rocks, Delegated."
     (interactive)
-    (pcase-let ((`(,total ,effort-a ,effort-b ,effort-c ,effort-d) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-fire ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
       (org-gtd-view-show
        `((name . ,(format "Sanity View (Total Effort: %s)" total))
          (prefix . (effort "—"))
          (blocks . (
-                    ;; 0. Today's Schedule (Calendar + Habits) — identical to engage view
+                    ;; 0. Today's Schedule (Calendar + Habits)
                     ((name . "Today's Schedule")
                      (block-type . calendar-day))
 
-                    ;; 1. Overdue Delegated check-ins
-                    ((name . "Overdue Delegated")
+                    ;; 1. Delegated: overdue
+                    ((name . "Delegated (Overdue)")
                      (type . delegated)
                      (when . past))
 
-                    ;; 2. Delegated check-ins due today
-                    ((name . "Delegated Due Today")
+                    ;; 2. Delegated: due today
+                    ((name . "Delegated (Due Today)")
                      (type . delegated)
                      (when . today))
 
-                    ;; 3. "A" Items
-                    ((name . ,(format "Hot Tickets (Priority A - %s)" effort-a))
+                    ;; 3. On Fire — tasks tagged :on_fire:
+                    ((name . ,(format "On Fire (%s)" effort-fire))
                      (type . next-action)
                      (todo . ("NEXT" "TODO"))
-                     (priority . A))
+                     (tags . ("on_fire")))
 
-                    ;; 4. "B" Items
-                    ((name . ,(format "For Today (Priority B - %s)" effort-b))
-                     (type . next-action)
-                     (todo . ("NEXT" "TODO"))
-                     (priority . B))
+                    ;; 4. Big Rocks — any h_/vh_ urgency or impact
+                    ;;    Uses native block for OR logic across tags
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\""
+                                ((org-agenda-overriding-header ,(format "Big Rocks (%s)" effort-big))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-12:(org-gtd-agenda--resolve-prefix-chain '(effort \"—\") 12) ")))
+                                 (org-agenda-skip-function
+                                  '(let ((end (org-entry-end-position))
+                                         (tags (org-get-tags nil t)))
+                                     (if (and (not (org-entry-is-done-p))
+                                              (not (member "on_fire" tags))
+                                              (cl-some (lambda (tag)
+                                                         (member tag '("h_urgency" "vh_urgency"
+                                                                       "h_impact" "vh_impact")))
+                                                       tags))
+                                         nil
+                                       end)))))))
+
+                    ;; 5. Quick Wins — effort > 0 and <= 30 min, not on_fire, not big_rock
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+Effort<=\"0:30\""
+                                ((org-agenda-overriding-header ,(format "Quick Wins (%s)" effort-quick))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-12:(org-gtd-agenda--resolve-prefix-chain '(effort \"—\") 12) ")))
+                                 (org-agenda-skip-function
+                                  '(let* ((end (org-entry-end-position))
+                                          (tags (org-get-tags nil t))
+                                          (effort-str (org-entry-get (point) "EFFORT"))
+                                          (effort-mins (when (and effort-str
+                                                                  (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
+                                                         (+ (* 60 (string-to-number (match-string 1 effort-str)))
+                                                            (string-to-number (match-string 2 effort-str))))))
+                                     (if (and (not (org-entry-is-done-p))
+                                              (not (member "on_fire" tags))
+                                              (not (cl-some (lambda (tag)
+                                                              (member tag '("h_urgency" "vh_urgency"
+                                                                            "h_impact" "vh_impact")))
+                                                            tags))
+                                              effort-mins (> effort-mins 0))
+                                         nil
+                                       end)))))))
+
+                    ;; 6. Other Rocks — estimated > 30 min, no on_fire, no big_rock
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\""
+                                ((org-agenda-overriding-header ,(format "Other Rocks (%s)" effort-other))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-12:(org-gtd-agenda--resolve-prefix-chain '(effort \"—\") 12) ")))
+                                 (org-agenda-skip-function
+                                  '(let* ((end (org-entry-end-position))
+                                          (tags (org-get-tags nil t))
+                                          (effort-str (org-entry-get (point) "EFFORT"))
+                                          (effort-mins (when (and effort-str
+                                                                  (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
+                                                         (+ (* 60 (string-to-number (match-string 1 effort-str)))
+                                                            (string-to-number (match-string 2 effort-str))))))
+                                     (if (and (not (org-entry-is-done-p))
+                                              (not (member "on_fire" tags))
+                                              (not (cl-some (lambda (tag)
+                                                              (member tag '("h_urgency" "vh_urgency"
+                                                                            "h_impact" "vh_impact")))
+                                                            tags))
+                                              effort-mins (> effort-mins 30))
+                                         nil
+                                       end)))))))
+
+                    ;; 7. Unestimated — no effort or effort = 0
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\""
+                                ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-unest))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-12:(org-gtd-agenda--resolve-prefix-chain '(effort \"—\") 12) ")))
+                                 (org-agenda-skip-function
+                                  '(let* ((end (org-entry-end-position))
+                                          (tags (org-get-tags nil t))
+                                          (effort-str (org-entry-get (point) "EFFORT"))
+                                          (effort-mins (when (and effort-str
+                                                                  (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
+                                                         (+ (* 60 (string-to-number (match-string 1 effort-str)))
+                                                            (string-to-number (match-string 2 effort-str))))))
+                                     (if (and (not (org-entry-is-done-p))
+                                              (not (member "on_fire" tags))
+                                              (not (cl-some (lambda (tag)
+                                                              (member tag '("h_urgency" "vh_urgency"
+                                                                            "h_impact" "vh_impact")))
+                                                            tags))
+                                              (or (not effort-mins) (<= effort-mins 0)))
+                                         nil
+                                       end)))))))
                     ))))))
 
   (defun tdw-decision-view ()
