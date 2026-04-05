@@ -1009,7 +1009,8 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     (define-key org-agenda-mode-map (kbd "-") #'tdw-agenda-effort-decrement)
     (define-key org-agenda-mode-map (kbd "u") #'tdw/agenda-cycle-urgency)
     (define-key org-agenda-mode-map (kbd "i") #'tdw/agenda-cycle-impact)
-    (define-key org-agenda-mode-map (kbd "I") #'org-agenda-diary-entry))
+    (define-key org-agenda-mode-map (kbd "I") #'org-agenda-diary-entry)
+    (define-key org-agenda-mode-map (kbd "f") #'tdw/agenda-toggle-on-fire))
 
   (with-eval-after-load 'org-gtd-agenda
     (defun org-gtd-agenda--resolve-effort ()
@@ -1123,6 +1124,24 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
     "Cycle impact tag: l → m → h → vh → l."
     (interactive)
     (tdw/agenda-cycle-tag "impact" '("l" "m" "h" "vh")))
+
+  (defun tdw/agenda-toggle-on-fire ()
+    "Toggle :on_fire: tag on the task at point."
+    (interactive)
+    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
+                         (org-agenda-error)))
+           (buffer (marker-buffer hdmarker))
+           (pos (marker-position hdmarker))
+           has-tag)
+      (with-current-buffer buffer
+        (widen)
+        (goto-char pos)
+        (setq has-tag (member "on_fire" (org-get-tags nil t)))
+        (if has-tag
+            (org-toggle-tag "on_fire" 'off)
+          (org-toggle-tag "on_fire" 'on)))
+      (org-agenda-redo-all)
+      (message "%s on_fire" (if has-tag "Removed" "Added"))))
 
   ;;; ——— Sanity View ———
 
