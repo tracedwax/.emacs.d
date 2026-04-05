@@ -1111,7 +1111,8 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
     "Tag-based GTD view: Calendar/Habits, On Fire, Big Rocks, Quick Wins, Other Rocks, Delegated."
     (interactive)
     (pcase-let ((`(,total ,effort-fire ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
-      (let ((org-agenda-todo-keyword-format ""))
+      (let ((org-agenda-todo-keyword-format "")
+            (org-agenda-cmp-user-defined #'tdw/agenda-cmp-score))
        (org-gtd-view-show
        `((name . ,(format "Sanity View (Total Effort: %s)" total))
          (prefix-width . 20)
@@ -1186,6 +1187,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 ((org-agenda-overriding-header ,(format "Other Rocks (%s)" effort-other))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-sorting-strategy '(user-defined-down priority-up alpha-up))
                                  (org-agenda-skip-function
                                   '(let* ((end (org-entry-end-position))
                                           (tags (org-get-tags nil t))
