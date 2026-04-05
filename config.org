@@ -1075,6 +1075,52 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
                    (priority . D))
                   )))))
 
+
+  ;;; ——— Sanity View: Urgency/Impact cycling ———
+
+  (defun tdw/agenda-cycle-tag (prefix levels)
+    "Cycle a tag with PREFIX through LEVELS on the task at point.
+PREFIX is e.g. \"urgency\" or \"impact\".
+LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
+    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
+                         (org-agenda-error)))
+           (buffer (marker-buffer hdmarker))
+           (pos (marker-position hdmarker))
+           current-level current-tag next-level next-tag)
+      (with-current-buffer buffer
+        (widen)
+        (goto-char pos)
+        (let ((tags (org-get-tags nil t)))
+          ;; Find current level
+          (setq current-level
+                (cl-find-if (lambda (lvl)
+                              (member (format "%s_%s" lvl prefix) tags))
+                            levels))
+          (setq current-tag (when current-level
+                              (format "%s_%s" current-level prefix)))
+          ;; Determine next level (cycle)
+          (setq next-level
+                (if current-level
+                    (let ((idx (cl-position current-level levels :test #'equal)))
+                      (nth (mod (1+ idx) (length levels)) levels))
+                  (car levels)))
+          (setq next-tag (format "%s_%s" next-level prefix))
+          ;; Remove old, add new
+          (when current-tag (org-toggle-tag current-tag 'off))
+          (org-toggle-tag next-tag 'on)))
+      (org-agenda-redo-all)
+      (message "Set %s → %s" prefix next-level)))
+
+  (defun tdw/agenda-cycle-urgency ()
+    "Cycle urgency tag: l → m → h → vh → l."
+    (interactive)
+    (tdw/agenda-cycle-tag "urgency" '("l" "m" "h" "vh")))
+
+  (defun tdw/agenda-cycle-impact ()
+    "Cycle impact tag: l → m → h → vh → l."
+    (interactive)
+    (tdw/agenda-cycle-tag "impact" '("l" "m" "h" "vh")))
+
   ;;; ——— Sanity View ———
 
 
