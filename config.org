@@ -1084,6 +1084,7 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
       (let ((org-agenda-todo-keyword-format ""))
        (org-gtd-view-show
        `((name . ,(format "Sanity View (Total Effort: %s)" total))
+         (prefix-width . 20)
          (prefix . (effort " " score " — "))
          (blocks . (
                     ;; 0. Today's Schedule (Calendar + Habits)
