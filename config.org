@@ -775,10 +775,10 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                tags)))
 
   (defun tdw/quick-win-p ()
-    "Return non-nil if current entry has effort > 0 and <= 30 minutes."
+    "Return non-nil if current entry has effort > 0 and <= 5 minutes."
     (let* ((effort-str (org-entry-get (point) "EFFORT"))
            (mins (when effort-str (tdw/get-effort-minutes effort-str))))
-      (and mins (> mins 0) (<= mins 30))))
+      (and mins (> mins 0) (<= mins 5))))
 
   (defun tdw/unestimated-p ()
     "Return non-nil if current entry has no effort or effort = 0."
@@ -1097,9 +1097,9 @@ ELEMENT can be:
                                          nil
                                        end)))))))
 
-                    ;; 5. Quick Wins — effort > 0 and <= 30 min, not on_fire, not big_rock
+                    ;; 5. Quick Wins — effort > 0 and <= 5 min, not on_fire, not big_rock
                     ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+Effort<=\"0:30\""
+                                "LEVEL>0+ORG_GTD=\"Actions\"+Effort<=\"0:05\""
                                 ((org-agenda-overriding-header ,(format "Quick Wins (%s)" effort-quick))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-12:(org-gtd-agenda--resolve-prefix-chain '(effort \"—\") 12) ")))
@@ -1121,7 +1121,7 @@ ELEMENT can be:
                                          nil
                                        end)))))))
 
-                    ;; 6. Other Rocks — estimated > 30 min, no on_fire, no big_rock
+                    ;; 6. Other Rocks — estimated > 5 min, no on_fire, no big_rock
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\""
                                 ((org-agenda-overriding-header ,(format "Other Rocks (%s)" effort-other))
@@ -1141,7 +1141,7 @@ ELEMENT can be:
                                                               (member tag '("h_urgency" "vh_urgency"
                                                                             "h_impact" "vh_impact")))
                                                             tags))
-                                              effort-mins (> effort-mins 30))
+                                              effort-mins (> effort-mins 5))
                                          nil
                                        end)))))))
 
