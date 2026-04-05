@@ -1024,14 +1024,31 @@ ELEMENT can be:
 - \\='area-of-focus - CATEGORY property
 - \\='file-name - buffer file base name
 - \\='effort - EFFORT property
+- \\='score - urgency/impact tag abbreviation
 - a string - returned as-is (literal)"
       (pcase element
         ('project (org-gtd-agenda--resolve-project))
         ('area-of-focus (org-gtd-agenda--resolve-area-of-focus))
         ('file-name (org-gtd-agenda--resolve-file-name))
         ('effort (org-gtd-agenda--resolve-effort))
+        ('score (org-gtd-agenda--resolve-score))
         ((pred stringp) element)
         (_ nil))))
+
+  (defun org-gtd-agenda--resolve-score ()
+    "Return compact urgency/impact string like 'U:vh I:h' from tags at point."
+    (let* ((tags (org-get-tags nil t))
+           (urg (cond ((member "vh_urgency" tags) "vh")
+                      ((member "h_urgency" tags)  "hi")
+                      ((member "m_urgency" tags)  "md")
+                      ((member "l_urgency" tags)  "lo")
+                      (t "--")))
+           (imp (cond ((member "vh_impact" tags)  "vh")
+                      ((member "h_impact" tags)   "hi")
+                      ((member "m_impact" tags)   "md")
+                      ((member "l_impact" tags)   "lo")
+                      (t "--"))))
+      (format "U:%s I:%s" urg imp)))
 
   (defun tdw-someday-priority-view ()
     "An Engage-style view for Someday/Maybe items with priorities C and D."
@@ -1056,7 +1073,7 @@ ELEMENT can be:
     (pcase-let ((`(,total ,effort-fire ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
       (org-gtd-view-show
        `((name . ,(format "Sanity View (Total Effort: %s)" total))
-         (prefix . (effort "—"))
+         (prefix . (effort " " score " — "))
          (blocks . (
                     ;; 0. Today's Schedule (Calendar + Habits)
                     ((name . "Today's Schedule")
@@ -1084,7 +1101,7 @@ ELEMENT can be:
                                 "LEVEL>0+ORG_GTD=\"Actions\""
                                 ((org-agenda-overriding-header ,(format "Big Rocks (%s)" effort-big))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-12:(org-gtd-agenda--resolve-prefix-chain '(effort \"—\") 12) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
                                  (org-agenda-skip-function
                                   '(let ((end (org-entry-end-position))
                                          (tags (org-get-tags nil t)))
@@ -1102,7 +1119,7 @@ ELEMENT can be:
                                 "LEVEL>0+ORG_GTD=\"Actions\"+Effort<=\"0:05\""
                                 ((org-agenda-overriding-header ,(format "Quick Wins (%s)" effort-quick))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-12:(org-gtd-agenda--resolve-prefix-chain '(effort \"—\") 12) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
                                  (org-agenda-skip-function
                                   '(let* ((end (org-entry-end-position))
                                           (tags (org-get-tags nil t))
@@ -1126,7 +1143,7 @@ ELEMENT can be:
                                 "LEVEL>0+ORG_GTD=\"Actions\""
                                 ((org-agenda-overriding-header ,(format "Other Rocks (%s)" effort-other))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-12:(org-gtd-agenda--resolve-prefix-chain '(effort \"—\") 12) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
                                  (org-agenda-skip-function
                                   '(let* ((end (org-entry-end-position))
                                           (tags (org-get-tags nil t))
@@ -1141,7 +1158,7 @@ ELEMENT can be:
                                                               (member tag '("h_urgency" "vh_urgency"
                                                                             "h_impact" "vh_impact")))
                                                             tags))
-                                              effort-mins (> effort-mins 5))
+                                              (or (not effort-mins) (> effort-mins 5)))
                                          nil
                                        end)))))))
 
@@ -1150,7 +1167,7 @@ ELEMENT can be:
                                 "LEVEL>0+ORG_GTD=\"Actions\""
                                 ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-unest))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-12:(org-gtd-agenda--resolve-prefix-chain '(effort \"—\") 12) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
                                  (org-agenda-skip-function
                                   '(let* ((end (org-entry-end-position))
                                           (tags (org-get-tags nil t))
