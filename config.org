@@ -1140,7 +1140,6 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
         (if has-tag
             (org-toggle-tag "on_fire" 'off)
           (org-toggle-tag "on_fire" 'on)))
-      (org-agenda-redo-all)
       (message "%s on_fire" (if has-tag "Removed" "Added"))))
 
   ;;; ——— Sanity View ———
