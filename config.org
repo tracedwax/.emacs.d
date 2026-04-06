@@ -1312,7 +1312,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                                               (member tag '("h_urgency" "vh_urgency"
                                                                             "h_impact" "vh_impact")))
                                                             tags))
-                                              (or (not effort-mins) (> effort-mins 5)))
+                                              (and effort-mins (> effort-mins 5)))
                                          nil
                                        end)))))))
 
