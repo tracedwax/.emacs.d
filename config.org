@@ -1238,7 +1238,25 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
          (prefix-width . 20)
          (prefix . (effort " " score " — "))
          (blocks . (
-                    ;; 0. On Fire — tasks tagged :on_fire:
+                    ;; 0. Daily Rituals — undone habits for today (Priority A & B)
+                    ((native . (agenda ""
+                                ((org-agenda-overriding-header "⏰ Daily Rituals")
+                                 (org-agenda-span 1)
+                                 (org-agenda-start-day nil)
+                                 (org-agenda-entry-types '(:scheduled))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((agenda . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))
+                                 (org-agenda-skip-function
+                                  '(let* ((dominated (org-entry-get (point) "STYLE"))
+                                          (is-habit (string= (or dominated "") "habit"))
+                                          (pri (org-entry-get (point) "PRIORITY"))
+                                          (done (org-entry-is-done-p)))
+                                     (if (and is-habit (not done) (member pri '("A" "B")))
+                                         nil
+                                       (outline-next-heading))))))))
+
+                    ;; 1. On Fire — tasks tagged :on_fire:
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+on_fire"
                                 ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
@@ -1246,15 +1264,16 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
 
-                    ;; 1. Today's Schedule (Calendar + Habits)
+                    ;; 2. Today's Schedule (Calendar + Habits)
                     ((native . (agenda ""
                                 ((org-agenda-span 1)
                                  (org-agenda-start-day nil)
                                  (org-agenda-skip-additional-timestamps-same-entry t)
                                  (org-agenda-skip-function 'org-gtd-view-lang--skip-unless-calendar-or-habit)
+                                 (org-agenda-prefix-format '((agenda . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
                                  (org-agenda-sorting-strategy '(priority-down time-up alpha-up))))))
 
-                    ;; 2. Delegated: overdue
+                    ;; 3. Delegated: overdue
                     ((name . "Delegated (Overdue)")
                      (type . delegated)
                      (when . past))
