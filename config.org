@@ -1227,10 +1227,12 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
          (prefix . (effort " " score " — "))
          (blocks . (
                     ;; 0. On Fire — tasks tagged :on_fire:
-                    ((name . ,(format "🔥🔥 On Fire (%s)" effort-fire))
-                     (type . next-action)
-                     (todo . ("NEXT" "TODO"))
-                     (tags . ("on_fire")))
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+on_fire"
+                                ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
 
                     ;; 1. Today's Schedule (Calendar + Habits)
                     ((name . "Today's Schedule")
