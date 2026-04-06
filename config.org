@@ -944,7 +944,12 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                  (new-effort (org-duration-from-minutes new-mins)))
             (org-with-point-at marker
               (org-entry-put nil "Effort" new-effort))
-            (org-agenda-redo)
+            ;; Update effort prefix in-place instead of full refresh
+            (let ((inhibit-read-only t))
+              (save-excursion
+                (beginning-of-line)
+                (when (re-search-forward "[0-9]+:[0-9]+" (line-end-position) t)
+                  (replace-match new-effort))))
             (message "Effort: %s" new-effort))
         (message "No task at point"))))
 
