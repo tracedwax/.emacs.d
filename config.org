@@ -843,9 +843,12 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                       (when (member "vh_impact" tags) (cl-incf n-vh-imp))
                       (when (member "h_impact" tags) (cl-incf n-h-imp)))))
                 nil nil))))))
-      (when (> n-fire 5)
+      (if (> n-fire 5)
+          (push (cons "On Fire"
+                       (format " *** WARNING: %d on-fire items — remove %d ***" n-fire (- n-fire 5)))
+                warnings)
         (push (cons "On Fire"
-                     (format " *** WARNING: %d on-fire items — remove %d ***" n-fire (- n-fire 5)))
+                     " [blocking someone | due <24h | big commitment at risk]")
               warnings))
       (when (or (> n-vh-urg 1) (> n-h-urg 2) (> n-vh-imp 1) (> n-h-imp 2))
         (let ((parts nil))
