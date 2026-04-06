@@ -1192,25 +1192,25 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
          (prefix-width . 20)
          (prefix . (effort " " score " — "))
          (blocks . (
-                    ;; 0. Today's Schedule (Calendar + Habits)
-                    ((name . "Today's Schedule")
-                     (block-type . calendar-day))
-
-                    ;; 1. Delegated: overdue
-                    ((name . "Delegated (Overdue)")
-                     (type . delegated)
-                     (when . past))
-
-                    ;; 2. Delegated: due today
-                    ((name . "Delegated (Due Today)")
-                     (type . delegated)
-                     (when . today))
-
-                    ;; 3. On Fire — tasks tagged :on_fire:
+                    ;; 0. On Fire — tasks tagged :on_fire:
                     ((name . ,(format "🔥🔥 On Fire (%s)" effort-fire))
                      (type . next-action)
                      (todo . ("NEXT" "TODO"))
                      (tags . ("on_fire")))
+
+                    ;; 1. Today's Schedule (Calendar + Habits)
+                    ((name . "Today's Schedule")
+                     (block-type . calendar-day))
+
+                    ;; 2. Delegated: overdue
+                    ((name . "Delegated (Overdue)")
+                     (type . delegated)
+                     (when . past))
+
+                    ;; 3. Delegated: due today
+                    ((name . "Delegated (Due Today)")
+                     (type . delegated)
+                     (when . today))
 
                     ;; 4. Big Rocks — any h_/vh_ urgency or impact
                     ;;    Uses native block for OR logic across tags
