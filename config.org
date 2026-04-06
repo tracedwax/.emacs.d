@@ -892,16 +892,16 @@ Inheritance respects `my/org-gtd-inherit-priority' and
               (replace-match (format "🔥🔥 On Fire (%s)" effort-fire) t t nil 1))
             ;; Big Rocks effort
             (goto-char (point-min))
-            (while (re-search-forward "\\(🪨🪨 Big Rocks\\( ([^)]*)\\)?\\)" nil t)
-              (replace-match (format "🪨🪨 Big Rocks (%s)" effort-big) t t nil 1))
+            (while (re-search-forward "\\(🪨🪨 Big Rocks\\( ([^)]*)\\)? ?🪨?🪨?\\)" nil t)
+              (replace-match (format "🪨🪨 Big Rocks (%s) 🪨🪨" effort-big) t t nil 1))
             ;; Quick Wins effort
             (goto-char (point-min))
-            (while (re-search-forward "\\(💨💨 Quick Wins\\( ([^)]*)\\)?\\)" nil t)
-              (replace-match (format "💨💨 Quick Wins (%s)" effort-quick) t t nil 1))
+            (while (re-search-forward "\\(💨💨 Quick Wins\\( ([^)]*)\\)? ?💨?💨?\\)" nil t)
+              (replace-match (format "💨💨 Quick Wins (%s) 💨💨" effort-quick) t t nil 1))
             ;; Other Rocks effort
             (goto-char (point-min))
-            (while (re-search-forward "\\(🪨 Other Rocks\\( ([^)]*)\\)?\\)" nil t)
-              (replace-match (format "🪨 Other Rocks (%s)" effort-other) t t nil 1))
+            (while (re-search-forward "\\(🪨 Other Rocks\\( ([^)]*)\\)? ?🪨?\\)" nil t)
+              (replace-match (format "🪨 Other Rocks (%s) 🪨" effort-other) t t nil 1))
             ;; Hot Tickets / For Today / Priority C / Priority D (Decision View compat)
             (goto-char (point-min))
             (while (re-search-forward "\\(Hot Tickets\\( (Priority A - [^)]*)\\)?\\)" nil t)
@@ -1213,7 +1213,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                     ;;    Uses native block for OR logic across tags
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\""
-                                ((org-agenda-overriding-header ,(format "🪨🪨 Big Rocks (%s)" effort-big))
+                                ((org-agenda-overriding-header ,(format "🪨🪨 Big Rocks (%s) 🪨🪨" effort-big))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))
@@ -1232,7 +1232,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                     ;; 5. Quick Wins — effort > 0 and <= 5 min, not on_fire, not big_rock
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+Effort<=\"0:05\""
-                                ((org-agenda-overriding-header ,(format "💨💨 Quick Wins (%s)" effort-quick))
+                                ((org-agenda-overriding-header ,(format "💨💨 Quick Wins (%s) 💨💨" effort-quick))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))
@@ -1257,7 +1257,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                     ;; 6. Other Rocks — estimated > 5 min, no on_fire, no big_rock
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\""
-                                ((org-agenda-overriding-header ,(format "🪨 Other Rocks (%s)" effort-other))
+                                ((org-agenda-overriding-header ,(format "🪨 Other Rocks (%s) 🪨" effort-other))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))
