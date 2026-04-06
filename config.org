@@ -1250,9 +1250,12 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-skip-function
                                   '(let* ((dominated (org-entry-get (point) "STYLE"))
                                           (is-habit (string= (or dominated "") "habit"))
-                                          (pri (org-entry-get (point) "PRIORITY"))
-                                          (done (org-entry-is-done-p)))
-                                     (if (and is-habit (not done) (member pri '("A" "B")))
+                                          (done (org-entry-is-done-p))
+                                          (hdl (org-get-heading t t t t)))
+                                     (if (and is-habit (not done)
+                                              (or (string-match-p "Set daily meeting timers" hdl)
+                                                  (string-match-p "GTD Daily Plan" hdl)
+                                                  (string-match-p "Start Time Out" hdl)))
                                          nil
                                        (outline-next-heading))))))))
 
@@ -1269,7 +1272,14 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 ((org-agenda-span 1)
                                  (org-agenda-start-day nil)
                                  (org-agenda-skip-additional-timestamps-same-entry t)
-                                 (org-agenda-skip-function 'org-gtd-view-lang--skip-unless-calendar-or-habit)
+                                 (org-agenda-skip-function
+                                  '(let ((hdl (org-get-heading t t t t)))
+                                     (if (and (stringp hdl)
+                                              (or (string-match-p "Set daily meeting timers" hdl)
+                                                  (string-match-p "GTD Daily Plan" hdl)
+                                                  (string-match-p "Start Time Out" hdl)))
+                                         (outline-next-heading)
+                                       (org-gtd-view-lang--skip-unless-calendar-or-habit))))
                                  (org-agenda-prefix-format '((agenda . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
                                  (org-agenda-sorting-strategy '(priority-down time-up alpha-up))))))
 
