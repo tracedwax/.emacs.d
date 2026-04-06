@@ -922,7 +922,9 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                 (goto-char (point-min))
                 (when (re-search-forward (regexp-quote (car w)) nil t)
                   (end-of-line)
-                  (insert (cdr w))))))))))
+                  (insert (cdr w)))))
+            ;; Scroll to top so On Fire is visible
+            (goto-char (point-min)))))))
 
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
 
@@ -1068,7 +1070,7 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
                       ((member "m_impact" tags)   "md")
                       ((member "l_impact" tags)   "lo")
                       (t "--")))
-           (fire (if (member "on_fire" tags) "🔥" "")))
+           (fire (if (member "on_fire" tags) "🔥 " "")))
       (format "%sU:%s I:%s" fire urg imp)))
 
   (defun tdw-someday-priority-view ()
@@ -1119,7 +1121,16 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           ;; Remove old, add new
           (when current-tag (org-toggle-tag current-tag 'off))
           (org-toggle-tag next-tag 'on)))
-      (org-agenda-redo-all)
+      ;; Update prefix in-place instead of full refresh
+      (let ((inhibit-read-only t)
+            (new-score (with-current-buffer buffer
+                         (org-with-wide-buffer
+                          (goto-char pos)
+                          (org-gtd-agenda--resolve-score)))))
+        (save-excursion
+          (beginning-of-line)
+          (when (re-search-forward "\\(🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+            (replace-match new-score))))
       (message "Set %s → %s" prefix next-level)))
 
   (defun tdw/agenda-cycle-urgency ()
@@ -1153,11 +1164,11 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (if has-tag
               ;; Remove 🔥 from prefix
-              (when (re-search-forward "🔥\\(U:\\)" (line-end-position) t)
+              (when (re-search-forward "🔥 \\(U:\\)" (line-end-position) t)
                 (replace-match "\\1"))
             ;; Add 🔥 before U:
             (when (re-search-forward "\\(U:\\)" (line-end-position) t)
-              (replace-match "🔥\\1")))))
+              (replace-match "🔥 \\1")))))
       (message "%s on_fire" (if has-tag "Removed" "Added"))))
 
   ;;; ——— Sanity View ———
