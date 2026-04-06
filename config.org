@@ -1067,8 +1067,9 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
                       ((member "h_impact" tags)   "hi")
                       ((member "m_impact" tags)   "md")
                       ((member "l_impact" tags)   "lo")
-                      (t "--"))))
-      (format "U:%s I:%s" urg imp)))
+                      (t "--")))
+           (fire (if (member "on_fire" tags) "🔥" "")))
+      (format "%sU:%s I:%s" fire urg imp)))
 
   (defun tdw-someday-priority-view ()
     "An Engage-style view for Someday/Maybe items with priorities C and D."
@@ -1146,6 +1147,17 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
         (if has-tag
             (org-toggle-tag "on_fire" 'off)
           (org-toggle-tag "on_fire" 'on)))
+      ;; Update prefix in-place
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (beginning-of-line)
+          (if has-tag
+              ;; Remove 🔥 from prefix
+              (when (re-search-forward "🔥\\(U:\\)" (line-end-position) t)
+                (replace-match "\\1"))
+            ;; Add 🔥 before U:
+            (when (re-search-forward "\\(U:\\)" (line-end-position) t)
+              (replace-match "🔥\\1")))))
       (message "%s on_fire" (if has-tag "Removed" "Added"))))
 
   ;;; ——— Sanity View ———
