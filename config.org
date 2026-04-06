@@ -844,11 +844,11 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                       (when (member "h_impact" tags) (cl-incf n-h-imp)))))
                 nil nil))))))
       (if (> n-fire 5)
-          (push (cons "On Fire"
-                       (format " *** WARNING: %d on-fire items — remove %d ***" n-fire (- n-fire 5)))
+          (push (cons "🔥🔥 On Fire"
+                       (format " *** WARNING: %d on-fire items — remove %d *** 🔥🔥" n-fire (- n-fire 5)))
                 warnings)
-        (push (cons "On Fire"
-                     " [blocking someone | due <24h | big commitment at risk]")
+        (push (cons "🔥🔥 On Fire"
+                     " [blocking someone | due <24h | big commitment at risk] 🔥🔥")
               warnings))
       (when (or (> n-vh-urg 1) (> n-h-urg 2) (> n-vh-imp 1) (> n-h-imp 2))
         (let ((parts nil))
@@ -871,7 +871,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
         ;; Detect if we are in Sanity/Decision View
         (when (or (re-search-forward "Sanity View" nil t)
                   (re-search-forward "Decision View" nil t)
-                  (re-search-forward "On Fire" nil t)
+                  (re-search-forward "🔥🔥 On Fire" nil t)
                   (re-search-forward "Big Rocks" nil t)
                   (re-search-forward "Hot Tickets" nil t)
                   (re-search-forward "For Today" nil t)
@@ -888,8 +888,8 @@ Inheritance respects `my/org-gtd-inherit-priority' and
               (replace-match (format "Decision View (Total Effort: %s)" total) t t nil 1))
             ;; On Fire effort
             (goto-char (point-min))
-            (while (re-search-forward "\\(On Fire\\( ([^)]*)\\)?\\)" nil t)
-              (replace-match (format "On Fire (%s)" effort-fire) t t nil 1))
+            (while (re-search-forward "\\(🔥🔥 On Fire\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "🔥🔥 On Fire (%s)" effort-fire) t t nil 1))
             ;; Big Rocks effort
             (goto-char (point-min))
             (while (re-search-forward "\\(Big Rocks\\( ([^)]*)\\)?\\)" nil t)
@@ -1204,7 +1204,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                      (when . today))
 
                     ;; 3. On Fire — tasks tagged :on_fire:
-                    ((name . ,(format "On Fire (%s)" effort-fire))
+                    ((name . ,(format "🔥🔥 On Fire (%s)" effort-fire))
                      (type . next-action)
                      (todo . ("NEXT" "TODO"))
                      (tags . ("on_fire")))
