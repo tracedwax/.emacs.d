@@ -922,9 +922,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                 (goto-char (point-min))
                 (when (re-search-forward (regexp-quote (car w)) nil t)
                   (end-of-line)
-                  (insert (cdr w)))))
-            ;; Scroll to top so On Fire is visible
-            (goto-char (point-min)))))))
+                  (insert (cdr w))))))))))
 
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
 
@@ -1018,7 +1016,15 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     (define-key org-agenda-mode-map (kbd "u") #'tdw/agenda-cycle-urgency)
     (define-key org-agenda-mode-map (kbd "i") #'tdw/agenda-cycle-impact)
     (define-key org-agenda-mode-map (kbd "I") #'org-agenda-diary-entry)
-    (define-key org-agenda-mode-map (kbd "f") #'tdw/agenda-toggle-on-fire))
+    (define-key org-agenda-mode-map (kbd "f") #'tdw/agenda-toggle-on-fire)
+    (define-key org-agenda-mode-map (kbd "r") #'tdw/sanity-refresh)
+    (define-key org-agenda-mode-map (kbd "g") #'tdw/sanity-refresh))
+
+  (defun tdw/sanity-refresh ()
+    "Rebuild agenda and scroll to top so On Fire is visible."
+    (interactive)
+    (org-agenda-redo-all)
+    (goto-char (point-min)))
 
   (with-eval-after-load 'org-gtd-agenda
     (defun org-gtd-agenda--resolve-effort ()
