@@ -1013,6 +1013,14 @@ Inheritance respects `my/org-gtd-inherit-priority' and
   (define-key tdw-agenda-comma-map (kbd "z") (lambda () (interactive) (org-agenda-priority ?Z)))
   (define-key tdw-agenda-comma-map (kbd ",") #'org-agenda-priority)
 
+  ;; After priority change, strip NEXT/TODO keyword from rebuilt line
+  (advice-add 'org-agenda-priority :after
+              (lambda (&rest _)
+                (let ((inhibit-read-only t))
+                  (save-excursion
+                    (beginning-of-line)
+                    (when (re-search-forward "\\bNEXT \\|\\bTODO " (line-end-position) t)
+                      (replace-match ""))))))
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
     (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
