@@ -1247,8 +1247,12 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
 
                     ;; 1. Today's Schedule (Calendar + Habits)
-                    ((name . "Today's Schedule")
-                     (block-type . calendar-day))
+                    ((native . (agenda ""
+                                ((org-agenda-span 1)
+                                 (org-agenda-start-day nil)
+                                 (org-agenda-skip-additional-timestamps-same-entry t)
+                                 (org-agenda-skip-function 'org-gtd-view-lang--skip-unless-calendar-or-habit)
+                                 (org-agenda-sorting-strategy '(priority-down time-up alpha-up))))))
 
                     ;; 2. Delegated: overdue
                     ((name . "Delegated (Overdue)")
