@@ -1255,7 +1255,8 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                      (if (and is-habit (not done)
                                               (or (string-match-p "Set daily meeting timers" hdl)
                                                   (string-match-p "GTD Daily Plan" hdl)
-                                                  (string-match-p "Start Time Out" hdl)))
+                                                  (string-match-p "Start Time Out" hdl)
+                                                  (string-match-p "Vivian Vyvanse" hdl)))
                                          nil
                                        (outline-next-heading))))))))
 
@@ -1277,7 +1278,8 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                      (if (and (stringp hdl)
                                               (or (string-match-p "Set daily meeting timers" hdl)
                                                   (string-match-p "GTD Daily Plan" hdl)
-                                                  (string-match-p "Start Time Out" hdl)))
+                                                  (string-match-p "Start Time Out" hdl)
+                                                   (string-match-p "Vivian Vyvanse" hdl)))
                                          (outline-next-heading)
                                        (org-gtd-view-lang--skip-unless-calendar-or-habit))))
                                  (org-agenda-prefix-format '((agenda . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
