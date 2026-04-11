@@ -928,14 +928,21 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                   (end-of-line)
                   (insert (cdr w))))))))))
 
-  ;; Guard variable: suppress expensive finalize-hook work during priority changes
+  ;; Guard variable: suppress ALL of org-agenda-finalize during priority changes.
+  ;; org-agenda-change-all-lines calls org-agenda-finalize per matching line.
+  ;; Each finalize does: org-activate-links, org-agenda-align-tags,
+  ;; org-habit-insert-consistency-graphs, dim-blocked-tasks, THEN our hook.
+  ;; Total cost per priority change: O(lines × buffer-size). Must skip entirely.
   (defvar tdw--in-priority-change nil
     "Non-nil while `org-agenda-priority' is executing.")
 
-  (add-hook 'org-agenda-finalize-hook
-            (lambda ()
-              (unless tdw--in-priority-change
-                (tdw/update-sanity-view-headers))))
+  (advice-add 'org-agenda-finalize :around
+              (lambda (orig-fn &rest args)
+                (if tdw--in-priority-change
+                    nil  ; skip entirely during priority changes
+                  (apply orig-fn args))))
+
+  (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
 
   (defun tdw/agenda-adjust-effort (&optional delta)
     "Adjust effort of agenda item at point by DELTA minutes (defaults to 15)."
