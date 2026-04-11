@@ -928,7 +928,14 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                   (end-of-line)
                   (insert (cdr w))))))))))
 
-  (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
+  ;; Guard variable: suppress expensive finalize-hook work during priority changes
+  (defvar tdw--in-priority-change nil
+    "Non-nil while `org-agenda-priority' is executing.")
+
+  (add-hook 'org-agenda-finalize-hook
+            (lambda ()
+              (unless tdw--in-priority-change
+                (tdw/update-sanity-view-headers))))
 
   (defun tdw/agenda-adjust-effort (&optional delta)
     "Adjust effort of agenda item at point by DELTA minutes (defaults to 15)."
@@ -1017,14 +1024,16 @@ Inheritance respects `my/org-gtd-inherit-priority' and
   (define-key tdw-agenda-comma-map (kbd "z") (lambda () (interactive) (org-agenda-priority ?Z)))
   (define-key tdw-agenda-comma-map (kbd ",") #'org-agenda-priority)
 
-  ;; After priority change, strip NEXT/TODO keyword from rebuilt line
-  (advice-add 'org-agenda-priority :after
-              (lambda (&rest _)
-                (let ((inhibit-read-only t))
-                  (save-excursion
-                    (beginning-of-line)
-                    (when (re-search-forward "\\bNEXT \\|\\bTODO " (line-end-position) t)
-                      (replace-match ""))))))
+  ;; Wrap priority changes: suppress finalize-hook, then strip NEXT/TODO keyword
+  (advice-add 'org-agenda-priority :around
+              (lambda (orig-fn &rest args)
+                (let ((tdw--in-priority-change t))
+                  (apply orig-fn args)
+                  (let ((inhibit-read-only t))
+                    (save-excursion
+                      (beginning-of-line)
+                      (when (re-search-forward "\\bNEXT \\|\\bTODO " (line-end-position) t)
+                        (replace-match "")))))))
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
     (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
@@ -1100,9 +1109,11 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
     "Someday/Maybe items — uses Aldric's exact view language.
 Press ', n' to flag for promotion, ', <letter>' to reprioritize."
     (interactive)
-    (org-gtd-view-show
-     '((name . "Someday/Maybe — ', n' to flag for promotion")
-       (type . someday))))
+    (let ((org-agenda-prefix-format
+           '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) "))))
+      (org-gtd-view-show
+       '((name . "Someday/Maybe — ', n' to flag for promotion")
+         (type . someday)))))
 
 
   ;;; ——— Sanity View: Urgency/Impact cycling ———
