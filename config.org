@@ -1096,77 +1096,66 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
            (fire (if (member "on_fire" tags) "🔥 " "")))
       (format "%sU:%s I:%s" fire urg imp)))
 
-  (defun tdw-someday--collect-items ()
-    "Return a list of (marker priority title) for all Someday items."
-    (let ((items '()))
-      (dolist (file (org-agenda-files))
-        (when (file-exists-p file)
-          (with-current-buffer (find-file-noselect file)
-            (org-with-wide-buffer
-             (goto-char (point-min))
-             (while (re-search-forward "^\\*+ " nil t)
-               (when (string= (org-entry-get (point) "ORG_GTD") "Someday")
-                 (unless (org-entry-is-done-p)
-                   (let* ((prio-cookie (save-excursion
-                                         (org-back-to-heading t)
-                                         (when (looking-at org-complex-heading-regexp)
-                                           (match-string-no-properties 3))))
-                          (prio (if (and prio-cookie
-                                         (string-match "\\[#\\(.\\)\\]" prio-cookie))
-                                    (match-string 1 prio-cookie)
-                                  "Z"))
-                          (title (org-get-heading t t t t))
-                          (marker (point-marker)))
-                     (push (list marker prio title) items)))))))))
-      (nreverse items)))
+  (defun tdw-someday-skip-non-someday-non-N ()
+    "Skip: include only active Someday items with priority N (flagged for promotion)."
+    (save-excursion
+      (org-back-to-heading t)
+      (let ((gtd  (org-entry-get (point) "ORG_GTD"))
+            (prio (when (looking-at org-complex-heading-regexp)
+                    (let ((cookie (match-string-no-properties 3)))
+                      (when (and cookie (string-match "\\[#\\(.\\)\\]" cookie))
+                        (match-string 1 cookie))))))
+        (if (and (string= gtd "Someday")
+                 (not (org-entry-is-done-p))
+                 (string= prio "N"))
+            nil
+          (org-entry-end-position)))))
+
+  (defun tdw-someday-skip-if-N ()
+    "Skip: include active Someday items whose priority is NOT N."
+    (save-excursion
+      (org-back-to-heading t)
+      (let ((gtd  (org-entry-get (point) "ORG_GTD"))
+            (prio (when (looking-at org-complex-heading-regexp)
+                    (let ((cookie (match-string-no-properties 3)))
+                      (when (and cookie (string-match "\\[#\\(.\\)\\]" cookie))
+                        (match-string 1 cookie))))))
+        (if (and (string= gtd "Someday")
+                 (not (org-entry-is-done-p))
+                 (not (string= prio "N")))
+            nil
+          (org-entry-end-position)))))
 
   (defun tdw-someday-priority-view ()
-    "View all Someday/Maybe items sorted by priority.
-Press \', n\' on any item to mark it [#N] (promote-me sentinel).
-Then ask Antigravity to run /move-someday-task-to-next-actions."
+    "Proper org-agenda view of all Someday/Maybe items, sorted by priority.
+Mirrors the sanity view structure. Press ', n' to flag an item as [#N],
+then ask Antigravity to run /move-someday-task-to-next-actions."
     (interactive)
-    (let* ((all-items (tdw-someday--collect-items))
-           (flagged   (seq-filter (lambda (i) (string= (cadr i) "N")) all-items))
-           (rest      (seq-sort (lambda (a b) (string< (cadr a) (cadr b)))
-                                (seq-filter (lambda (i) (not (string= (cadr i) "N"))) all-items)))
-           (buf (get-buffer-create "*Someday/Maybe*")))
-      (with-current-buffer buf
-        (let ((inhibit-read-only t))
-          (erase-buffer)
-          (org-agenda-mode)
-          (setq org-agenda-type 'tags)
-          ;; Fix freeze: tell org-agenda-redo how to rebuild this buffer
-          (setq-local org-agenda-redo-command '(tdw-someday-priority-view))
-          ;; Helper: insert one item line with colored priority cookie
-          (cl-flet ((insert-item
-                     (marker prio title)
-                     (let* ((prio-face (condition-case nil
-                                           (org-get-priority-face (string-to-char prio))
-                                         (error 'org-priority)))
-                            (prio-str (propertize (format "[#%s]" prio) 'face prio-face))
-                            (txt (concat "  " prio-str " " title "\n")))
-                       (add-text-properties 0 (length txt)
-                                            (list 'org-marker marker 'org-hd-marker marker
-                                                  'org-agenda-type 'tags)
-                                            txt)
-                       (insert txt))))
-            ;; Flagged section
-            (insert (propertize "🚀 Flagged for Promotion  [priority #N — run /move-someday-task-to-next-actions]\n"
-                                'face 'org-agenda-structure))
-            (if flagged
-                (dolist (item flagged)
-                  (insert-item (car item) (cadr item) (caddr item)))
-              (insert "  (none)\n"))
-            (insert "\n")
-            ;; Main section
-            (insert (propertize (format "📦 Someday/Maybe — %d items  (priority-sorted, press `, n to flag)\n"
-                                        (length rest))
-                                'face 'org-agenda-structure))
-            (dolist (item rest)
-              (insert-item (car item) (cadr item) (caddr item)))
-            (goto-char (point-min))
-            (setq buffer-read-only t))))
-      (pop-to-buffer buf)))
+    (let ((org-agenda-todo-keyword-format ""))
+      (org-gtd-view-show
+       `((name . "Someday/Maybe — ', n' to flag for promotion")
+         (prefix-width . 20)
+         (prefix . (effort " " score " — "))
+         (blocks . (
+                    ;; Flagged for promotion (priority N sentinel)
+                    ((native . (tags
+                                "LEVEL>0+ORG_GTD=\"Someday\""
+                                ((org-agenda-overriding-header "🚀 Flagged for Promotion  [#N — ask Antigravity to run /move-someday-task-to-next-actions]")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-sorting-strategy '(alpha-up))
+                                 (org-agenda-skip-function 'tdw-someday-skip-non-someday-non-N)))))
+
+                    ;; All other Someday items, priority-sorted
+                    ((native . (tags
+                                "LEVEL>0+ORG_GTD=\"Someday\""
+                                ((org-agenda-overriding-header "📦 Someday/Maybe  (priority-sorted — ', n' to flag, ', <letter>' to reprioritize)")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))
+                                 (org-agenda-skip-function 'tdw-someday-skip-if-N)))))
+                    ))))))
+
 
 
   ;;; ——— Sanity View: Urgency/Impact cycling ———
