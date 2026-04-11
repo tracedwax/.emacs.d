@@ -1097,19 +1097,40 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
       (format "%sU:%s I:%s" fire urg imp)))
 
   (defun tdw-someday-priority-view ()
-    "An Engage-style view for Someday/Maybe items with priorities C and D."
+    "Sanity-style view of all Someday/Maybe items, sorted by priority.
+Browse the list and press ', n' on any item to mark it priority [#N]
+(the promote-me sentinel). Then ask Antigravity to move all [#N] items
+to Next Actions."
     (interactive)
-    (org-gtd-view-show
-     '((name . "Someday/Maybe Priority Review")
-       (prefix . (project "—"))
-       (blocks . (
-                  ((name . "Priority C Items")
-                   (type . someday)
-                   (priority . C))
-                  ((name . "Priority D Items")
-                   (type . someday)
-                   (priority . D))
-                  )))))
+      (org-gtd-view-show
+       `((name . "Someday/Maybe View — press ', n' to flag for promotion")
+         (prefix-width . 20)
+         (prefix . (effort " " score " — "))
+         (blocks . (
+                    ;; Items flagged for promotion (priority N = promote-me sentinel)
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\""
+                                ((org-agenda-overriding-header "🚀 Flagged for Promotion  [#N — run '/move-someday-task-to-next-actions']")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-sorting-strategy '(alpha-up))
+                                 (org-agenda-skip-function
+                                  '(let ((end (org-entry-end-position))
+                                         (prio (org-entry-get (point) "PRIORITY")))
+                                     (if (equal prio "N") nil end)))))))
+
+                    ;; All other someday items, sorted priority-down
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\""
+                                ((org-agenda-overriding-header "📦 Someday/Maybe  (priority-sorted — use ', <letter>' to reprioritize)")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))
+                                 (org-agenda-skip-function
+                                  '(let ((end (org-entry-end-position))
+                                         (prio (org-entry-get (point) "PRIORITY")))
+                                     (if (equal prio "N") end nil)))))))
+                    )))))
 
 
   ;;; ——— Sanity View: Urgency/Impact cycling ———
