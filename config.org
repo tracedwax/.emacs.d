@@ -1109,11 +1109,11 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
     "Someday/Maybe items — uses Aldric's exact view language.
 Press ', n' to flag for promotion, ', <letter>' to reprioritize."
     (interactive)
-    (let ((org-agenda-prefix-format
-           '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) "))))
-      (org-gtd-view-show
-       '((name . "Someday/Maybe — ', n' to flag for promotion")
-         (type . someday)))))
+    (org-gtd-view-show
+     '((name . "Someday/Maybe — ', n' to flag for promotion")
+       (type . someday)
+       (prefix-width . 20)
+       (prefix . (effort " " score " — ")))))
 
 
   ;;; ——— Sanity View: Urgency/Impact cycling ———
