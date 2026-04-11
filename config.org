@@ -1096,6 +1096,37 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
            (fire (if (member "on_fire" tags) "🔥 " "")))
       (format "%sU:%s I:%s" fire urg imp)))
 
+  (defun tdw-someday-set-priority (char)
+    "Change priority of the Someday item at point to CHAR without triggering org-agenda-redo.
+After the change, re-runs tdw-someday-priority-view to refresh."
+    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
+                         (org-agenda-error)))
+           (buffer   (marker-buffer hdmarker))
+           (pos      (marker-position hdmarker)))
+      (with-current-buffer buffer
+        (widen)
+        (goto-char pos)
+        (org-priority char)
+        (save-buffer))
+      (tdw-someday-priority-view)))
+
+  (defvar tdw-someday-priority-map (make-sparse-keymap)
+    "Local keymap for Someday/Maybe view priority changes.
+Bypasses org-agenda-priority (which triggers redo) in favour of
+tdw-someday-set-priority (which calls tdw-someday-priority-view directly).")
+
+  (let ((map tdw-someday-priority-map))
+    (dolist (pair '((?A . ?A)(?B . ?B)(?C . ?C)(?D . ?D)(?E . ?E)
+                    (?F . ?F)(?G . ?G)(?H . ?H)(?I . ?I)(?J . ?J)
+                    (?K . ?K)(?L . ?L)(?M . ?M)(?N . ?N)(?O . ?O)
+                    (?P . ?P)(?Q . ?Q)(?R . ?R)(?S . ?S)(?T . ?T)
+                    (?U . ?U)(?V . ?V)(?W . ?W)(?X . ?X)(?Y . ?Y)(?Z . ?Z)))
+      (let ((letter (cdr pair)))
+        (define-key map (vector letter)
+          (lambda () (interactive)
+            (tdw-someday-set-priority letter))))))
+
+
   (defun tdw-someday-skip-non-someday-non-N ()
     "Skip: include only active Someday items with priority N (flagged for promotion)."
     (save-excursion
@@ -1154,8 +1185,11 @@ then ask Antigravity to run /move-someday-task-to-next-actions."
                                  (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))
                                  (org-agenda-skip-function 'tdw-someday-skip-if-N)))))
-                    ))))))
-
+                     ))))
+      ;; Override comma map so ', n' calls tdw-someday-set-priority (no redo hang)
+      (when-let ((buf (get-buffer "*Someday/Maybe*")))
+        (with-current-buffer buf
+          (local-set-key (kbd ",") tdw-someday-priority-map)))))
 
 
   ;;; ——— Sanity View: Urgency/Impact cycling ———
