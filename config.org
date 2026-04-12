@@ -768,11 +768,13 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     (tdw/has-tag-p "on_fire"))
 
   (defun tdw/big-rock-p ()
-    "Return non-nil if current entry has any high urgency or impact tag."
-    (let ((tags (org-get-tags nil t)))
-      (cl-some (lambda (tag)
-                 (member tag '("h_urgency" "vh_urgency" "h_impact" "vh_impact")))
-               tags)))
+    "Return non-nil if current entry has score >= 10."
+    (let* ((tags (org-get-tags nil t))
+           (score-tag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags))
+           (score (if score-tag
+                      (string-to-number (substring score-tag 6))
+                    (tdw/compute-score-at-point))))
+      (>= score 10)))
 
   (defun tdw/quick-win-p ()
     "Return non-nil if current entry has effort > 0 and <= 5 minutes."
@@ -823,8 +825,9 @@ Inheritance respects `my/org-gtd-inherit-priority' and
   ;;; ——— Sanity View: Capacity warnings ———
 
   (defun tdw/sanity-view-warnings ()
-    "Return alist of (SECTION . WARNING-STRING) for capacity violations."
-    (let ((n-fire 0) (n-vh-urg 0) (n-h-urg 0) (n-vh-imp 0) (n-h-imp 0)
+    "Return alist of (SECTION . WARNING-STRING) for capacity violations.
+Only alerts on on-fire count exceeding 5."
+    (let ((n-fire 0)
           (warnings nil))
       (dolist (file (org-agenda-files))
         (let ((expanded-file (expand-file-name file)))
@@ -837,11 +840,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                   (let ((todo (org-get-todo-state))
                         (tags (org-get-tags nil t)))
                     (when (member todo '("NEXT" "TODO"))
-                      (when (member "on_fire" tags) (cl-incf n-fire))
-                      (when (member "vh_urgency" tags) (cl-incf n-vh-urg))
-                      (when (member "h_urgency" tags) (cl-incf n-h-urg))
-                      (when (member "vh_impact" tags) (cl-incf n-vh-imp))
-                      (when (member "h_impact" tags) (cl-incf n-h-imp)))))
+                      (when (member "on_fire" tags) (cl-incf n-fire)))))
                 nil nil))))))
       (if (> n-fire 5)
           (push (cons "🔥🔥 On Fire"
@@ -850,16 +849,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
         (push (cons "🔥🔥 On Fire"
                      " [blocking someone | due <24h | big commitment at risk] 🔥🔥")
               warnings))
-      (if (or (> n-vh-urg 1) (> n-h-urg 2) (> n-vh-imp 1) (> n-h-imp 2))
-          (let ((parts nil))
-            (when (> n-vh-urg 1) (push (format "%d vh_urgency — remove %d" n-vh-urg (- n-vh-urg 1)) parts))
-            (when (> n-h-urg 2) (push (format "%d h_urgency — remove %d" n-h-urg (- n-h-urg 2)) parts))
-            (when (> n-vh-imp 1) (push (format "%d vh_impact — remove %d" n-vh-imp (- n-vh-imp 1)) parts))
-            (when (> n-h-imp 2) (push (format "%d h_impact — remove %d" n-h-imp (- n-h-imp 2)) parts))
-            (push (cons "🪨🪨 Big Rocks"
-                         (format " *** WARNING: %s *** 🪨🪨" (string-join (nreverse parts) ", ")))
-                  warnings))
-        (push (cons "🪨🪨 Big Rocks" " 🪨🪨") warnings))
+      (push (cons "🪨🪨 Big Rocks" " 🪨🪨") warnings)
       (push (cons "💨💨 Quick Wins" " 💨💨") warnings)
       (push (cons "🪨 Other Rocks" " 🪨") warnings)
       warnings))
@@ -959,13 +949,25 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                  (new-mins (max 0 (+ current-mins delta-mins)))
                  (new-effort (org-duration-from-minutes new-mins)))
             (org-with-point-at marker
-              (org-entry-put nil "Effort" new-effort))
+              (org-entry-put nil "Effort" new-effort)
+              ;; Recalculate score tag after effort change
+              (tdw/compute-and-set-score))
             ;; Update effort prefix in-place instead of full refresh
             (let ((inhibit-read-only t))
               (save-excursion
                 (beginning-of-line)
                 (when (re-search-forward "[0-9]+:[0-9]+" (line-end-position) t)
-                  (replace-match new-effort))))
+                  (replace-match new-effort))
+                ;; Also update score bracket
+                (beginning-of-line)
+                (when (re-search-forward "\\[\\w*\\]" (line-end-position) t)
+                  (let ((new-score-str (with-current-buffer (marker-buffer marker)
+                                         (org-with-wide-buffer
+                                          (goto-char (marker-position marker))
+                                          (let* ((tags (org-get-tags nil t))
+                                                 (stag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags)))
+                                            (if stag (format "[%s]" (substring stag 6)) "[]"))))))
+                    (replace-match new-score-str)))))
             (message "Effort: %s" new-effort))
         (message "No task at point"))))
 
@@ -1046,20 +1048,29 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                         (beginning-of-line)
                         (if (re-search-forward "\\[#.\\]" (line-end-position) t)
                             (replace-match (format "[#%s]" (or new-pri "K")))
-                          ;; No cookie yet — insert before first non-space
+                          ;; No cookie yet — insert after " — " prefix separator
                           (beginning-of-line)
-                          (when (re-search-forward "[^ ]" (line-end-position) t)
-                            (goto-char (match-beginning 0))
-                            (insert (format "[#%s] " (or new-pri "K")))))))))))
+                          (if (re-search-forward " — " (line-end-position) t)
+                              (insert (format "[#%s] " (or new-pri "K")))
+                            ;; Fallback if no separator found
+                            (end-of-line)
+                            (insert (format " [#%s]" (or new-pri "K")))))))))))
 
 
   ;; Wrap todo state changes: skip change-all-lines, show new keyword in-place.
   ;; Keywords are hidden (todo-keyword-format=""), so we must clean up any manually
   ;; inserted or residual keywords before inserting the new ones.
+  ;; Special handling for habits: they auto-reset to TODO after DONE, so we
+  ;; skip keyword insertion (since keywords are hidden) and show a clear message.
   (advice-add 'org-agenda-todo :around
               (lambda (orig-fn &rest args)
                 (let* ((tdw--skip-change-all-lines t)
-                       (hdm (org-get-at-bol 'org-hd-marker)))
+                       (hdm (org-get-at-bol 'org-hd-marker))
+                       (is-habit (when hdm
+                                   (with-current-buffer (marker-buffer hdm)
+                                     (org-with-wide-buffer
+                                      (goto-char (marker-position hdm))
+                                      (org-is-habit-p))))))
                   (apply orig-fn args)
                   (when hdm
                     (let* ((new-state (with-current-buffer (marker-buffer hdm)
@@ -1067,30 +1078,20 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                                         (goto-char (marker-position hdm))
                                         (or (org-get-todo-state) ""))))
                            (inhibit-read-only t))
-                      (save-excursion
-                        (beginning-of-line)
-                        (let* ((eol (line-end-position))
-                               (anchor (or (text-property-not-all (point) eol 'txt nil)
-                                           (text-property-not-all (point) eol 'org-hd-marker nil)
-                                           (save-excursion
-                                             (goto-char (point))
-                                             (when (re-search-forward "\\(?: — \\| - \\)[ \t]*" eol t)
-                                               (point)))
-                                           (save-excursion
-                                             (goto-char (point))
-                                             (when (re-search-forward "\\[#.\\]" eol t)
-                                               (match-beginning 0)))
-                                           (save-excursion
-                                             (goto-char (point))
-                                             (when (re-search-forward "[^ \t]" eol t)
-                                               (match-beginning 0)))
-                                           (point))))
-                          (goto-char anchor)
-                          (if (looking-at "\\(?:\\(?:TODO\\|NEXT\\|WAIT\\|DONE\\|CNCL\\|SOMEDAY\\)[ \t]*\\)+")
-                              (replace-match (if (string= new-state "") "" (concat new-state " ")))
-                            (unless (string= new-state "")
-                              (insert new-state " ")))))
-                      (message "→ %s" new-state))))))
+                      (if is-habit
+                          ;; Habits reset to TODO after DONE — don't insert keyword
+                          ;; (keywords are hidden by format=""), just show a clear message
+                          (message "✓ Habit completed — reset for next repeat")
+                        ;; Non-habit: insert the keyword in-place as before
+                        (save-excursion
+                          (beginning-of-line)
+                          (when (re-search-forward " — " (line-end-position) t)
+                            (if (looking-at "\\(?:\\(?:TODO\\|NEXT\\|WAIT\\|DONE\\|CNCL\\|SOMEDAY\\)[ \t]*\\)+")
+                                (replace-match (if (string= new-state "") "" (concat new-state " ")))
+                              (if (looking-at "\\[#.\\] ")
+                                  (progn (goto-char (match-end 0)) (insert (if (string= new-state "") "" (concat new-state " "))))
+                                (insert (if (string= new-state "") "" (concat new-state " ")))))))
+                        (message "→ %s" new-state)))))))
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
     (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
@@ -1147,20 +1148,29 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
         (truncate-string-to-width (or result "") width nil ?\s org-gtd-agenda-truncate-ellipsis))))
 
   (defun org-gtd-agenda--resolve-score ()
-    "Return compact urgency/impact string like 'U:vh I:h' from tags at point."
+    "Return compact urgency/impact string with score like '🔥 U:vh I:h [13]'.
+Always shows brackets — empty [] if no score tag found."
     (let* ((tags (org-get-tags nil t))
-           (urg (cond ((member "vh_urgency" tags) "vh")
+           (fire (if (member "on_fire" tags) "🔥 " ""))
+           (urg (cond ((member "wh_urgency" tags) "wh")
+                      ((member "vh_urgency" tags) "vh")
                       ((member "h_urgency" tags)  "hi")
+                      ((member "sh_urgency" tags) "sh")
                       ((member "m_urgency" tags)  "md")
                       ((member "l_urgency" tags)  "lo")
                       (t "--")))
-           (imp (cond ((member "vh_impact" tags)  "vh")
+           (imp (cond ((member "wh_impact" tags)  "wh")
+                      ((member "vh_impact" tags)  "vh")
                       ((member "h_impact" tags)   "hi")
+                      ((member "sh_impact" tags)  "sh")
                       ((member "m_impact" tags)   "md")
                       ((member "l_impact" tags)   "lo")
                       (t "--")))
-           (fire (if (member "on_fire" tags) "🔥 " "")))
-      (format "%sU:%s I:%s" fire urg imp)))
+           (score-tag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags))
+           (score-str (if score-tag
+                          (substring score-tag 6)
+                        "")))
+      (format "%sU:%s I:%s [%s]" fire urg imp score-str)))
 
   (defun tdw-someday-priority-view ()
     "Someday/Maybe items — uses Aldric's exact view language.
@@ -1169,7 +1179,7 @@ Press ', n' to flag for promotion, ', <letter>' to reprioritize."
     (org-gtd-view-show
      '((name . "Someday/Maybe — ', n' to flag for promotion")
        (type . someday)
-       (prefix-width . 20)
+       (prefix-width . 25)
        (prefix . (effort " " score " — ")))))
 
 
@@ -1204,7 +1214,9 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (setq next-tag (format "%s_%s" next-level prefix))
           ;; Remove old, add new
           (when current-tag (org-toggle-tag current-tag 'off))
-          (org-toggle-tag next-tag 'on)))
+          (org-toggle-tag next-tag 'on)
+          ;; Recalculate score tag
+          (tdw/compute-and-set-score)))
       ;; Update prefix in-place instead of full refresh
       (let ((inhibit-read-only t)
             (new-score (with-current-buffer buffer
@@ -1213,22 +1225,22 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
                           (org-gtd-agenda--resolve-score)))))
         (save-excursion
           (beginning-of-line)
-          (when (re-search-forward "\\(🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+          (when (re-search-forward "\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (replace-match new-score))))
       (message "Set %s → %s" prefix next-level)))
 
   (defun tdw/agenda-cycle-urgency ()
-    "Cycle urgency tag: l → m → h → vh → l."
+    "Cycle urgency tag: l → m → sh → h → vh → wh → l."
     (interactive)
-    (tdw/agenda-cycle-tag "urgency" '("l" "m" "h" "vh")))
+    (tdw/agenda-cycle-tag "urgency" '("l" "m" "sh" "h" "vh" "wh")))
 
   (defun tdw/agenda-cycle-impact ()
-    "Cycle impact tag: l → m → h → vh → l."
+    "Cycle impact tag: l → m → sh → h → vh → wh → l."
     (interactive)
-    (tdw/agenda-cycle-tag "impact" '("l" "m" "h" "vh")))
+    (tdw/agenda-cycle-tag "impact" '("l" "m" "sh" "h" "vh" "wh")))
 
   (defun tdw/agenda-toggle-on-fire ()
-    "Toggle :on_fire: tag on the task at point."
+    "Toggle :on_fire: tag on the task at point and update prefix in-place."
     (interactive)
     (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
                          (org-agenda-error)))
@@ -1242,36 +1254,74 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
         (if has-tag
             (org-toggle-tag "on_fire" 'off)
           (org-toggle-tag "on_fire" 'on)))
-      ;; Update prefix in-place
-      (let ((inhibit-read-only t))
+      ;; In-place update of the prefix
+      (let ((inhibit-read-only t)
+            (new-score (with-current-buffer buffer
+                         (org-with-wide-buffer
+                          (goto-char pos)
+                          (org-gtd-agenda--resolve-score)))))
         (save-excursion
           (beginning-of-line)
-          (if has-tag
-              ;; Remove 🔥 from prefix
-              (when (re-search-forward "🔥 \\(U:\\)" (line-end-position) t)
-                (replace-match "\\1"))
-            ;; Add 🔥 before U:
-            (when (re-search-forward "\\(U:\\)" (line-end-position) t)
-              (replace-match "🔥 \\1")))))
+          (when (re-search-forward "\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+            (replace-match new-score))))
       (message "%s on_fire" (if has-tag "Removed" "Added"))))
+
+  ;;; ——— Score Computation ———
+
+  (defun tdw/score-value-for-level (level)
+    "Map urgency/impact level abbreviation to numeric score.
+Levels: l=0, m=1, sh=2, h=3, vh=5, wh=8."
+    (pcase level
+      ("wh" 8) ("vh" 5) ("h" 3) ("sh" 2) ("m" 1) (_ 0)))
+
+  (defun tdw/compute-score-at-point ()
+    "Compute floor((2*urg + imp) / effort-tier) at point. Returns integer.
+Effort tiers: 0-5min=1, 6-15min=2, 16-60min=3, 60+=4.
+Higher score = more value per unit of effort."
+    (let* ((tags (org-get-tags nil t))
+           (urg-level (or (cl-find-if (lambda (lvl)
+                                        (member (format "%s_urgency" lvl) tags))
+                                      '("wh" "vh" "h" "sh" "m" "l"))
+                          "l"))
+           (imp-level (or (cl-find-if (lambda (lvl)
+                                        (member (format "%s_impact" lvl) tags))
+                                      '("wh" "vh" "h" "sh" "m" "l"))
+                          "l"))
+           (urg (tdw/score-value-for-level urg-level))
+           (imp (tdw/score-value-for-level imp-level))
+           (effort-str (org-entry-get (point) "EFFORT"))
+           (effort-mins (if (and effort-str
+                                 (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
+                            (let ((m (+ (* 60 (string-to-number (match-string 1 effort-str)))
+                                        (string-to-number (match-string 2 effort-str)))))
+                              (if (> m 0) m 5))
+                          5))
+           (tier (cond ((<= effort-mins 5) 1)
+                       ((<= effort-mins 15) 2)
+                       ((<= effort-mins 60) 3)
+                       (t 4)))
+           (raw (+ (* 2 urg) imp)))
+      (floor (/ (float raw) tier))))
+
+  (defun tdw/compute-and-set-score ()
+    "Compute score at point and update the :score_N: tag.
+Removes any existing score_* tags, then adds :score_N:."
+    (let ((new-score (tdw/compute-score-at-point))
+          (tags (org-get-tags nil t)))
+      ;; Remove any existing score_* tags
+      (dolist (tag tags)
+        (when (string-prefix-p "score_" tag)
+          (org-toggle-tag tag 'off)))
+      ;; Add new score tag
+      (org-toggle-tag (format "score_%d" new-score) 'on)))
 
   ;;; ——— Sanity View ———
 
 
   (defun tdw/agenda-score-at-marker (marker)
-    "Compute urgency/impact score at MARKER: 2*urgency + impact.
-vh=3, h=2, m=1, l=0."
+    "Compute (2*urg + imp) * (effort/5) at MARKER for agenda sorting."
     (or (org-with-point-at marker
-          (let* ((tags (org-get-tags nil t))
-                 (urg (cond ((member "vh_urgency" tags) 3)
-                            ((member "h_urgency" tags) 2)
-                            ((member "m_urgency" tags) 1)
-                            (t 0)))
-                 (imp (cond ((member "vh_impact" tags) 3)
-                            ((member "h_impact" tags) 2)
-                            ((member "m_impact" tags) 1)
-                            (t 0))))
-            (+ (* 2 urg) imp)))
+          (tdw/compute-score-at-point))
         0))
 
   (defun tdw/agenda-cmp-score (a b)
@@ -1296,7 +1346,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
       (let ((org-agenda-todo-keyword-format ""))
        (org-gtd-view-show
        `((name . ,(format "Sanity View (Total Effort: %s)" total))
-         (prefix-width . 20)
+         (prefix-width . 25)
          (prefix . (effort " " score " — "))
          (blocks . (
                     ;; 0. Daily Rituals — undone habits for today (Priority A & B)
@@ -1306,7 +1356,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-start-day nil)
                                  (org-agenda-entry-types '(:scheduled))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((agenda . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-prefix-format '((agenda . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))
                                  (org-agenda-skip-function
                                   '(let* ((dominated (org-entry-get (point) "STYLE"))
@@ -1314,7 +1364,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                           (done (org-entry-is-done-p))
                                           (hdl (org-get-heading t t t t)))
                                      (if (and is-habit (not done)
-                                              (or (string-match-p "Set daily meeting timers" hdl)
+                                              (or (string-match-p "Daily meeting prep" hdl)
                                                   (string-match-p "GTD Daily Plan" hdl)
                                                   (string-match-p "Start Time Out" hdl)
                                                   (string-match-p "Vivian Vyvanse" hdl)))
@@ -1326,7 +1376,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Actions\"+on_fire"
                                 ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
 
                     ;; 2. Today's Schedule (Calendar + Habits)
@@ -1337,13 +1387,13 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-skip-function
                                   '(let ((hdl (org-get-heading t t t t)))
                                      (if (and (stringp hdl)
-                                              (or (string-match-p "Set daily meeting timers" hdl)
+                                              (or (string-match-p "Daily meeting prep" hdl)
                                                   (string-match-p "GTD Daily Plan" hdl)
                                                   (string-match-p "Start Time Out" hdl)
                                                    (string-match-p "Vivian Vyvanse" hdl)))
                                          (outline-next-heading)
                                        (org-gtd-view-lang--skip-unless-calendar-or-habit))))
-                                 (org-agenda-prefix-format '((agenda . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down time-up alpha-up))))))
 
                     ;; 3. Delegated: overdue
@@ -1361,7 +1411,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Incubated\""
                                 ((org-agenda-overriding-header "🔔 Ticklers Due")
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down scheduled-up alpha-up))
                                  (org-agenda-skip-function
                                   '(let* ((scheduled (org-get-scheduled-time (point)))
@@ -1374,23 +1424,21 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                          nil
                                        (org-entry-end-position))))))))
 
-                    ;; 4. Big Rocks — any h_/vh_ urgency or impact
-                    ;;    Uses native block for OR logic across tags
+                    ;; 4. Big Rocks — score >= 10
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\""
                                 ((org-agenda-overriding-header ,(format "🪨🪨 Big Rocks (%s)" effort-big))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))
                                  (org-agenda-skip-function
-                                  '(let ((end (org-entry-end-position))
-                                         (tags (org-get-tags nil t)))
+                                  '(let* ((end (org-entry-end-position))
+                                          (tags (org-get-tags nil t))
+                                          (score-tag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags))
+                                          (score (if score-tag (string-to-number (substring score-tag 6)) (tdw/compute-score-at-point))))
                                      (if (and (not (org-entry-is-done-p))
                                               (not (member "on_fire" tags))
-                                              (cl-some (lambda (tag)
-                                                         (member tag '("h_urgency" "vh_urgency"
-                                                                       "h_impact" "vh_impact")))
-                                                       tags))
+                                              (>= score 10))
                                          nil
                                        end)))))))
 
@@ -1399,11 +1447,13 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Actions\"+Effort<=\"0:05\""
                                 ((org-agenda-overriding-header ,(format "💨💨 Quick Wins (%s)" effort-quick))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))
                                  (org-agenda-skip-function
                                   '(let* ((end (org-entry-end-position))
                                           (tags (org-get-tags nil t))
+                                          (score-tag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags))
+                                          (score (if score-tag (string-to-number (substring score-tag 6)) (tdw/compute-score-at-point)))
                                           (effort-str (org-entry-get (point) "EFFORT"))
                                           (effort-mins (when (and effort-str
                                                                   (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
@@ -1411,10 +1461,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                                             (string-to-number (match-string 2 effort-str))))))
                                      (if (and (not (org-entry-is-done-p))
                                               (not (member "on_fire" tags))
-                                              (not (cl-some (lambda (tag)
-                                                              (member tag '("h_urgency" "vh_urgency"
-                                                                            "h_impact" "vh_impact")))
-                                                            tags))
+                                              (< score 10)
                                               effort-mins (> effort-mins 0))
                                          nil
                                        end)))))))
@@ -1424,11 +1471,13 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Actions\""
                                 ((org-agenda-overriding-header ,(format "🪨 Other Rocks (%s)" effort-other))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))
                                  (org-agenda-skip-function
                                   '(let* ((end (org-entry-end-position))
                                           (tags (org-get-tags nil t))
+                                          (score-tag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags))
+                                          (score (if score-tag (string-to-number (substring score-tag 6)) (tdw/compute-score-at-point)))
                                           (effort-str (org-entry-get (point) "EFFORT"))
                                           (effort-mins (when (and effort-str
                                                                   (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
@@ -1436,10 +1485,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                                             (string-to-number (match-string 2 effort-str))))))
                                      (if (and (not (org-entry-is-done-p))
                                               (not (member "on_fire" tags))
-                                              (not (cl-some (lambda (tag)
-                                                              (member tag '("h_urgency" "vh_urgency"
-                                                                            "h_impact" "vh_impact")))
-                                                            tags))
+                                              (< score 10)
                                               (and effort-mins (> effort-mins 5)))
                                          nil
                                        end)))))))
@@ -1449,11 +1495,13 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Actions\""
                                 ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-unest))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))
                                  (org-agenda-skip-function
                                   '(let* ((end (org-entry-end-position))
                                           (tags (org-get-tags nil t))
+                                          (score-tag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags))
+                                          (score (if score-tag (string-to-number (substring score-tag 6)) (tdw/compute-score-at-point)))
                                           (effort-str (org-entry-get (point) "EFFORT"))
                                           (effort-mins (when (and effort-str
                                                                   (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
@@ -1461,10 +1509,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                                             (string-to-number (match-string 2 effort-str))))))
                                      (if (and (not (org-entry-is-done-p))
                                               (not (member "on_fire" tags))
-                                              (not (cl-some (lambda (tag)
-                                                              (member tag '("h_urgency" "vh_urgency"
-                                                                            "h_impact" "vh_impact")))
-                                                            tags))
+                                              (< score 10)
                                               (or (not effort-mins) (<= effort-mins 0)))
                                          nil
                                        end)))))))
