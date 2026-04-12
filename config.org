@@ -1343,6 +1343,24 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                      (type . delegated)
                      (when . today))
 
+                    ;; 3b. Ticklers Due — incubated items scheduled for today or earlier
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Incubated\""
+                                ((org-agenda-overriding-header "🔔 Ticklers Due")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-20:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 20) ")))
+                                 (org-agenda-sorting-strategy '(priority-down scheduled-up alpha-up))
+                                 (org-agenda-skip-function
+                                  '(let* ((scheduled (org-get-scheduled-time (point)))
+                                          (today (org-today)))
+                                     (if (and scheduled
+                                              (not (org-entry-is-done-p))
+                                              (<= (org-time-string-to-absolute
+                                                   (format-time-string "%Y-%m-%d" scheduled))
+                                                  today))
+                                         nil
+                                       (org-entry-end-position))))))))
+
                     ;; 4. Big Rocks — any h_/vh_ urgency or impact
                     ;;    Uses native block for OR logic across tags
                     ((native . (tags-todo
