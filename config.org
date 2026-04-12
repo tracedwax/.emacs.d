@@ -1047,30 +1047,27 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                         (when (re-search-forward "\\[#.\\]" (line-end-position) t)
                           (replace-match (format "[#%s]" (or new-pri "K"))))))))))
 
-  ;; Wrap todo state changes: skip change-all-lines, show new keyword in-place
+  ;; Wrap todo state changes: skip change-all-lines, show new keyword in-place.
+  ;; The agenda line already contains the old TODO keyword — replace it directly.
   (advice-add 'org-agenda-todo :around
               (lambda (orig-fn &rest args)
                 (let* ((tdw--skip-change-all-lines t)
                        (hdm (org-get-at-bol 'org-hd-marker)))
                   (apply orig-fn args)
-                  ;; Inline update: show the new todo keyword on the line
                   (when hdm
                     (let* ((new-state (with-current-buffer (marker-buffer hdm)
                                        (org-with-wide-buffer
                                         (goto-char (marker-position hdm))
-                                        (org-get-todo-state))))
+                                        (or (org-get-todo-state) ""))))
                            (inhibit-read-only t))
-                      (when new-state
-                        (save-excursion
-                          (beginning-of-line)
-                          ;; Insert keyword before the priority cookie
-                          (when (re-search-forward "\\[#.\\]" (line-end-position) t)
-                            (goto-char (match-beginning 0))
-                            (insert (propertize (concat new-state " ")
-                                                'face (if (member new-state '("DONE" "CNCL"))
-                                                          'org-agenda-done
-                                                        'org-todo)))))
-                        (message "→ %s" new-state)))))))
+                      (save-excursion
+                        (beginning-of-line)
+                        ;; Agenda lines: "  KEYWORD [#P] heading…" — match any TODO keyword
+                        (when (re-search-forward
+                               (concat "\\b\\(" (regexp-opt org-todo-keywords-1) "\\)\\b")
+                               (line-end-position) t)
+                          (replace-match new-state t t)))
+                      (message "→ %s" new-state)))))))
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
     (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
