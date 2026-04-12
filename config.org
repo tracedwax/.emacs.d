@@ -855,6 +855,12 @@ Only alerts on on-fire count exceeding 5."
       (push (cons "🪨 Other Rocks" " 🪨") warnings)
       warnings))
 
+  ;;; ——— Sanity View: Buffer-local state ———
+
+  (defvar tdw--is-unordered-view nil
+    "Non-nil when the current agenda is an Unordered View.
+Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
+
   ;;; ——— Sanity View: Header updater ———
 
   (defun tdw/update-sanity-view-headers ()
@@ -924,8 +930,7 @@ Only alerts on on-fire count exceeding 5."
                   (end-of-line)
                   (insert (cdr w)))))
             ;; Strip priority cookies [#X] in Unordered View only
-            (goto-char (point-min))
-            (when (re-search-forward "Unordered View" nil t)
+            (when tdw--is-unordered-view
               (goto-char (point-min))
               (let ((cookie-re (concat " ?" (regexp-quote "[") "#[A-Z]" (regexp-quote "]") " ?")))
                 (while (re-search-forward cookie-re nil t)
@@ -1355,6 +1360,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
   (defun tdw-sanity-view ()
     "Tag-based GTD view: Calendar/Habits, On Fire, Big Rocks, Quick Wins, Other Rocks, Delegated."
     (interactive)
+    (setq tdw--is-unordered-view nil)
     (pcase-let ((`(,total ,effort-fire ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
       (let ((org-agenda-todo-keyword-format ""))
        (org-gtd-view-show
@@ -1531,6 +1537,8 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
   (defun tdw-unordered-view ()
     "Like Sanity View but without score annotations, priority cookies, or custom sorting."
     (interactive)
+    ;; Signal to the finalize hook that this is an Unordered View.
+    (setq tdw--is-unordered-view t)
     (pcase-let ((`(,total ,effort-fire ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
       (let ((org-agenda-todo-keyword-format ""))
        (org-gtd-view-show
