@@ -1029,63 +1029,48 @@ Inheritance respects `my/org-gtd-inherit-priority' and
   (define-key tdw-agenda-comma-map (kbd "z") (lambda () (interactive) (org-agenda-priority ?Z)))
   (define-key tdw-agenda-comma-map (kbd ",") #'org-agenda-priority)
 
-  ;; Wrap priority changes: skip change-all-lines, then rebuild view cleanly
+  ;; Wrap priority changes: skip change-all-lines, update [#X] cookie in-place
   (advice-add 'org-agenda-priority :around
               (lambda (orig-fn &rest args)
                 (let* ((tdw--skip-change-all-lines t)
-                       (hdm (org-get-at-bol 'org-hd-marker))
-                       (search-key (when hdm
-                                     (with-current-buffer (marker-buffer hdm)
-                                       (org-with-wide-buffer
-                                        (goto-char (marker-position hdm))
-                                        (let ((h (org-get-heading t t t t)))
-                                          (substring h 0 (min 40 (length h)))))))))
+                       (hdm (org-get-at-bol 'org-hd-marker)))
                   (apply orig-fn args)
-                  (tdw-sanity-view)
-                  (when (get-buffer "*Org Agenda*")
-                    (switch-to-buffer "*Org Agenda*"))
-                  (when search-key
-                    (goto-char (point-min))
-                    (if (search-forward search-key nil t)
-                        (progn (beginning-of-line) (recenter))
-                      (message "DEBUG: search-key not found: [%s]" search-key))))))
+                  ;; Inline update: replace the priority cookie on current line
+                  (when hdm
+                    (let* ((new-pri (with-current-buffer (marker-buffer hdm)
+                                     (org-with-wide-buffer
+                                      (goto-char (marker-position hdm))
+                                      (org-entry-get nil "PRIORITY"))))
+                           (inhibit-read-only t))
+                      (save-excursion
+                        (beginning-of-line)
+                        (when (re-search-forward "\\[#.\\]" (line-end-position) t)
+                          (replace-match (format "[#%s]" (or new-pri "K"))))))))))
 
-  ;; Wrap todo state changes: skip change-all-lines, rebuild.
-  ;; Cancelled/done tasks vanish from the view, so also capture the next
-  ;; task's heading as a fallback landing target.
+  ;; Wrap todo state changes: skip change-all-lines, show new keyword in-place
   (advice-add 'org-agenda-todo :around
               (lambda (orig-fn &rest args)
                 (let* ((tdw--skip-change-all-lines t)
-                       (hdm (org-get-at-bol 'org-hd-marker))
-                       (search-key (when hdm
-                                     (with-current-buffer (marker-buffer hdm)
+                       (hdm (org-get-at-bol 'org-hd-marker)))
+                  (apply orig-fn args)
+                  ;; Inline update: show the new todo keyword on the line
+                  (when hdm
+                    (let* ((new-state (with-current-buffer (marker-buffer hdm)
                                        (org-with-wide-buffer
                                         (goto-char (marker-position hdm))
-                                        (let ((h (org-get-heading t t t t)))
-                                          (substring h 0 (min 40 (length h))))))))
-                       (fallback-key (save-excursion
-                                       (forward-line 1)
-                                       (let ((m (org-get-at-bol 'org-hd-marker)))
-                                         (when m
-                                           (with-current-buffer (marker-buffer m)
-                                             (org-with-wide-buffer
-                                              (goto-char (marker-position m))
-                                              (let ((h (org-get-heading t t t t)))
-                                                (substring h 0 (min 40 (length h)))))))))))
-                  (apply orig-fn args)
-                  (tdw-sanity-view)
-                  (when (get-buffer "*Org Agenda*")
-                    (switch-to-buffer "*Org Agenda*"))
-                  (let ((found nil))
-                    (when search-key
-                      (goto-char (point-min))
-                      (when (search-forward search-key nil t)
-                        (beginning-of-line) (recenter)
-                        (setq found t)))
-                    (when (and (not found) fallback-key)
-                      (goto-char (point-min))
-                      (when (search-forward fallback-key nil t)
-                        (beginning-of-line) (recenter)))))))
+                                        (org-get-todo-state))))
+                           (inhibit-read-only t))
+                      (when new-state
+                        (save-excursion
+                          (beginning-of-line)
+                          ;; Insert keyword before the priority cookie
+                          (when (re-search-forward "\\[#.\\]" (line-end-position) t)
+                            (goto-char (match-beginning 0))
+                            (insert (propertize (concat new-state " ")
+                                                'face (if (member new-state '("DONE" "CNCL"))
+                                                          'org-agenda-done
+                                                        'org-todo)))))
+                        (message "→ %s" new-state)))))))
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
     (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
