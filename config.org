@@ -1049,7 +1049,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
 
 
   ;; Wrap todo state changes: skip change-all-lines, show new keyword in-place.
-  ;; The agenda line already contains the old TODO keyword — replace it directly.
+  ;; Keywords are hidden (todo-keyword-format=""), so insert before [#X] cookie.
   (advice-add 'org-agenda-todo :around
               (lambda (orig-fn &rest args)
                 (let* ((tdw--skip-change-all-lines t)
@@ -1064,10 +1064,9 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                       (save-excursion
                         (beginning-of-line)
                         ;; Agenda lines: "  KEYWORD [#P] heading…" — match any TODO keyword
-                        (when (re-search-forward
-                               (concat "\\b\\(" (regexp-opt org-todo-keywords-1) "\\)\\b")
-                               (line-end-position) t)
-                          (replace-match new-state t t)))
+                        (when (re-search-forward "\\[#.\\]" (line-end-position) t)
+                          (goto-char (match-beginning 0))
+                          (insert new-state " ")))
                       (message "→ %s" new-state))))))
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
