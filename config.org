@@ -1560,22 +1560,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))
-                                 (org-agenda-skip-function
-                                  '(let* ((end (org-entry-end-position))
-                                          (tags (org-get-tags nil t))
-                                          (score-tag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags))
-                                          (score (if score-tag (string-to-number (substring score-tag 6)) (tdw/compute-score-at-point)))
-                                          (effort-str (org-entry-get (point) "EFFORT"))
-                                          (effort-mins (when (and effort-str
-                                                                  (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
-                                                         (+ (* 60 (string-to-number (match-string 1 effort-str)))
-                                                            (string-to-number (match-string 2 effort-str))))))
-                                     (if (and (not (org-entry-is-done-p))
-                                              (not (member "on_fire" tags))
-                                              (< score 10)
-                                              (and effort-mins (> effort-mins 5)))
-                                         nil
-                                       end)))))))
+                                 (org-agenda-skip-function 'tdw/skip-unless-other-rock)))))
 
                     ;; 7. Unestimated — no effort or effort = 0
                     ((native . (tags-todo
