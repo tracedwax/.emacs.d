@@ -1033,28 +1033,27 @@ Inheritance respects `my/org-gtd-inherit-priority' and
   (advice-add 'org-agenda-priority :around
               (lambda (orig-fn &rest args)
                 (let* ((tdw--in-priority-change t)
-                       ;; Grab heading AFTER priority is set (org-priority runs inside orig-fn)
                        (hdm (org-get-at-bol 'org-hd-marker))
-                       (heading-before (when hdm
-                                         (with-current-buffer (marker-buffer hdm)
-                                           (org-with-wide-buffer
-                                            (goto-char (marker-position hdm))
-                                            (org-get-heading t t t t))))))
+                       ;; Save a search key BEFORE priority changes the heading
+                       (search-key (when hdm
+                                     (with-current-buffer (marker-buffer hdm)
+                                       (org-with-wide-buffer
+                                        (goto-char (marker-position hdm))
+                                        (let ((h (org-get-heading t t t t)))
+                                          ;; Use first 40 chars to avoid trailing whitespace issues
+                                          (substring h 0 (min 40 (length h)))))))))
                   (apply orig-fn args)
-                  ;; Get the NEW heading (priority changed)
-                  (let ((heading (when hdm
-                                   (with-current-buffer (marker-buffer hdm)
-                                     (org-with-wide-buffer
-                                      (goto-char (marker-position hdm))
-                                      (org-get-heading t t t t))))))
-                    ;; Full view rebuild — preserves delegate names, hides keywords
-                    (tdw-sanity-view)
-                    ;; Find the task by heading text and center it
-                    (when heading
-                      (goto-char (point-min))
-                      (when (search-forward heading nil t)
-                        (beginning-of-line)
-                        (recenter)))))))
+                  ;; Full view rebuild — preserves delegate names, hides keywords
+                  (tdw-sanity-view)
+                  ;; Explicitly ensure we're in the agenda buffer
+                  (when (get-buffer "*Org Agenda*")
+                    (switch-to-buffer "*Org Agenda*"))
+                  ;; Find the task by heading text and center it
+                  (when search-key
+                    (goto-char (point-min))
+                    (when (search-forward search-key nil t)
+                      (beginning-of-line)
+                      (recenter))))))
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
     (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
