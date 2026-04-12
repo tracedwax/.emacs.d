@@ -1265,15 +1265,14 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
     (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
                          (org-agenda-error)))
            (buffer (marker-buffer hdmarker))
-           (pos (marker-position hdmarker))
            has-tag)
       (with-current-buffer buffer
-        (widen)
-        (goto-char pos)
-        (setq has-tag (member "on_fire" (org-get-tags nil t)))
-        (if has-tag
-            (org-toggle-tag "on_fire" 'off)
-          (org-toggle-tag "on_fire" 'on)))
+        (org-with-wide-buffer
+         (goto-char hdmarker)
+         (setq has-tag (member "on_fire" (org-get-tags nil t)))
+         (if has-tag
+             (org-toggle-tag "on_fire" 'off)
+           (org-toggle-tag "on_fire" 'on))))
       ;; In-place update of the prefix
       (let ((inhibit-read-only t))
         (save-excursion
@@ -1283,9 +1282,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
            ((re-search-forward "\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let ((new-score (with-current-buffer buffer
                                (org-with-wide-buffer
-                                (goto-char pos)
-                                ;; Force fresh tag read after toggle
-                                (org-set-tags (org-get-tags nil t))
+                                (goto-char hdmarker)
                                 (org-gtd-agenda--resolve-score)))))
               (replace-match new-score)))
            ;; Unordered View: toggle fire emoji before the — dash
