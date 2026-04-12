@@ -1282,7 +1282,9 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (when (re-search-forward "\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (replace-match new-score))))
-      (message "%s on_fire" (if has-tag "Removed" "Added"))))
+      (message "%s on_fire" (if has-tag "Removed" "Added"))
+      ;; Refresh the entire composite view so the task moves between sections
+      (org-agenda-redo-all)))
 
   ;;; ——— Score Computation ———
 
