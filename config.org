@@ -1629,16 +1629,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down scheduled-up alpha-up))
-                                 (org-agenda-skip-function
-                                  '(let* ((scheduled (org-get-scheduled-time (point)))
-                                          (today (org-today)))
-                                     (if (and scheduled
-                                              (not (org-entry-is-done-p))
-                                              (<= (org-time-string-to-absolute
-                                                   (format-time-string "%Y-%m-%d" scheduled))
-                                                  today))
-                                         nil
-                                       (org-entry-end-position))))))))
+                                 (org-agenda-skip-function 'tdw/skip-unless-tickler-due)))))
 
                     ;; 4. Big Rocks — score >= 10
                     ((native . (tags-todo
