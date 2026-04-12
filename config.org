@@ -1436,12 +1436,12 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                     ;; 3. Delegated: overdue
                     ((name . "Delegated (Overdue)")
                      (type . delegated)
-                     (when . past))
+                     (,(intern "when") . past))
 
                     ;; 3. Delegated: due today
                     ((name . "Delegated (Due Today)")
                      (type . delegated)
-                     (when . today))
+                     (,(intern "when") . today))
 
                     ;; 3b. Ticklers Due — incubated items scheduled for today or earlier
                     ((native . (tags-todo
@@ -1614,12 +1614,12 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                     ;; 3. Delegated: overdue
                     ((name . "Delegated (Overdue)")
                      (type . delegated)
-                     (when . past))
+                     (,(intern "when") . past))
 
                     ;; 3. Delegated: due today
                     ((name . "Delegated (Due Today)")
                      (type . delegated)
-                     (when . today))
+                     (,(intern "when") . today))
 
                     ;; 3b. Ticklers Due
                     ((native . (tags-todo
