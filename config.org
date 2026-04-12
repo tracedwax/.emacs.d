@@ -928,26 +928,17 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                   (end-of-line)
                   (insert (cdr w))))))))))
 
-  ;; Guard variable: run lightweight org-agenda-finalize during priority changes.
-  ;; org-agenda-change-all-lines calls org-agenda-finalize per matching line
-  ;; (narrowed to one line). Full finalize triggers link activation, habit graphs,
-  ;; blocked-task dimming, and our header updater — collectively expensive.
-  ;; During priority changes, run ONLY tag alignment + priority fontification
-  ;; to keep the display correct without the O(n) overhead.
+  ;; Guard variable: skip org-agenda-finalize entirely during priority changes.
+  ;; org-agenda-change-all-lines calls finalize per matching line — each one
+  ;; does link activation, habit graphs, blocked-task dimming, and our hook.
+  ;; Skipping prevents the O(n × buffer) hang. The priority :around advice
+  ;; below does a single org-agenda-redo afterward for a clean refresh.
   (defvar tdw--in-priority-change nil
     "Non-nil while `org-agenda-priority' is executing.")
 
   (advice-add 'org-agenda-finalize :around
               (lambda (orig-fn &rest args)
-                (if tdw--in-priority-change
-                    ;; Lightweight: just fix tags and priority faces on this line
-                    (unless org-agenda-multi
-                      (let ((inhibit-read-only t))
-                        (save-excursion
-                          (unless (eq org-agenda-remove-tags t)
-                            (org-agenda-align-tags))
-                          (when org-agenda-fontify-priorities
-                            (org-agenda-fontify-priorities)))))
+                (unless tdw--in-priority-change
                   (apply orig-fn args))))
 
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
@@ -1039,16 +1030,13 @@ Inheritance respects `my/org-gtd-inherit-priority' and
   (define-key tdw-agenda-comma-map (kbd "z") (lambda () (interactive) (org-agenda-priority ?Z)))
   (define-key tdw-agenda-comma-map (kbd ",") #'org-agenda-priority)
 
-  ;; Wrap priority changes: suppress finalize-hook, then strip NEXT/TODO keyword
+  ;; Wrap priority changes: skip per-line finalize, then do one clean redo
   (advice-add 'org-agenda-priority :around
               (lambda (orig-fn &rest args)
                 (let ((tdw--in-priority-change t))
-                  (apply orig-fn args)
-                  (let ((inhibit-read-only t))
-                    (save-excursion
-                      (beginning-of-line)
-                      (when (re-search-forward "\\bNEXT \\|\\bTODO " (line-end-position) t)
-                        (replace-match "")))))))
+                  (apply orig-fn args))
+                ;; Single clean rebuild — one finalize instead of N
+                (org-agenda-redo)))
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
     (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
