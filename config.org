@@ -928,15 +928,14 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                   (end-of-line)
                   (insert (cdr w))))))))))
 
-  ;; Guard variable: skip org-agenda-finalize entirely during priority changes.
-  ;; org-agenda-change-all-lines calls finalize per matching line — each one
-  ;; does link activation, habit graphs, blocked-task dimming, and our hook.
-  ;; Skipping prevents the O(n × buffer) hang. The priority :around advice
-  ;; below does a single org-agenda-redo afterward for a clean refresh.
+  ;; Guard variable: skip org-agenda-change-all-lines during priority changes.
+  ;; change-all-lines reformats each matching line, which kills delegate name
+  ;; annotations and triggers expensive per-line org-agenda-finalize calls.
+  ;; The priority :around advice rebuilds the view cleanly afterward.
   (defvar tdw--in-priority-change nil
     "Non-nil while `org-agenda-priority' is executing.")
 
-  (advice-add 'org-agenda-finalize :around
+  (advice-add 'org-agenda-change-all-lines :around
               (lambda (orig-fn &rest args)
                 (unless tdw--in-priority-change
                   (apply orig-fn args))))
@@ -1030,26 +1029,32 @@ Inheritance respects `my/org-gtd-inherit-priority' and
   (define-key tdw-agenda-comma-map (kbd "z") (lambda () (interactive) (org-agenda-priority ?Z)))
   (define-key tdw-agenda-comma-map (kbd ",") #'org-agenda-priority)
 
-  ;; Wrap priority changes: skip per-line finalize, then do one clean redo
+  ;; Wrap priority changes: skip change-all-lines, then rebuild view cleanly
   (advice-add 'org-agenda-priority :around
               (lambda (orig-fn &rest args)
                 (let* ((tdw--in-priority-change t)
-                       ;; Grab the heading text from the org file (stable identity)
+                       ;; Grab heading AFTER priority is set (org-priority runs inside orig-fn)
                        (hdm (org-get-at-bol 'org-hd-marker))
-                       (heading (when hdm
-                                  (with-current-buffer (marker-buffer hdm)
-                                    (org-with-wide-buffer
-                                     (goto-char (marker-position hdm))
-                                     (org-get-heading t t t t))))))
+                       (heading-before (when hdm
+                                         (with-current-buffer (marker-buffer hdm)
+                                           (org-with-wide-buffer
+                                            (goto-char (marker-position hdm))
+                                            (org-get-heading t t t t))))))
                   (apply orig-fn args)
-                  ;; Rebuild with keyword format preserved
-                  (let ((org-agenda-todo-keyword-format ""))
-                    (org-agenda-redo))
-                  ;; Find the task by heading text
-                  (when heading
-                    (goto-char (point-min))
-                    (search-forward heading nil t)
-                    (beginning-of-line)))))
+                  ;; Get the NEW heading (priority changed)
+                  (let ((heading (when hdm
+                                   (with-current-buffer (marker-buffer hdm)
+                                     (org-with-wide-buffer
+                                      (goto-char (marker-position hdm))
+                                      (org-get-heading t t t t))))))
+                    ;; Full view rebuild — preserves delegate names, hides keywords
+                    (tdw-sanity-view)
+                    ;; Find the task by heading text and center it
+                    (when heading
+                      (goto-char (point-min))
+                      (when (search-forward heading nil t)
+                        (beginning-of-line)
+                        (recenter)))))))
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
     (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
