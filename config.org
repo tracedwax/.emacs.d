@@ -1064,9 +1064,14 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                       (save-excursion
                         (beginning-of-line)
                         ;; Agenda lines: "  KEYWORD [#P] heading…" — match any TODO keyword
-                        (when (re-search-forward "\\[#.\\]" (line-end-position) t)
-                          (goto-char (match-beginning 0))
-                          (insert new-state " ")))
+                         (if (re-search-forward "\\[#.\\]" (line-end-position) t)
+                             (progn (goto-char (match-beginning 0))
+                                    (insert new-state " "))
+                           ;; No priority cookie — insert before first non-space
+                           (beginning-of-line)
+                           (when (re-search-forward "[^ ]" (line-end-position) t)
+                             (goto-char (match-beginning 0))
+                             (insert new-state " "))))
                       (message "→ %s" new-state))))))
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
