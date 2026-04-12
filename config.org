@@ -1375,6 +1375,108 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
 
   (setq org-agenda-cmp-user-defined #'tdw/agenda-cmp-score)
 
+  ;; ——— Shared Agenda Skip Functions ———
+  ;; Extracted from inline lambdas so both Sanity View and Unordered View
+  ;; can reference them by name instead of duplicating escaped code.
+
+  (defvar tdw--ritual-habits '("Daily meeting prep" "GTD Daily Plan" "Start Time Out" "Vivian Vyvanse")
+    "Habit headings shown in the Daily Rituals section.")
+
+  (defun tdw/skip-unless-daily-ritual ()
+    "Skip unless this is an undone daily ritual habit."
+    (let* ((dominated (org-entry-get (point) "STYLE"))
+           (is-habit (string= (or dominated "") "habit"))
+           (done (org-entry-is-done-p))
+           (hdl (org-get-heading t t t t)))
+      (if (and is-habit (not done)
+               (cl-some (lambda (name) (string-match-p name hdl))
+                        tdw--ritual-habits))
+          nil
+        (outline-next-heading))))
+
+  (defun tdw/skip-ritual-habits-or-non-calendar ()
+    "Skip ritual habits (shown in Daily Rituals) and non-calendar items."
+    (let ((hdl (org-get-heading t t t t)))
+      (if (and (stringp hdl)
+               (cl-some (lambda (name) (string-match-p name hdl))
+                        tdw--ritual-habits))
+          (outline-next-heading)
+        (org-gtd-view-lang--skip-unless-calendar-or-habit))))
+
+  (defun tdw/skip-unless-tickler-due ()
+    "Skip unless this is an incubated item scheduled for today or earlier."
+    (let* ((scheduled (org-get-scheduled-time (point)))
+           (today (org-today)))
+      (if (and scheduled
+               (not (org-entry-is-done-p))
+               (<= (org-time-string-to-absolute
+                    (format-time-string "%Y-%m-%d" scheduled))
+                   today))
+          nil
+        (org-entry-end-position))))
+
+  (defun tdw--score-effort-at-point ()
+    "Return (score effort-mins on-fire-p done-p) at point for skip functions."
+    (let* ((tags (org-get-tags nil t))
+           (score-tag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags))
+           (score (if score-tag (string-to-number (substring score-tag 6)) (tdw/compute-score-at-point)))
+           (effort-str (org-entry-get (point) "EFFORT"))
+           (effort-mins (when (and effort-str
+                                   (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
+                          (+ (* 60 (string-to-number (match-string 1 effort-str)))
+                             (string-to-number (match-string 2 effort-str))))))
+      (list score effort-mins (member "on_fire" tags) (org-entry-is-done-p))))
+
+  (defun tdw/skip-unless-big-rock ()
+    "Skip unless score >= 10 and not on_fire."
+    (let* ((end (org-entry-end-position))
+           (info (tdw--score-effort-at-point))
+           (score (nth 0 info))
+           (on-fire (nth 2 info))
+           (done (nth 3 info)))
+      (if (and (not done) (not on-fire) (>= score 10))
+          nil
+        end)))
+
+  (defun tdw/skip-unless-quick-win ()
+    "Skip unless score < 10, effort > 0 and <= 5 min, not on_fire."
+    (let* ((end (org-entry-end-position))
+           (info (tdw--score-effort-at-point))
+           (score (nth 0 info))
+           (effort-mins (nth 1 info))
+           (on-fire (nth 2 info))
+           (done (nth 3 info)))
+      (if (and (not done) (not on-fire) (< score 10)
+               effort-mins (> effort-mins 0))
+          nil
+        end)))
+
+  (defun tdw/skip-unless-other-rock ()
+    "Skip unless score < 10, effort > 5 min, not on_fire."
+    (let* ((end (org-entry-end-position))
+           (info (tdw--score-effort-at-point))
+           (score (nth 0 info))
+           (effort-mins (nth 1 info))
+           (on-fire (nth 2 info))
+           (done (nth 3 info)))
+      (if (and (not done) (not on-fire) (< score 10)
+               (and effort-mins (> effort-mins 5)))
+          nil
+        end)))
+
+  (defun tdw/skip-unless-unestimated ()
+    "Skip unless score < 10, no effort or effort = 0, not on_fire."
+    (let* ((end (org-entry-end-position))
+           (info (tdw--score-effort-at-point))
+           (score (nth 0 info))
+           (effort-mins (nth 1 info))
+           (on-fire (nth 2 info))
+           (done (nth 3 info)))
+      (if (and (not done) (not on-fire) (< score 10)
+               (or (not effort-mins) (<= effort-mins 0)))
+          nil
+        end)))
+
   (defun tdw-sanity-view ()
     "Tag-based GTD view: Calendar/Habits, On Fire, Big Rocks, Quick Wins, Other Rocks, Delegated."
     (interactive)
