@@ -1145,6 +1145,7 @@ ELEMENT can be:
 - \\='file-name - buffer file base name
 - \\='effort - EFFORT property
 - \\='score - urgency/impact tag abbreviation
+- \\='fire - fire emoji if tagged :on_fire:
 - a string - returned as-is (literal)"
       (pcase element
         ('project (org-gtd-agenda--resolve-project))
@@ -1152,6 +1153,7 @@ ELEMENT can be:
         ('file-name (org-gtd-agenda--resolve-file-name))
         ('effort (org-gtd-agenda--resolve-effort))
         ('score (org-gtd-agenda--resolve-score))
+        ('fire (if (member "on_fire" (org-get-tags nil t)) "🔥" ""))
         ((pred stringp) element)
         (_ nil)))
 
@@ -1273,18 +1275,26 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
             (org-toggle-tag "on_fire" 'off)
           (org-toggle-tag "on_fire" 'on)))
       ;; In-place update of the prefix
-      (let ((inhibit-read-only t)
-            (new-score (with-current-buffer buffer
-                         (org-with-wide-buffer
-                          (goto-char pos)
-                          (org-gtd-agenda--resolve-score)))))
+      (let ((inhibit-read-only t))
         (save-excursion
           (beginning-of-line)
-          (when (re-search-forward "\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
-            (replace-match new-score))))
-      (message "%s on_fire" (if has-tag "Removed" "Added"))
-      ;; Refresh the entire composite view so the task moves between sections
-      (org-agenda-redo-all)))
+          (cond
+           ;; Sanity View: replace full score annotation (🔥 U:xx I:xx [nn])
+           ((re-search-forward "\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+            (let ((new-score (with-current-buffer buffer
+                               (org-with-wide-buffer
+                                (goto-char pos)
+                                (org-gtd-agenda--resolve-score)))))
+              (replace-match new-score)))
+           ;; Unordered View: toggle fire emoji before the — dash
+           ((re-search-forward "\\(🔥 \\)— " (line-end-position) t)
+            ;; Had fire, remove it
+            (replace-match "— "))
+           ((re-search-forward "\\([0-9]+:[0-9]+\\) — " (line-end-position) t)
+            ;; No fire yet, add it after the effort
+            (when (not has-tag)  ;; we just added on_fire
+              (replace-match (concat (match-string 1) " 🔥 — ")))))))
+      (message "%s on_fire" (if has-tag "Removed" "Added"))))
 
   ;;; ——— Score Computation ———
 
@@ -1546,7 +1556,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
        (org-gtd-view-show
        `((name . ,(format "Unordered View (Total Effort: %s)" total))
          (prefix-width . 25)
-         (prefix . (effort " — "))
+         (prefix . (effort " " fire " — "))
          (blocks . (
                     ;; 0. Daily Rituals
                     ((native . (agenda ""
@@ -1555,7 +1565,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-start-day nil)
                                  (org-agenda-entry-types '(:scheduled))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))
                                  (org-agenda-skip-function
                                   '(let* ((dominated (org-entry-get (point) "STYLE"))
@@ -1575,7 +1585,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Actions\"+on_fire"
                                 ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))))))
 
                     ;; 2. Today's Schedule
@@ -1592,7 +1602,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                                    (string-match-p "Vivian Vyvanse" hdl)))
                                          (outline-next-heading)
                                        (org-gtd-view-lang--skip-unless-calendar-or-habit))))
-                                 (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down time-up alpha-up))))))
 
                     ;; 3. Delegated: overdue
@@ -1610,7 +1620,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Incubated\""
                                 ((org-agenda-overriding-header "🔔 Ticklers Due")
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down scheduled-up alpha-up))
                                  (org-agenda-skip-function
                                   '(let* ((scheduled (org-get-scheduled-time (point)))
@@ -1628,7 +1638,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Actions\""
                                 ((org-agenda-overriding-header ,(format "🪨🪨 Big Rocks (%s)" effort-big))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))
                                  (org-agenda-skip-function
                                   '(let* ((end (org-entry-end-position))
@@ -1646,7 +1656,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Actions\"+Effort<=\"0:05\""
                                 ((org-agenda-overriding-header ,(format "💨💨 Quick Wins (%s)" effort-quick))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))
                                  (org-agenda-skip-function
                                   '(let* ((end (org-entry-end-position))
@@ -1670,7 +1680,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Actions\""
                                 ((org-agenda-overriding-header ,(format "🪨 Other Rocks (%s)" effort-other))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))
                                  (org-agenda-skip-function
                                   '(let* ((end (org-entry-end-position))
@@ -1694,7 +1704,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Actions\""
                                 ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-unest))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))
                                  (org-agenda-skip-function
                                   '(let* ((end (org-entry-end-position))
