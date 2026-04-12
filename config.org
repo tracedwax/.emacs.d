@@ -1050,7 +1050,9 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                         (progn (beginning-of-line) (recenter))
                       (message "DEBUG: search-key not found: [%s]" search-key))))))
 
-  ;; Wrap todo state changes: same pattern — skip change-all-lines, rebuild
+  ;; Wrap todo state changes: skip change-all-lines, rebuild.
+  ;; Cancelled/done tasks vanish from the view, so also capture the next
+  ;; task's heading as a fallback landing target.
   (advice-add 'org-agenda-todo :around
               (lambda (orig-fn &rest args)
                 (let* ((tdw--skip-change-all-lines t)
@@ -1060,16 +1062,30 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                                        (org-with-wide-buffer
                                         (goto-char (marker-position hdm))
                                         (let ((h (org-get-heading t t t t)))
-                                          (substring h 0 (min 40 (length h)))))))))
+                                          (substring h 0 (min 40 (length h))))))))
+                       (fallback-key (save-excursion
+                                       (forward-line 1)
+                                       (let ((m (org-get-at-bol 'org-hd-marker)))
+                                         (when m
+                                           (with-current-buffer (marker-buffer m)
+                                             (org-with-wide-buffer
+                                              (goto-char (marker-position m))
+                                              (let ((h (org-get-heading t t t t)))
+                                                (substring h 0 (min 40 (length h)))))))))))
                   (apply orig-fn args)
                   (tdw-sanity-view)
                   (when (get-buffer "*Org Agenda*")
                     (switch-to-buffer "*Org Agenda*"))
-                  (when search-key
-                    (goto-char (point-min))
-                    (when (search-forward search-key nil t)
-                      (beginning-of-line)
-                      (recenter))))))
+                  (let ((found nil))
+                    (when search-key
+                      (goto-char (point-min))
+                      (when (search-forward search-key nil t)
+                        (beginning-of-line) (recenter)
+                        (setq found t)))
+                    (when (and (not found) fallback-key)
+                      (goto-char (point-min))
+                      (when (search-forward fallback-key nil t)
+                        (beginning-of-line) (recenter)))))))
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
     (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
