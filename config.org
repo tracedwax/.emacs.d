@@ -1280,11 +1280,17 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (cond
            ;; Sanity View: replace full score annotation (🔥 U:xx I:xx [nn])
            ((re-search-forward "\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
-            (let ((new-score (with-current-buffer buffer
-                               (org-with-wide-buffer
-                                (goto-char hdmarker)
-                                (org-gtd-agenda--resolve-score)))))
-              (replace-match new-score)))
+            ;; Save match positions NOW — resolve-score uses regex internally
+            ;; and will destroy the match data if we don't capture first
+            (let* ((mbeg (match-beginning 0))
+                   (mend (match-end 0))
+                   (new-score (with-current-buffer buffer
+                                (org-with-wide-buffer
+                                 (goto-char hdmarker)
+                                 (org-gtd-agenda--resolve-score)))))
+              (delete-region mbeg mend)
+              (goto-char mbeg)
+              (insert new-score)))
            ;; Unordered View: toggle fire emoji before the — dash
            ((re-search-forward "🔥 — " (line-end-position) t)
             ;; Had fire, now removing
