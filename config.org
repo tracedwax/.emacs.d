@@ -928,16 +928,16 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                   (end-of-line)
                   (insert (cdr w))))))))))
 
-  ;; Guard variable: skip org-agenda-change-all-lines during priority changes.
-  ;; change-all-lines reformats each matching line, which kills delegate name
-  ;; annotations and triggers expensive per-line org-agenda-finalize calls.
-  ;; The priority :around advice rebuilds the view cleanly afterward.
-  (defvar tdw--in-priority-change nil
-    "Non-nil while `org-agenda-priority' is executing.")
+  ;; Guard variable: skip org-agenda-change-all-lines during agenda commands
+  ;; that will rebuild the view themselves afterward. change-all-lines reformats
+  ;; each matching line, which kills delegate name annotations and triggers
+  ;; expensive per-line org-agenda-finalize calls.
+  (defvar tdw--skip-change-all-lines nil
+    "Non-nil to suppress `org-agenda-change-all-lines'.")
 
   (advice-add 'org-agenda-change-all-lines :around
               (lambda (orig-fn &rest args)
-                (unless tdw--in-priority-change
+                (unless tdw--skip-change-all-lines
                   (apply orig-fn args))))
 
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
@@ -1032,7 +1032,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
   ;; Wrap priority changes: skip change-all-lines, then rebuild view cleanly
   (advice-add 'org-agenda-priority :around
               (lambda (orig-fn &rest args)
-                (let* ((tdw--in-priority-change t)
+                (let* ((tdw--skip-change-all-lines t)
                        (hdm (org-get-at-bol 'org-hd-marker))
                        (search-key (when hdm
                                      (with-current-buffer (marker-buffer hdm)
@@ -1049,6 +1049,27 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                     (if (search-forward search-key nil t)
                         (progn (beginning-of-line) (recenter))
                       (message "DEBUG: search-key not found: [%s]" search-key))))))
+
+  ;; Wrap todo state changes: same pattern — skip change-all-lines, rebuild
+  (advice-add 'org-agenda-todo :around
+              (lambda (orig-fn &rest args)
+                (let* ((tdw--skip-change-all-lines t)
+                       (hdm (org-get-at-bol 'org-hd-marker))
+                       (search-key (when hdm
+                                     (with-current-buffer (marker-buffer hdm)
+                                       (org-with-wide-buffer
+                                        (goto-char (marker-position hdm))
+                                        (let ((h (org-get-heading t t t t)))
+                                          (substring h 0 (min 40 (length h)))))))))
+                  (apply orig-fn args)
+                  (tdw-sanity-view)
+                  (when (get-buffer "*Org Agenda*")
+                    (switch-to-buffer "*Org Agenda*"))
+                  (when search-key
+                    (goto-char (point-min))
+                    (when (search-forward search-key nil t)
+                      (beginning-of-line)
+                      (recenter))))))
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
     (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
