@@ -1054,7 +1054,8 @@ Inheritance respects `my/org-gtd-inherit-priority' and
 
 
   ;; Wrap todo state changes: skip change-all-lines, show new keyword in-place.
-  ;; Keywords are hidden (todo-keyword-format=""), so insert before [#X] cookie.
+  ;; Keywords are hidden (todo-keyword-format=""), so we must clean up any manually
+  ;; inserted or residual keywords before inserting the new ones.
   (advice-add 'org-agenda-todo :around
               (lambda (orig-fn &rest args)
                 (let* ((tdw--skip-change-all-lines t)
@@ -1068,15 +1069,27 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                            (inhibit-read-only t))
                       (save-excursion
                         (beginning-of-line)
-                        ;; Agenda lines: "  KEYWORD [#P] heading…" — match any TODO keyword
-                         (if (re-search-forward "\\[#.\\]" (line-end-position) t)
-                             (progn (goto-char (match-beginning 0))
-                                    (insert new-state " "))
-                           ;; No priority cookie — insert before first non-space
-                           (beginning-of-line)
-                           (when (re-search-forward "[^ ]" (line-end-position) t)
-                             (goto-char (match-beginning 0))
-                             (insert new-state " "))))
+                        (let* ((eol (line-end-position))
+                               (anchor (or (text-property-not-all (point) eol 'txt nil)
+                                           (text-property-not-all (point) eol 'org-hd-marker nil)
+                                           (save-excursion
+                                             (goto-char (point))
+                                             (when (re-search-forward "\\(?: — \\| - \\)[ \t]*" eol t)
+                                               (point)))
+                                           (save-excursion
+                                             (goto-char (point))
+                                             (when (re-search-forward "\\[#.\\]" eol t)
+                                               (match-beginning 0)))
+                                           (save-excursion
+                                             (goto-char (point))
+                                             (when (re-search-forward "[^ \t]" eol t)
+                                               (match-beginning 0)))
+                                           (point))))
+                          (goto-char anchor)
+                          (if (looking-at "\\(?:\\(?:TODO\\|NEXT\\|WAIT\\|DONE\\|CNCL\\|SOMEDAY\\)[ \t]*\\)+")
+                              (replace-match (if (string= new-state "") "" (concat new-state " ")))
+                            (unless (string= new-state "")
+                              (insert new-state " ")))))
                       (message "→ %s" new-state))))))
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
