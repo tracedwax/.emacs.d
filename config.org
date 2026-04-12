@@ -1044,8 +1044,13 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                            (inhibit-read-only t))
                       (save-excursion
                         (beginning-of-line)
-                        (when (re-search-forward "\\[#.\\]" (line-end-position) t)
-                          (replace-match (format "[#%s]" (or new-pri "K"))))))))))
+                        (if (re-search-forward "\\[#.\\]" (line-end-position) t)
+                            (replace-match (format "[#%s]" (or new-pri "K")))
+                          ;; No cookie yet — insert before first non-space
+                          (beginning-of-line)
+                          (when (re-search-forward "[^ ]" (line-end-position) t)
+                            (goto-char (match-beginning 0))
+                            (insert (format "[#%s] " (or new-pri "K")))))))))))
 
 
   ;; Wrap todo state changes: skip change-all-lines, show new keyword in-place.
