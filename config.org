@@ -1047,6 +1047,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                         (when (re-search-forward "\\[#.\\]" (line-end-position) t)
                           (replace-match (format "[#%s]" (or new-pri "K"))))))))))
 
+
   ;; Wrap todo state changes: skip change-all-lines, show new keyword in-place.
   ;; The agenda line already contains the old TODO keyword — replace it directly.
   (advice-add 'org-agenda-todo :around
@@ -1067,7 +1068,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                                (concat "\\b\\(" (regexp-opt org-todo-keywords-1) "\\)\\b")
                                (line-end-position) t)
                           (replace-match new-state t t)))
-                      (message "→ %s" new-state)))))))
+                      (message "→ %s" new-state))))))
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
     (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
