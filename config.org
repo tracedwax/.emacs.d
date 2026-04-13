@@ -1312,15 +1312,17 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (delete-region mbeg mend)
               (goto-char mbeg)
               (insert new-score)))
-           ;; Unordered View: toggle fire emoji before the — dash
-           ((re-search-forward "🔥 — " (line-end-position) t)
-            ;; Had fire, now removing
-            (when has-tag
-              (replace-match "— ")))
-           ((re-search-forward "\\([0-9]+:[0-9]+\\) — " (line-end-position) t)
-            ;; No fire, now adding
-            (when (not has-tag)
-              (replace-match (concat (match-string 1) " 🔥 — ")))))))
+           ;; Unordered View: replace urg-imp annotation (🔥 U:xx I:xx)
+           ((re-search-forward "\\(?:🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+            (let* ((mbeg (match-beginning 0))
+                   (mend (match-end 0))
+                   (new-urg-imp (with-current-buffer buffer
+                                  (org-with-wide-buffer
+                                   (goto-char hdmarker)
+                                   (org-gtd-agenda--resolve-urg-imp)))))
+              (delete-region mbeg mend)
+              (goto-char mbeg)
+              (insert new-urg-imp))))))
       (message "%s on_fire" (if has-tag "Removed" "Added"))))
 
   ;;; ——— Score Computation ———
