@@ -1270,7 +1270,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
                           (org-gtd-agenda--resolve-score)))))
         (save-excursion
           (beginning-of-line)
-          (when (re-search-forward "\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+          (when (re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (replace-match new-score))))
       (message "Set %s → %s" prefix next-level)))
 
@@ -1304,7 +1304,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (cond
            ;; Sanity View: replace full score annotation (🔥 U:xx I:xx [nn])
-           ((re-search-forward "\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             ;; Save match positions NOW — resolve-score uses regex internally
             ;; and will destroy the match data if we don't capture first
             (let* ((mbeg (match-beginning 0))
@@ -1317,7 +1317,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation (🔥 U:xx I:xx)
-           ((re-search-forward "\\(?:🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
