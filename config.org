@@ -1599,7 +1599,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
           nil
         end)))
 
-  (defun tdw-sanity-view ()
+  (defun tdw-sanity-view (&optional keys)
     "Tag-based GTD view: Calendar/Habits, On Fire, Big Rocks, Quick Wins, Other Rocks, Delegated."
     (interactive)
     (setq tdw--is-unordered-view nil)
@@ -1708,7 +1708,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))
                                  (org-agenda-skip-function 'tdw/skip-unless-unestimated)))))
-                    )))))))
+                    ))) (or keys "s"))))))
 
   (defun tdw-unordered-view ()
     "Like Sanity View but without score annotations, priority cookies, or custom sorting."
@@ -1928,7 +1928,7 @@ These are tags to add to tasks, such as types of action, mindset I need to be in
     (org-agenda-diary-file 'diary-file)
     (org-agenda-include-diary t)
     (org-agenda-restore-windows-after-quit t)
-    (org-agenda-sticky nil)
+    (org-agenda-sticky t)
     (org-agenda-window-setup 'other-window)
     (org-agenda-skip-deadline-if-done t)
     (org-agenda-skip-scheduled-if-done t)
