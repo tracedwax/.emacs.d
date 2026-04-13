@@ -1153,6 +1153,7 @@ ELEMENT can be:
         ('file-name (org-gtd-agenda--resolve-file-name))
         ('effort (org-gtd-agenda--resolve-effort))
         ('score (org-gtd-agenda--resolve-score))
+        ('urg-imp (org-gtd-agenda--resolve-urg-imp))
         ('fire (if (member "on_fire" (org-get-tags nil t)) "🔥" ""))
         ((pred stringp) element)
         (_ nil)))
