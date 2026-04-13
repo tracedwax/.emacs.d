@@ -1264,15 +1264,32 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           ;; Recalculate score tag
           (tdw/compute-and-set-score)))
       ;; Update prefix in-place instead of full refresh
-      (let ((inhibit-read-only t)
-            (new-score (with-current-buffer buffer
-                         (org-with-wide-buffer
-                          (goto-char pos)
-                          (org-gtd-agenda--resolve-score)))))
+      (let ((inhibit-read-only t))
         (save-excursion
           (beginning-of-line)
-          (when (re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
-            (replace-match new-score))))
+          (cond
+           ;; Sanity View: replace full score annotation (U:xx I:xx [nn])
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+            (let* ((mbeg (match-beginning 0))
+                   (mend (match-end 0))
+                   (new-score (with-current-buffer buffer
+                                (org-with-wide-buffer
+                                 (goto-char pos)
+                                 (org-gtd-agenda--resolve-score)))))
+              (delete-region mbeg mend)
+              (goto-char mbeg)
+              (insert new-score)))
+           ;; Unordered View: replace urg-imp annotation (U:xx I:xx)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+            (let* ((mbeg (match-beginning 0))
+                   (mend (match-end 0))
+                   (new-urg-imp (with-current-buffer buffer
+                                  (org-with-wide-buffer
+                                   (goto-char pos)
+                                   (org-gtd-agenda--resolve-urg-imp)))))
+              (delete-region mbeg mend)
+              (goto-char mbeg)
+              (insert new-urg-imp))))))
       (message "Set %s → %s" prefix next-level)))
 
   (defun tdw/agenda-cycle-urgency ()
