@@ -918,10 +918,12 @@ Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
             (goto-char (point-min))
             (while (re-search-forward "\\(For Today\\( (Priority B - [^)]*)\\)?\\)" nil t)
               (replace-match (format "For Today (Priority B - %s)" effort-big) t t nil 1))
-            ;; Strip NEXT/TODO/WAIT keywords from all lines
-            (goto-char (point-min))
-            (while (re-search-forward "\\bNEXT \\|\\bTODO \\|\\bWAIT " nil t)
-              (replace-match ""))
+            ;; Strip NEXT/TODO/WAIT keywords from all lines (case-sensitive
+            ;; to avoid corrupting task titles containing "next", "Next", etc.)
+            (let ((case-fold-search nil))
+              (goto-char (point-min))
+              (while (re-search-forward "\\bNEXT \\|\\bTODO \\|\\bWAIT " nil t)
+                (replace-match "")))
             ;; Inject capacity warnings
             (let ((warnings (tdw/sanity-view-warnings)))
               (dolist (w warnings)
