@@ -1119,8 +1119,9 @@ Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
     (define-key org-agenda-mode-map (kbd "i") #'tdw/agenda-cycle-impact)
     (define-key org-agenda-mode-map (kbd "I") #'org-agenda-diary-entry)
     (define-key org-agenda-mode-map (kbd "f") #'tdw/agenda-toggle-on-fire)
-    (define-key org-agenda-mode-map (kbd "r") #'tdw/sanity-refresh)
-    (define-key org-agenda-mode-map (kbd "g") #'tdw/sanity-refresh))
+    (define-key org-agenda-mode-map (kbd "g") #'tdw/agenda-toggle-gc-next)
+    (define-key org-agenda-mode-map (kbd "l") #'tdw/agenda-toggle-flyby)
+    (define-key org-agenda-mode-map (kbd "r") #'tdw/sanity-refresh))
 
   (defun tdw/sanity-refresh ()
     "Rebuild agenda and scroll to top so On Fire is visible."
@@ -1328,6 +1329,92 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-urg-imp))))))
       (message "%s on_fire" (if has-tag "Removed" "Added"))))
+
+  (defun tdw/agenda-toggle-gc-next ()
+    "Toggle :gc_next: tag on the task at point and update prefix in-place."
+    (interactive)
+    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
+                         (org-agenda-error)))
+           (buffer (marker-buffer hdmarker))
+           has-tag)
+      (with-current-buffer buffer
+        (org-with-wide-buffer
+         (goto-char hdmarker)
+         (setq has-tag (member "gc_next" (org-get-tags nil t)))
+         (if has-tag
+             (org-toggle-tag "gc_next" 'off)
+           (org-toggle-tag "gc_next" 'on))))
+      ;; In-place update of the prefix
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (beginning-of-line)
+          (cond
+           ;; Sanity View: replace full score annotation
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+            (let* ((mbeg (match-beginning 0))
+                   (mend (match-end 0))
+                   (new-score (with-current-buffer buffer
+                                (org-with-wide-buffer
+                                 (goto-char hdmarker)
+                                 (org-gtd-agenda--resolve-score)))))
+              (delete-region mbeg mend)
+              (goto-char mbeg)
+              (insert new-score)))
+           ;; Unordered View: replace urg-imp annotation
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+            (let* ((mbeg (match-beginning 0))
+                   (mend (match-end 0))
+                   (new-urg-imp (with-current-buffer buffer
+                                  (org-with-wide-buffer
+                                   (goto-char hdmarker)
+                                   (org-gtd-agenda--resolve-urg-imp)))))
+              (delete-region mbeg mend)
+              (goto-char mbeg)
+              (insert new-urg-imp))))))
+      (message "%s gc_next" (if has-tag "Removed" "Added"))))
+
+  (defun tdw/agenda-toggle-flyby ()
+    "Toggle :flyby: tag on the task at point and update prefix in-place."
+    (interactive)
+    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
+                         (org-agenda-error)))
+           (buffer (marker-buffer hdmarker))
+           has-tag)
+      (with-current-buffer buffer
+        (org-with-wide-buffer
+         (goto-char hdmarker)
+         (setq has-tag (member "flyby" (org-get-tags nil t)))
+         (if has-tag
+             (org-toggle-tag "flyby" 'off)
+           (org-toggle-tag "flyby" 'on))))
+      ;; In-place update of the prefix
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (beginning-of-line)
+          (cond
+           ;; Sanity View: replace full score annotation
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+            (let* ((mbeg (match-beginning 0))
+                   (mend (match-end 0))
+                   (new-score (with-current-buffer buffer
+                                (org-with-wide-buffer
+                                 (goto-char hdmarker)
+                                 (org-gtd-agenda--resolve-score)))))
+              (delete-region mbeg mend)
+              (goto-char mbeg)
+              (insert new-score)))
+           ;; Unordered View: replace urg-imp annotation
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+            (let* ((mbeg (match-beginning 0))
+                   (mend (match-end 0))
+                   (new-urg-imp (with-current-buffer buffer
+                                  (org-with-wide-buffer
+                                   (goto-char hdmarker)
+                                   (org-gtd-agenda--resolve-urg-imp)))))
+              (delete-region mbeg mend)
+              (goto-char mbeg)
+              (insert new-urg-imp))))))
+      (message "%s flyby" (if has-tag "Removed" "Added"))))
 
   ;;; ——— Score Computation ———
 
