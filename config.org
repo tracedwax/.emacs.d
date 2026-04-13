@@ -1603,7 +1603,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
        (org-gtd-view-show
        `((name . ,(format "Unordered View (Total Effort: %s)" total))
          (prefix-width . 25)
-         (prefix . (effort " " fire " — "))
+         (prefix . (effort " " urg-imp " — "))
          (blocks . (
                     ;; 0. Daily Rituals
                     ((native . (agenda ""
@@ -1612,7 +1612,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-start-day nil)
                                  (org-agenda-entry-types '(:scheduled))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))
                                  (org-agenda-skip-function 'tdw/skip-unless-daily-ritual)))))
 
@@ -1621,7 +1621,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Actions\"+on_fire"
                                 ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))))))
 
                     ;; 2. Today's Schedule
@@ -1630,7 +1630,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-start-day nil)
                                  (org-agenda-skip-additional-timestamps-same-entry t)
                                  (org-agenda-skip-function 'tdw/skip-ritual-habits-or-non-calendar)
-                                 (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down time-up alpha-up))))))
 
                     ;; 3. Delegated: overdue
@@ -1648,7 +1648,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Incubated\""
                                 ((org-agenda-overriding-header "🔔 Ticklers Due")
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down scheduled-up alpha-up))
                                  (org-agenda-skip-function 'tdw/skip-unless-tickler-due)))))
 
@@ -1657,7 +1657,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Actions\""
                                 ((org-agenda-overriding-header ,(format "🪨🪨 Big Rocks (%s)" effort-big))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))
                                  (org-agenda-skip-function 'tdw/skip-unless-big-rock)))))
 
@@ -1666,7 +1666,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Actions\"+Effort<=\"0:05\""
                                 ((org-agenda-overriding-header ,(format "💨💨 Quick Wins (%s)" effort-quick))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))
                                  (org-agenda-skip-function 'tdw/skip-unless-quick-win)))))
 
@@ -1675,7 +1675,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Actions\""
                                 ((org-agenda-overriding-header ,(format "🪨 Other Rocks (%s)" effort-other))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))
                                  (org-agenda-skip-function 'tdw/skip-unless-other-rock)))))
 
@@ -1684,7 +1684,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 "LEVEL>0+ORG_GTD=\"Actions\""
                                 ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-unest))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" fire \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))
                                  (org-agenda-skip-function 'tdw/skip-unless-unestimated)))))
                     )))))))
