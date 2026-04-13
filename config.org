@@ -1708,9 +1708,9 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))
                                  (org-agenda-skip-function 'tdw/skip-unless-unestimated)))))
-                    ))) (or keys "s"))))))
+                    ))) (or keys "s"))))
 
-  (defun tdw-unordered-view ()
+  (defun tdw-unordered-view (&optional keys)
     "Like Sanity View but without score annotations, priority cookies, or custom sorting."
     (interactive)
     ;; Signal to the finalize hook that this is an Unordered View.
@@ -1820,7 +1820,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))
                                  (org-agenda-skip-function 'tdw/skip-unless-unestimated)))))
-                    )))))))
+                    ))) (or keys "u"))))
 
   (defun tdw-decision-view ()
     "A broad GTD view for decision making: Priority A, B, C, and D."
@@ -2031,3 +2031,42 @@ With this configuration, using C-f in a status buffer will trigger the gitflow s
 #+END_SRC
 
 
+
+* Dual-Frame Startup
+#+BEGIN_SRC emacs-lisp
+(defun tdw/startup-dual-frames ()
+  "Automatically open Sanity View on secondary monitor and Unordered View on primary monitor."
+  (let* ((monitors (display-monitor-attributes-list))
+         (primary (cl-find-if (lambda (m)
+                                (let ((geom (assoc 'geometry m)))
+                                  (and (= (nth 1 geom) 0)
+                                       (= (nth 2 geom) 0))))
+                              monitors)))
+         (secondary (cl-find-if (lambda (m)
+                                  (let ((geom (assoc 'geometry m)))
+                                    (or (/= (nth 1 geom) 0)
+                                        (/= (nth 2 geom) 0))))
+                                monitors)))
+         ;; Fallback to primary if no secondary
+         (secondary (or secondary primary))
+         (sec-geom (assoc 'geometry secondary))
+         (pri-geom (assoc 'geometry primary))
+         (first-frame (selected-frame)))
+
+    ;; 1. Setup Sanity View on Secondary Monitor (Frame 1)
+    (set-frame-parameter first-frame 'fullscreen 'fullboth)
+    (set-frame-position first-frame (nth 1 sec-geom) (nth 2 sec-geom))
+    (with-selected-frame first-frame
+      (tdw-sanity-view "s")
+      (delete-other-windows))
+
+    ;; 2. Setup Unordered View on Primary Monitor (Frame 2)
+    (let ((second-frame (make-frame `((fullscreen . fullboth)
+                                      (top . ,(nth 2 pri-geom))
+                                      (left . ,(nth 1 pri-geom))))))
+      (with-selected-frame second-frame
+        (tdw-unordered-view "u")
+        (delete-other-windows)))))
+
+(add-hook 'emacs-startup-hook #'tdw/startup-dual-frames)
+#+END_SRC
