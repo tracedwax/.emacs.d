@@ -1769,6 +1769,22 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-sorting-strategy '(priority-down scheduled-up alpha-up))
                                  (org-agenda-skip-function 'tdw/skip-unless-tickler-due)))))
 
+                    ;; 3c. Google Cloud Next
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+gc_next"
+                                ((org-agenda-overriding-header "☁️☁️ Google Cloud Next")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 3d. Flyby messages
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+flyby"
+                                ((org-agenda-overriding-header "🛸🛸 <1m comms flyby messages 🛸🛸")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
                     ;; 4. Big Rocks — score >= 10
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\""
