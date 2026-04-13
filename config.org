@@ -1192,6 +1192,26 @@ Always shows brackets — empty [] if no score tag found."
                         "")))
       (format "%sU:%s I:%s [%s]" fire urg imp score-str)))
 
+  (defun org-gtd-agenda--resolve-urg-imp ()
+    "Return compact urgency/impact string without the numeric score, like '🔥 U:vh I:h'."
+    (let* ((tags (org-get-tags nil t))
+           (fire (if (member "on_fire" tags) "🔥 " ""))
+           (urg (cond ((member "wh_urgency" tags) "wh")
+                      ((member "vh_urgency" tags) "vh")
+                      ((member "h_urgency" tags)  "hi")
+                      ((member "sh_urgency" tags) "sh")
+                      ((member "m_urgency" tags)  "md")
+                      ((member "l_urgency" tags)  "lo")
+                      (t "--")))
+           (imp (cond ((member "wh_impact" tags)  "wh")
+                      ((member "vh_impact" tags)  "vh")
+                      ((member "h_impact" tags)   "hi")
+                      ((member "sh_impact" tags)  "sh")
+                      ((member "m_impact" tags)   "md")
+                      ((member "l_impact" tags)   "lo")
+                      (t "--"))))
+      (format "%sU:%s I:%s" fire urg imp)))
+
   (defun tdw-someday-priority-view ()
     "Someday/Maybe items — uses Aldric's exact view language.
 Press ', n' to flag for promotion, ', <letter>' to reprioritize."
