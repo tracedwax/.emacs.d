@@ -1671,7 +1671,8 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
     (interactive)
     (setq tdw--is-unordered-view nil)
     (pcase-let ((`(,total ,effort-fire ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
-      (let ((org-agenda-todo-keyword-format ""))
+      (let ((org-agenda-todo-keyword-format "")
+          (org-agenda-hide-tags-regexp "."))
        (org-gtd-view-show
        `((name . ,(format "Sanity View (Total Effort: %s)" total))
          (prefix-width . 25)
@@ -2050,7 +2051,8 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
     ;; Signal to the finalize hook that this is an Unordered View.
     (setq tdw--is-unordered-view t)
     (pcase-let ((`(,total ,effort-fire ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
-      (let ((org-agenda-todo-keyword-format ""))
+      (let ((org-agenda-todo-keyword-format "")
+            (org-agenda-hide-tags-regexp "."))
        (org-gtd-view-show
        `((name . ,(format "Unordered View (Total Effort: %s)" total))
          (prefix-width . 25)
