@@ -405,7 +405,11 @@ Because sometimes, vim.
 #+BEGIN_SRC emacs-lisp
 (use-package evil
   :config
-  (evil-mode 1))
+  (evil-mode 1)
+  ;; Org-agenda buffers use Emacs state so native org-agenda keybindings
+  ;; (I, O, t, etc.) take priority over evil normal-state bindings.
+  ;; Evil remains active for all other buffers including org files.
+  (evil-set-initial-state 'org-agenda-mode 'emacs))
 #+END_SRC
 
 ** Minibuffer
@@ -735,6 +739,13 @@ Inheritance respects `my/org-gtd-inherit-priority' and
      :map org-agenda-mode-map
      ("C-c ?" . org-gtd-agenda-transient)
      ("C-c c" . org-gtd-clarify-agenda-item)))
+
+  ;; Override I/O in org-agenda-mode-map via hook so it always wins,
+  ;; even after org-agenda (re)sets its keymap.
+  (add-hook 'org-agenda-mode-hook
+            (lambda ()
+              (local-set-key (kbd "I") #'org-agenda-clock-in)
+              (local-set-key (kbd "O") #'org-agenda-clock-out)))
 
   (defun tdw/get-effort-minutes (effort-str)
     "Convert EFFORT-STR (H:MM) to minutes."
