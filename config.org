@@ -2494,7 +2494,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
-                    ))) (or keys "u"))))
+                    ))) (or keys "u")))))
 
   (defun tdw-decision-view ()
     "A broad GTD view for decision making: Priority A, B, C, and D."
