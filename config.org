@@ -1224,12 +1224,13 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
         (truncate-string-to-width (or result "") width nil ?\s org-gtd-agenda-truncate-ellipsis))))
 
   (defun org-gtd-agenda--resolve-score ()
-    "Return compact urgency/impact string with score like '🔥 U:vh I:h [13]'.
+    "Return compact urgency/impact string with score like '🔥 ⚾️ U:vh I:h [13]'.
 Always shows brackets — empty [] if no score tag found."
     (let* ((tags (org-get-tags nil t))
            (gc-next (if (member "gc_next" tags) "☁️ " ""))
            (flyby (if (member "flyby" tags) "🛸 " ""))
            (fire (if (member "on_fire" tags) "🔥 " ""))
+           (deck (if (member "on_deck" tags) "⚾️ " ""))
            (urg (cond ((member "wh_urgency" tags) "wh")
                       ((member "vh_urgency" tags) "vh")
                       ((member "h_urgency" tags)  "hi")
@@ -1248,14 +1249,15 @@ Always shows brackets — empty [] if no score tag found."
            (score-str (if score-tag
                           (substring score-tag 6)
                         "")))
-      (format "%s%s%sU:%s I:%s [%s]" gc-next flyby fire urg imp score-str)))
+      (format "%s%s%s%sU:%s I:%s [%s]" gc-next flyby fire deck urg imp score-str)))
 
   (defun org-gtd-agenda--resolve-urg-imp ()
-    "Return compact urgency/impact string without the numeric score, like '🔥 U:vh I:h'."
+    "Return compact urgency/impact string without the numeric score, like '🔥 ⚾️ U:vh I:h'."
     (let* ((tags (org-get-tags nil t))
            (gc-next (if (member "gc_next" tags) "☁️ " ""))
            (flyby (if (member "flyby" tags) "🛸 " ""))
            (fire (if (member "on_fire" tags) "🔥 " ""))
+           (deck (if (member "on_deck" tags) "⚾️ " ""))
            (urg (cond ((member "wh_urgency" tags) "wh")
                       ((member "vh_urgency" tags) "vh")
                       ((member "h_urgency" tags)  "hi")
@@ -1270,7 +1272,7 @@ Always shows brackets — empty [] if no score tag found."
                       ((member "m_impact" tags)   "md")
                       ((member "l_impact" tags)   "lo")
                       (t "--"))))
-      (format "%s%s%sU:%s I:%s" gc-next flyby fire urg imp)))
+      (format "%s%s%s%sU:%s I:%s" gc-next flyby fire deck urg imp)))
 
   (defun tdw-someday-priority-view ()
     "Someday/Maybe items — uses Aldric's exact view language.
