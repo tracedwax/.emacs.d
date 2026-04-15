@@ -982,7 +982,7 @@ Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
     "Tags that have dedicated sections in the Sanity/Unordered views.")
 
   (defvar tdw--excluded-tag-prefixes
-    '("on_fire" "on_deck" "tgl_" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
+    '("on_fire" "on_deck" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
       "for_" "ARCHIVE" "FLAGGED")
     "Tag prefixes excluded from the missing-tag check (urgency/impact/score/meta).")
 
@@ -990,6 +990,46 @@ Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
     '("bug" "david_walker" "jason" "meaghan" "rakesh" "vikas" "zach"
       "noexport" "crypt")
     "Individual tags excluded from the missing-tag check (people/meta).")
+
+  (defun tdw/generate-tgl-blocks (prefix-type)
+    "Generate a single agenda block matching all active tgl_* tags.
+PREFIX-TYPE is either \='score or \='urg-imp.  Returns a list
+containing one native agenda block alist, or nil if no tgl_* tags exist."
+    (let ((tgl-tags nil)
+          (sort-strat (if (eq prefix-type 'score)
+                          '(user-defined-down priority-down alpha-up)
+                        '(category-keep))))
+      (let ((gtd-file (expand-file-name "~/my-life/orgnotes/gtd/org-gtd-tasks.org")))
+        (when (file-exists-p gtd-file)
+          (with-temp-buffer
+            (insert-file-contents gtd-file)
+            (goto-char (point-min))
+            (while (re-search-forward
+                    "^\\*+ +\\(NEXT\\|TODO\\) .+:\\(tgl_[a-z0-9_]+\\):" nil t)
+              (let ((tag (match-string 2)))
+                (unless (member tag tgl-tags)
+                  (push tag tgl-tags)))
+              (let ((tag-end (line-end-position))
+                    (case-fold-search nil))
+                (while (re-search-forward ":tgl_\\([a-z0-9_]+\\):" tag-end t)
+                  (let ((extra-tag (concat "tgl_" (match-string 1))))
+                    (unless (member extra-tag tgl-tags)
+                      (push extra-tag tgl-tags)))))))))
+      (when tgl-tags
+        (setq tgl-tags (sort tgl-tags #'string<))
+        (let* ((or-match (format "LEVEL>0+ORG_GTD=\"Actions\"+{%s}"
+                                 (mapconcat #'identity tgl-tags "|")))
+               (pfx-chain (if (eq prefix-type 'score)
+                              "(effort \" \" score \" — \")"
+                            "(effort \" \" urg-imp \" — \")"))
+               (pfx-format (format " %%i %%-25:(org-gtd-agenda--resolve-prefix-chain '%s 25) " pfx-chain)))
+          (list
+           `((native . (tags-todo
+                        ,or-match
+                        ((org-agenda-overriding-header "Toggl Projects")
+                         (org-agenda-todo-keyword-format "")
+                         (org-agenda-prefix-format '((tags . ,pfx-format)))
+                         (org-agenda-sorting-strategy ',sort-strat))))))))))
 
   (defun tdw/check-missing-tag-sections ()
     "After agenda finalization, check if any Actions tags lack a view section.
@@ -1008,6 +1048,7 @@ Displays a message listing uncovered tags, if any."
                     (when (stringp tag-str)
                       (unless (or (member tag-str tdw--known-tag-sections)
                                   (member tag-str tdw--excluded-tags-exact)
+                                  (string-prefix-p "tgl_" tag-str) ;; covered by dynamic block
                                   (cl-some (lambda (pfx)
                                              (string-prefix-p pfx tag-str))
                                            tdw--excluded-tag-prefixes)
@@ -2108,6 +2149,14 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
+
+                    ;; Toggl Projects
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+{tgl_.+}"
+                                ((org-agenda-overriding-header "Toggl Projects")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
                     ))) (or keys "s")))))
 
   (defun tdw-unordered-view (&optional keys)
@@ -2495,6 +2544,14 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+tools"
                                 ((org-agenda-overriding-header "🔧 Tools")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))))))
+
+                    ;; Toggl Projects
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+{tgl_.+}"
+                                ((org-agenda-overriding-header "Toggl Projects")
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
