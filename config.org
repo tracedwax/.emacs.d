@@ -1190,6 +1190,7 @@ Displays a message listing uncovered tags, if any."
     (define-key org-agenda-mode-map (kbd "i") #'tdw/agenda-cycle-impact)
     (define-key org-agenda-mode-map (kbd "I") #'org-agenda-diary-entry)
     (define-key org-agenda-mode-map (kbd "f") #'tdw/agenda-toggle-on-fire)
+    (define-key org-agenda-mode-map (kbd "d") #'tdw/agenda-toggle-on-deck)
     (define-key org-agenda-mode-map (kbd "g") #'tdw/agenda-toggle-gc-next)
     (define-key org-agenda-mode-map (kbd "l") #'tdw/agenda-toggle-flyby)
     (define-key org-agenda-mode-map (kbd "r") #'tdw/sanity-refresh))
@@ -1342,7 +1343,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (cond
            ;; Sanity View: replace full score annotation (U:xx I:xx [nn])
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-score (with-current-buffer buffer
@@ -1353,7 +1354,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation (U:xx I:xx)
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
@@ -1395,7 +1396,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (cond
            ;; Sanity View: replace full score annotation (🔥 U:xx I:xx [nn])
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             ;; Save match positions NOW — resolve-score uses regex internally
             ;; and will destroy the match data if we don't capture first
             (let* ((mbeg (match-beginning 0))
@@ -1408,7 +1409,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation (🔥 U:xx I:xx)
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
@@ -1483,7 +1484,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (cond
            ;; Sanity View: replace full score annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-score (with-current-buffer buffer
@@ -1494,7 +1495,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
@@ -1526,7 +1527,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (cond
            ;; Sanity View: replace full score annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-score (with-current-buffer buffer
@@ -1537,7 +1538,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
