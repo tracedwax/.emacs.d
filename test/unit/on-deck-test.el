@@ -132,6 +132,14 @@ Sets score_15 tag for a high-scoring entry (>= 10)."
       (should (string-match-p "🔥" result))
       (should (string-match-p "⚾️" result)))))
 
+;;;; ——— Effort totals: on_deck bucket ———
+
+(ert-deftest on-deck/effort-totals-returns-7-elements ()
+  "tdw/get-sanity-effort-totals should return a 7-element list (was 6).
+Elements: (TOTAL ON-FIRE ON-DECK BIG-ROCKS QUICK-WINS OTHER N-UNESTIMATED)."
+  (let ((result (tdw/get-sanity-effort-totals)))
+    (should (= (length result) 7))))
+
 ;;;; ——— Toggle function: tdw/agenda-toggle-on-deck ———
 
 ;; Note: The toggle function requires `org-get-at-bol 'org-hd-marker` which
