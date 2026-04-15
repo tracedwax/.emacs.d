@@ -168,4 +168,13 @@ Elements: (TOTAL ON-FIRE ON-DECK BIG-ROCKS QUICK-WINS OTHER N-UNESTIMATED)."
     (org-toggle-tag "on_deck" 'off)
     (should-not (member "on_deck" (org-get-tags nil t)))))
 
+;;;; ——— View function definitions ———
+
+(ert-deftest on-deck/unordered-view-is-interactive-command ()
+  "tdw-unordered-view should be defined as an interactive command.
+Regression: missing close paren in sanity view caused the unordered view
+defun to be swallowed inside the sanity view defun."
+  (should (fboundp 'tdw-unordered-view))
+  (should (commandp 'tdw-unordered-view)))
+
 ;;; on-deck-test.el ends here

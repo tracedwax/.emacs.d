@@ -2106,7 +2106,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
-                    ))) (or keys "s"))))
+                    ))) (or keys "s")))))
 
   (defun tdw-unordered-view (&optional keys)
     "Like Sanity View but without score annotations, priority cookies, or custom sorting."
