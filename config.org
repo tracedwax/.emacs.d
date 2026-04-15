@@ -798,7 +798,6 @@ Inheritance respects `my/org-gtd-inherit-priority' and
   (defun tdw/get-sanity-effort-totals ()
     "Return a list (TOTAL ON-FIRE BIG-ROCKS QUICK-WINS OTHER) formatted as H:MM."
     (let ((mins-fire 0)
-          (mins-deck 0)
           (mins-big 0)
           (mins-quick 0)
           (mins-other 0)
@@ -815,16 +814,14 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                     (when (member todo '("NEXT" "TODO"))
                       (let ((effort (tdw/get-subtree-effort-minutes)))
                         (cond ((tdw/on-fire-p) (setq mins-fire (+ mins-fire effort)))
-                              ((tdw/on-deck-p) (setq mins-deck (+ mins-deck effort)))
                               ((tdw/big-rock-p) (setq mins-big (+ mins-big effort)))
                               ((tdw/unestimated-p) (cl-incf n-unestimated))
                               ((tdw/quick-win-p) (setq mins-quick (+ mins-quick effort)))
                               (t (setq mins-other (+ mins-other effort))))))))
                 nil nil))))))
       (let ((fmt (lambda (m) (format "%d:%02d" (/ m 60) (% m 60)))))
-        (list (funcall fmt (+ mins-fire mins-deck mins-big mins-quick mins-other))
+        (list (funcall fmt (+ mins-fire mins-big mins-quick mins-other))
               (funcall fmt mins-fire)
-              (funcall fmt mins-deck)
               (funcall fmt mins-big)
               (funcall fmt mins-quick)
               (funcall fmt mins-other)
@@ -836,7 +833,6 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     "Return alist of (SECTION . WARNING-STRING) for capacity violations.
 Only alerts on on-fire count exceeding 5."
     (let ((n-fire 0)
-          (n-deck 0)
           (warnings nil))
       (dolist (file (org-agenda-files))
         (let ((expanded-file (expand-file-name file)))
@@ -849,8 +845,7 @@ Only alerts on on-fire count exceeding 5."
                   (let ((todo (org-get-todo-state))
                         (tags (org-get-tags nil t)))
                     (when (member todo '("NEXT" "TODO"))
-                      (when (member "on_fire" tags) (cl-incf n-fire))
-                      (when (member "on_deck" tags) (cl-incf n-deck)))))
+                      (when (member "on_fire" tags) (cl-incf n-fire)))))
                 nil nil))))))
       (if (> n-fire 5)
           (push (cons "🔥🔥 On Fire"
@@ -858,13 +853,6 @@ Only alerts on on-fire count exceeding 5."
                 warnings)
         (push (cons "🔥🔥 On Fire"
                      " [blocking someone | due <24h | big commitment at risk] 🔥🔥")
-              warnings))
-      (if (> n-deck 5)
-          (push (cons "⚾️ ⚾️ On Deck"
-                       (format " *** WARNING: %d on-deck items — remove %d *** ⚾️⚾️" n-deck (- n-deck 5)))
-                warnings)
-        (push (cons "⚾️ ⚾️ On Deck"
-                     " [next up after on-fire clears] ⚾️⚾️")
               warnings))
       (push (cons "🪨🪨 Big Rocks" " 🪨🪨") warnings)
       (push (cons "💨💨 Quick Wins" " 💨💨") warnings)
@@ -889,13 +877,12 @@ Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
                   (re-search-forward "Unordered View" nil t)
                   (re-search-forward "Decision View" nil t)
                   (re-search-forward "🔥🔥 On Fire" nil t)
-                  (re-search-forward "⚾️ ⚾️ On Deck" nil t)
                   (re-search-forward "🪨🪨 Big Rocks" nil t)
                   (re-search-forward "Hot Tickets" nil t)
                   (re-search-forward "For Today" nil t)
                   (re-search-forward "Priority C" nil t)
                   (re-search-forward "Priority D" nil t))
-          (pcase-let ((`(,total ,effort-fire ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
+          (pcase-let ((`(,total ,effort-fire ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
             ;; Update Sanity View total
             (goto-char (point-min))
             (while (re-search-forward "\\(Sanity View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
@@ -912,10 +899,6 @@ Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
             (goto-char (point-min))
             (while (re-search-forward "\\(🔥🔥 On Fire\\( ([^)]*)\\)?\\)" nil t)
               (replace-match (format "🔥🔥 On Fire (%s)" effort-fire) t t nil 1))
-            ;; On Deck effort
-            (goto-char (point-min))
-            (while (re-search-forward "\\(⚾️ ⚾️ On Deck\\( ([^)]*)\\)?\\)" nil t)
-              (replace-match (format "⚾️ ⚾️ On Deck (%s)" effort-deck) t t nil 1))
             ;; Big Rocks effort
             (goto-char (point-min))
             (while (re-search-forward "\\(🪨🪨 Big Rocks\\( ([^)]*)\\)? ?🪨?🪨?\\)" nil t)
@@ -982,7 +965,7 @@ Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
     "Tags that have dedicated sections in the Sanity/Unordered views.")
 
   (defvar tdw--excluded-tag-prefixes
-    '("on_fire" "on_deck" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
+    '("on_fire" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
       "for_" "ARCHIVE" "FLAGGED")
     "Tag prefixes excluded from the missing-tag check (urgency/impact/score/meta).")
 
@@ -1190,7 +1173,6 @@ Displays a message listing uncovered tags, if any."
     (define-key org-agenda-mode-map (kbd "i") #'tdw/agenda-cycle-impact)
     (define-key org-agenda-mode-map (kbd "I") #'org-agenda-diary-entry)
     (define-key org-agenda-mode-map (kbd "f") #'tdw/agenda-toggle-on-fire)
-    (define-key org-agenda-mode-map (kbd "d") #'tdw/agenda-toggle-on-deck)
     (define-key org-agenda-mode-map (kbd "g") #'tdw/agenda-toggle-gc-next)
     (define-key org-agenda-mode-map (kbd "l") #'tdw/agenda-toggle-flyby)
     (define-key org-agenda-mode-map (kbd "r") #'tdw/sanity-refresh))
@@ -1242,13 +1224,12 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
         (truncate-string-to-width (or result "") width nil ?\s org-gtd-agenda-truncate-ellipsis))))
 
   (defun org-gtd-agenda--resolve-score ()
-    "Return compact urgency/impact string with score like '🔥 ⚾️ U:vh I:h [13]'.
+    "Return compact urgency/impact string with score like '🔥 U:vh I:h [13]'.
 Always shows brackets — empty [] if no score tag found."
     (let* ((tags (org-get-tags nil t))
            (gc-next (if (member "gc_next" tags) "☁️ " ""))
            (flyby (if (member "flyby" tags) "🛸 " ""))
            (fire (if (member "on_fire" tags) "🔥 " ""))
-           (deck (if (member "on_deck" tags) "⚾️ " ""))
            (urg (cond ((member "wh_urgency" tags) "wh")
                       ((member "vh_urgency" tags) "vh")
                       ((member "h_urgency" tags)  "hi")
@@ -1267,15 +1248,14 @@ Always shows brackets — empty [] if no score tag found."
            (score-str (if score-tag
                           (substring score-tag 6)
                         "")))
-      (format "%s%s%s%sU:%s I:%s [%s]" gc-next flyby fire deck urg imp score-str)))
+      (format "%s%s%sU:%s I:%s [%s]" gc-next flyby fire urg imp score-str)))
 
   (defun org-gtd-agenda--resolve-urg-imp ()
-    "Return compact urgency/impact string without the numeric score, like '🔥 ⚾️ U:vh I:h'."
+    "Return compact urgency/impact string without the numeric score, like '🔥 U:vh I:h'."
     (let* ((tags (org-get-tags nil t))
            (gc-next (if (member "gc_next" tags) "☁️ " ""))
            (flyby (if (member "flyby" tags) "🛸 " ""))
            (fire (if (member "on_fire" tags) "🔥 " ""))
-           (deck (if (member "on_deck" tags) "⚾️ " ""))
            (urg (cond ((member "wh_urgency" tags) "wh")
                       ((member "vh_urgency" tags) "vh")
                       ((member "h_urgency" tags)  "hi")
@@ -1290,7 +1270,7 @@ Always shows brackets — empty [] if no score tag found."
                       ((member "m_impact" tags)   "md")
                       ((member "l_impact" tags)   "lo")
                       (t "--"))))
-      (format "%s%s%s%sU:%s I:%s" gc-next flyby fire deck urg imp)))
+      (format "%s%s%sU:%s I:%s" gc-next flyby fire urg imp)))
 
   (defun tdw-someday-priority-view ()
     "Someday/Maybe items — uses Aldric's exact view language.
@@ -1343,7 +1323,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (cond
            ;; Sanity View: replace full score annotation (U:xx I:xx [nn])
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-score (with-current-buffer buffer
@@ -1354,7 +1334,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation (U:xx I:xx)
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
@@ -1396,7 +1376,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (cond
            ;; Sanity View: replace full score annotation (🔥 U:xx I:xx [nn])
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             ;; Save match positions NOW — resolve-score uses regex internally
             ;; and will destroy the match data if we don't capture first
             (let* ((mbeg (match-beginning 0))
@@ -1409,7 +1389,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation (🔥 U:xx I:xx)
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
@@ -1420,49 +1400,6 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-urg-imp))))))
       (message "%s on_fire" (if has-tag "Removed" "Added"))))
-
-  (defun tdw/agenda-toggle-on-deck ()
-    "Toggle :on_deck: tag on the task at point and update prefix in-place."
-    (interactive)
-    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
-                         (org-agenda-error)))
-           (buffer (marker-buffer hdmarker))
-           has-tag)
-      (with-current-buffer buffer
-        (org-with-wide-buffer
-         (goto-char hdmarker)
-         (setq has-tag (member "on_deck" (org-get-tags nil t)))
-         (if has-tag
-             (org-toggle-tag "on_deck" 'off)
-           (org-toggle-tag "on_deck" 'on))))
-      ;; In-place update of the prefix
-      (let ((inhibit-read-only t))
-        (save-excursion
-          (beginning-of-line)
-          (cond
-           ;; Sanity View: replace full score annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-score (with-current-buffer buffer
-                                (org-with-wide-buffer
-                                 (goto-char hdmarker)
-                                 (org-gtd-agenda--resolve-score)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-score)))
-           ;; Unordered View: replace urg-imp annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-urg-imp (with-current-buffer buffer
-                                  (org-with-wide-buffer
-                                   (goto-char hdmarker)
-                                   (org-gtd-agenda--resolve-urg-imp)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-urg-imp))))))
-      (message "%s on_deck" (if has-tag "Removed" "Added"))))
 
   (defun tdw/agenda-toggle-gc-next ()
     "Toggle :gc_next: tag on the task at point and update prefix in-place."
@@ -1484,7 +1421,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (cond
            ;; Sanity View: replace full score annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-score (with-current-buffer buffer
@@ -1495,7 +1432,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
@@ -1527,7 +1464,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (cond
            ;; Sanity View: replace full score annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-score (with-current-buffer buffer
@@ -1538,7 +1475,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
@@ -1676,47 +1613,59 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
       (list score effort-mins (member "on_fire" tags) (org-entry-is-done-p) (member "gc_next" tags) (member "flyby" tags))))
 
   (defun tdw/skip-unless-big-rock ()
-    "Skip unless score >= 10."
+    "Skip unless score >= 10 and not on_fire, gc_next, or flyby."
     (let* ((end (org-entry-end-position))
            (info (tdw--score-effort-at-point))
            (score (nth 0 info))
-           (done (nth 3 info)))
-      (if (and (not done) (>= score 10))
+           (on-fire (nth 2 info))
+           (done (nth 3 info))
+           (gc-next (nth 4 info))
+           (flyby (nth 5 info)))
+      (if (and (not done) (not on-fire) (not gc-next) (not flyby) (>= score 10))
           nil
         end)))
 
   (defun tdw/skip-unless-quick-win ()
-    "Skip unless score < 10, effort > 0 and <= 5 min."
+    "Skip unless score < 10, effort > 0 and <= 5 min, not on_fire, gc_next, or flyby."
     (let* ((end (org-entry-end-position))
            (info (tdw--score-effort-at-point))
            (score (nth 0 info))
            (effort-mins (nth 1 info))
-           (done (nth 3 info)))
-      (if (and (not done) (< score 10)
+           (on-fire (nth 2 info))
+           (done (nth 3 info))
+           (gc-next (nth 4 info))
+           (flyby (nth 5 info)))
+      (if (and (not done) (not on-fire) (not gc-next) (not flyby) (< score 10)
                effort-mins (> effort-mins 0))
           nil
         end)))
 
   (defun tdw/skip-unless-other-rock ()
-    "Skip unless score < 10, effort > 5 min."
+    "Skip unless score < 10, effort > 5 min, not on_fire, gc_next, or flyby."
     (let* ((end (org-entry-end-position))
            (info (tdw--score-effort-at-point))
            (score (nth 0 info))
            (effort-mins (nth 1 info))
-           (done (nth 3 info)))
-      (if (and (not done) (< score 10)
+           (on-fire (nth 2 info))
+           (done (nth 3 info))
+           (gc-next (nth 4 info))
+           (flyby (nth 5 info)))
+      (if (and (not done) (not on-fire) (not gc-next) (not flyby) (< score 10)
                (and effort-mins (> effort-mins 5)))
           nil
         end)))
 
   (defun tdw/skip-unless-unestimated ()
-    "Skip unless score < 10, no effort or effort = 0."
+    "Skip unless score < 10, no effort or effort = 0, not on_fire, gc_next, or flyby."
     (let* ((end (org-entry-end-position))
            (info (tdw--score-effort-at-point))
            (score (nth 0 info))
            (effort-mins (nth 1 info))
-           (done (nth 3 info)))
-      (if (and (not done) (< score 10)
+           (on-fire (nth 2 info))
+           (done (nth 3 info))
+           (gc-next (nth 4 info))
+           (flyby (nth 5 info)))
+      (if (and (not done) (not on-fire) (not gc-next) (not flyby) (< score 10)
                (or (not effort-mins) (<= effort-mins 0)))
           nil
         end)))
@@ -1725,7 +1674,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
     "Tag-based GTD view: Calendar/Habits, On Fire, Big Rocks, Quick Wins, Other Rocks, Delegated."
     (interactive)
     (setq tdw--is-unordered-view nil)
-    (pcase-let ((`(,total ,effort-fire ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-fire ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
        (org-gtd-view-show
@@ -1748,14 +1697,6 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+on_fire"
                                 ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
-                                 (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
-                                 (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
-
-                    ;; 1b. On Deck — tasks tagged :on_deck:
-                    ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+on_deck"
-                                ((org-agenda-overriding-header ,(format "⚾️ ⚾️ On Deck (%s)" effort-deck))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
@@ -2106,14 +2047,14 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
-                    ))) (or keys "s")))))
+                    ))) (or keys "s"))))
 
   (defun tdw-unordered-view (&optional keys)
     "Like Sanity View but without score annotations, priority cookies, or custom sorting."
     (interactive)
     ;; Signal to the finalize hook that this is an Unordered View.
     (setq tdw--is-unordered-view t)
-    (pcase-let ((`(,total ,effort-fire ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-fire ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
             (org-agenda-hide-tags-regexp "."))
        (org-gtd-view-show
@@ -2136,14 +2077,6 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+on_fire"
                                 ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
-                                 (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
-                                 (org-agenda-sorting-strategy '(category-keep))))))
-
-                    ;; 1b. On Deck
-                    ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+on_deck"
-                                ((org-agenda-overriding-header ,(format "⚾️ ⚾️ On Deck (%s)" effort-deck))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
@@ -2494,7 +2427,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
-                    ))) (or keys "u")))))
+                    ))) (or keys "u"))))
 
   (defun tdw-decision-view ()
     "A broad GTD view for decision making: Priority A, B, C, and D."
