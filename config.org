@@ -2833,38 +2833,19 @@ With this configuration, using C-f in a status buffer will trigger the gitflow s
          (pri-geom (assoc 'geometry primary))
          (first-frame (selected-frame)))
 
-    ;; Defer view rendering until a GUI frame is actually created.
-    ;; In daemon mode, this fires when emacsclient connects — not at init.
-    (let ((ff first-frame)
-          (sg sec-geom)
-          (pg pri-geom))
-      (if (not (daemonp))
-          ;; Non-daemon: render immediately
-          (progn
-            (set-frame-position ff (nth 1 sg) (nth 2 sg))
-            (with-selected-frame ff
-              (tdw-sanity-view "s")
-              (delete-other-windows))
-            (let ((second-frame (make-frame `((top . ,(nth 2 pg))
-                                              (left . ,(nth 1 pg))))))
-              (with-selected-frame second-frame
-                (tdw-unordered-view "u")
-                (delete-other-windows))))
-        ;; Daemon: use a wall-clock timer (not idle — daemon is always idle).
-        ;; 3 seconds gives the daemon time to finish init and accept connections.
-        (run-with-timer
-         3 nil
-         (lambda (ff sg pg)
-           (set-frame-position ff (nth 1 sg) (nth 2 sg))
-           (with-selected-frame ff
-             (tdw-sanity-view "s")
-             (delete-other-windows))
-           (let ((second-frame (make-frame `((top . ,(nth 2 pg))
-                                             (left . ,(nth 1 pg))))))
-             (with-selected-frame second-frame
-               (tdw-unordered-view "u")
-               (delete-other-windows))))
-         ff sg pg)))))
+    ;; Only render views when we have a real GUI frame (non-daemon).
+    ;; In daemon mode, no GUI frame exists at startup — user triggers
+    ;; views manually with C-c d a / C-c d u after connecting.
+    (unless (daemonp)
+      (set-frame-position first-frame (nth 1 sec-geom) (nth 2 sec-geom))
+      (with-selected-frame first-frame
+        (tdw-sanity-view "s")
+        (delete-other-windows))
+      (let ((second-frame (make-frame `((top . ,(nth 2 pri-geom))
+                                        (left . ,(nth 1 pri-geom))))))
+        (with-selected-frame second-frame
+          (tdw-unordered-view "u")
+          (delete-other-windows))))))
 
 (add-hook 'emacs-startup-hook #'tdw/startup-dual-frames)
 #+END_SRC
