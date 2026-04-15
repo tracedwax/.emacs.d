@@ -2728,15 +2728,13 @@ With this configuration, using C-f in a status buffer will trigger the gitflow s
          (first-frame (selected-frame)))
 
     ;; 1. Setup Sanity View on Secondary Monitor (Frame 1)
-    (set-frame-parameter first-frame 'fullscreen 'fullboth)
     (set-frame-position first-frame (nth 1 sec-geom) (nth 2 sec-geom))
     (with-selected-frame first-frame
       (tdw-sanity-view "s")
       (delete-other-windows))
 
     ;; 2. Setup Unordered View on Primary Monitor (Frame 2)
-    (let ((second-frame (make-frame `((fullscreen . fullboth)
-                                      (top . ,(nth 2 pri-geom))
+    (let ((second-frame (make-frame `((top . ,(nth 2 pri-geom))
                                       (left . ,(nth 1 pri-geom))))))
       (with-selected-frame second-frame
         (tdw-unordered-view "u")
