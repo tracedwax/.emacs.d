@@ -53,3 +53,9 @@ fi
 
 echo ""
 echo "=== TESTS COMPLETE ==="
+
+# CRITICAL: Delete config.el after test run to prevent timestamp desync.
+# org-babel-load-file compares timestamps — a batch-tangled config.el will be
+# NEWER than config.org, causing Emacs to skip retangling on next startup.
+rm -f "$CONFIG_EL"
+echo "Cleaned up $CONFIG_EL (forces fresh tangle on next Emacs startup)"
