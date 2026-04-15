@@ -889,6 +889,7 @@ Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
                   (re-search-forward "Unordered View" nil t)
                   (re-search-forward "Decision View" nil t)
                   (re-search-forward "🔥🔥 On Fire" nil t)
+                  (re-search-forward "⚾️ ⚾️ On Deck" nil t)
                   (re-search-forward "🪨🪨 Big Rocks" nil t)
                   (re-search-forward "Hot Tickets" nil t)
                   (re-search-forward "For Today" nil t)
@@ -911,6 +912,10 @@ Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
             (goto-char (point-min))
             (while (re-search-forward "\\(🔥🔥 On Fire\\( ([^)]*)\\)?\\)" nil t)
               (replace-match (format "🔥🔥 On Fire (%s)" effort-fire) t t nil 1))
+            ;; On Deck effort
+            (goto-char (point-min))
+            (while (re-search-forward "\\(⚾️ ⚾️ On Deck\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "⚾️ ⚾️ On Deck (%s)" effort-deck) t t nil 1))
             ;; Big Rocks effort
             (goto-char (point-min))
             (while (re-search-forward "\\(🪨🪨 Big Rocks\\( ([^)]*)\\)? ?🪨?🪨?\\)" nil t)
@@ -1746,6 +1751,14 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
 
+                    ;; 1b. On Deck — tasks tagged :on_deck:
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+on_deck"
+                                ((org-agenda-overriding-header ,(format "⚾️ ⚾️ On Deck (%s)" effort-deck))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
+
                     ;; 2. Today's Schedule (Calendar + Habits)
                     ((native . (agenda ""
                                 ((org-agenda-span 1)
@@ -2122,6 +2135,14 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+on_fire"
                                 ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))))))
+
+                    ;; 1b. On Deck
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+on_deck"
+                                ((org-agenda-overriding-header ,(format "⚾️ ⚾️ On Deck (%s)" effort-deck))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
