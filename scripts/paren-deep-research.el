@@ -42,27 +42,29 @@ of context above and below."
          (start (max 0 (- error-line-0indexed 3)))
          (end (min total (+ error-line-0indexed 4)))
          (result '()))
-    (cl-loop for i from start below end
-             do (push (cons (1+ i) (nth i lines)) result))
+    (let ((cursor (nthcdr start lines)))
+      (cl-loop for i from start below end
+               do (push (cons (1+ i) (car cursor)) result)
+               do (setq cursor (cdr cursor))))
     (nreverse result)))
 
 (defun pdr--format-context (context-lines error-line-1indexed error-col)
   "Format CONTEXT-LINES with a caret at ERROR-COL on ERROR-LINE-1INDEXED.
 Each element of CONTEXT-LINES is (LINE-NUM . TEXT)."
-  (let ((output ""))
+  (let ((parts '()))
     (dolist (pair context-lines)
       (let* ((lnum (car pair))
              (text (cdr pair))
              (prefix (if (= lnum error-line-1indexed) ">" " "))
              (line (format "  %s %3d | %s\n" prefix lnum text)))
-        (setq output (concat output line))
+        (push line parts)
         ;; Add caret line after the error line
         (when (= lnum error-line-1indexed)
           (let* ((gutter-width (+ 8))  ;; "  > NNN | " = 8 + digits
                  (caret-offset (+ gutter-width error-col))
                  (caret-line (concat (make-string caret-offset ? ) "^ error here\n")))
-            (setq output (concat output caret-line))))))
-    output))
+            (push caret-line parts)))))
+    (mapconcat #'identity (nreverse parts) "")))
 
 (defun pdr--check-block (code)
   "Check CODE string for paren balance.
@@ -148,6 +150,7 @@ Uses incremental `parse-partial-sexp' (O(n) single pass, not O(n²))."
       (while (re-search-forward "^[[:space:]]*(defun \\([^ \t\n(]+\\)" nil t)
         (let* ((name (match-string 1))
                (defun-start (match-beginning 0))
+               (search-resume (point))  ;; save where re-search-forward left point
                (line-1 (line-number-at-pos defun-start)))
           ;; Incremental parse from where we left off
           (setq parse-state (parse-partial-sexp last-pos defun-start nil nil parse-state))
@@ -156,7 +159,8 @@ Uses incremental `parse-partial-sexp' (O(n) single pass, not O(n²))."
                         :line-1indexed line-1
                         :depth-before depth-before)
                   results))
-          (setq last-pos defun-start)))
+          (setq last-pos defun-start)
+          (goto-char search-resume)))  ;; restore point for next re-search-forward
       (nreverse results))))
 
 (defun pdr--run (file)
@@ -183,7 +187,7 @@ Uses incremental `parse-partial-sexp' (O(n) single pass, not O(n²))."
                        ;; Line of #+begin_src in the org file (1-indexed)
                        (org-begin-line (count-lines 1 post-aff))
                        ;; Count lines in the code to get end line
-                       (code-lines (length (split-string code "\n" t)))
+                       (code-lines (cl-count ?\n code))
                        (org-end-line (+ org-begin-line code-lines))
                        (heading (pdr--get-parent-heading block)))
                   (push (list :code code

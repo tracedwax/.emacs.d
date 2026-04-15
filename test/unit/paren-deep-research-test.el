@@ -23,11 +23,10 @@
   (assert-nil (pdr--check-block "(defun foo () (+ 1 2))\n(defun bar () nil)\n")))
 
 (deftest pdr/check-block-detects-missing-close-paren ()
-  "An unclosed paren returns a depth-mismatch error."
+  "An unclosed paren returns a scan-error (scan-sexps catches it first)."
   (let ((result (pdr--check-block "(defun foo () (+ 1 2)\n")))
     (assert-true result)
-    (assert-equal "depth-mismatch" (plist-get result :type))
-    (assert-equal 2 (plist-get result :depth))))
+    (assert-equal "scan-error" (plist-get result :type))))
 
 (deftest pdr/check-block-detects-extra-close-paren ()
   "An extra close paren returns a scan-error."
