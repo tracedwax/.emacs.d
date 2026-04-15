@@ -1066,7 +1066,45 @@ Displays a message listing uncovered tags, if any."
           (message "⚠️ Tags without view sections: %s"
                    (string-join (sort uncovered #'string<) ", "))))))
 
+  (defun tdw/insert-tgl-subheaders ()
+    "Insert visual sub-headers within the Toggl Projects section.
+Groups tasks by their specific tgl_* tag with readable dividers."
+    (when (get-text-property (point-min) 'org-agenda-type)
+      (save-excursion
+        (goto-char (point-min))
+        (when (re-search-forward "^Toggl Projects$" nil t)
+          (forward-line 1)
+          (let ((inhibit-read-only t)
+                (current-tag nil)
+                (section-end nil))
+            ;; Find where the next section header starts (or end of buffer)
+            (save-excursion
+              (if (re-search-forward "^[^\n ].+$" nil t)
+                  (setq section-end (line-beginning-position))
+                (setq section-end (point-max))))
+            (while (and (< (point) section-end) (not (eobp)))
+              (let ((tags (get-text-property (point) 'tags)))
+                (when tags
+                  (let ((tgl-tag (cl-find-if
+                                  (lambda (tg)
+                                    (let ((s (if (symbolp tg) (symbol-name tg) tg)))
+                                      (and (stringp s) (string-prefix-p "tgl_" s))))
+                                  tags)))
+                    (when tgl-tag
+                      (let ((tag-str (if (symbolp tgl-tag) (symbol-name tgl-tag) tgl-tag)))
+                        (unless (equal tag-str current-tag)
+                          (setq current-tag tag-str)
+                          (let* ((readable (mapconcat #'capitalize
+                                                      (split-string (substring tag-str 4) "_")
+                                                      " "))
+                                 (header (concat "  — " readable " —\n")))
+                            (beginning-of-line)
+                            (insert (propertize header 'face 'org-agenda-structure))
+                            (setq section-end (+ section-end (length header))))))))))
+              (forward-line 1)))))))
+
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
+  (add-hook 'org-agenda-finalize-hook #'tdw/insert-tgl-subheaders)
   (add-hook 'org-agenda-finalize-hook #'tdw/check-missing-tag-sections)
 
   (defun tdw/agenda-adjust-effort (&optional delta)
