@@ -982,7 +982,7 @@ Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
     "Tags that have dedicated sections in the Sanity/Unordered views.")
 
   (defvar tdw--excluded-tag-prefixes
-    '("on_fire" "on_deck" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
+    '("on_fire" "on_deck" "tgl_" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
       "for_" "ARCHIVE" "FLAGGED")
     "Tag prefixes excluded from the missing-tag check (urgency/impact/score/meta).")
 
@@ -1724,6 +1724,8 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
   (defun tdw-sanity-view (&optional keys)
     "Tag-based GTD view: Calendar/Habits, On Fire, Big Rocks, Quick Wins, Other Rocks, Delegated."
     (interactive)
+    ;; Kill existing sticky buffer so we always regenerate fresh
+    (when-let ((buf (get-buffer "*Org Agenda(s)*"))) (kill-buffer buf))
     (setq tdw--is-unordered-view nil)
     (pcase-let ((`(,total ,effort-fire ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
@@ -2111,6 +2113,8 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
   (defun tdw-unordered-view (&optional keys)
     "Like Sanity View but without score annotations, priority cookies, or custom sorting."
     (interactive)
+    ;; Kill existing sticky buffer so we always regenerate fresh
+    (when-let ((buf (get-buffer "*Org Agenda(u)*"))) (kill-buffer buf))
     ;; Signal to the finalize hook that this is an Unordered View.
     (setq tdw--is-unordered-view t)
     (pcase-let ((`(,total ,effort-fire ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
@@ -2603,7 +2607,7 @@ These are tags to add to tasks, such as types of action, mindset I need to be in
     (org-agenda-include-diary t)
     (org-agenda-restore-windows-after-quit t)
     (org-agenda-sticky t)
-    (org-agenda-window-setup 'other-window)
+    (org-agenda-window-setup 'only-window)
     (org-agenda-skip-deadline-if-done t)
     (org-agenda-skip-scheduled-if-done t)
     (org-agenda-start-on-weekday nil))
