@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run-tests.sh — Tangle config.org, load it, and run ERT tests for config.org features
+# run-tests.sh — Tangle config.org, load it, and run e-unit tests for config.org features
 # Usage: bash ~/.emacs.d/test/run-tests.sh [optional-test-file.el]
 set -euo pipefail
 
@@ -19,21 +19,37 @@ emacs -q --batch --eval "
   (org-babel-tangle-file \"$CONFIG_ORG\" \"$CONFIG_EL\"))" 2>&1
 
 echo ""
-echo "=== Step 2: Run ERT tests ==="
+echo "=== Step 2: Run e-unit tests ==="
 
 if [ -n "$TEST_FILE" ]; then
-  TEST_LOADS="-l $TEST_FILE"
+  # Run a single test file via e-unit-run-file
+  emacs -q --batch \
+    -l "$BOOTSTRAP" \
+    --eval "(progn
+      (e-unit-configure :verbose t)
+      (e-unit-set-reporter 'console)
+      (let ((results (e-unit-run-file \"$TEST_FILE\")))
+        (if (null results)
+            (progn (message \"No e-unit tests found\") (kill-emacs 1))
+          (let* ((failed (length (cl-remove-if-not
+                                  (lambda (r) (memq (plist-get r :status) '(fail error)))
+                                  results))))
+            (kill-emacs (if (zerop failed) 0 1))))))" 2>&1
 else
-  TEST_LOADS=""
-  for f in $(find "$TEST_DIR" -name "*-test.el" -type f | sort); do
-    TEST_LOADS="$TEST_LOADS -l $f"
-  done
+  # Run all test files in test/unit/ via e-unit-run-directory
+  emacs -q --batch \
+    -l "$BOOTSTRAP" \
+    --eval "(progn
+      (e-unit-configure :verbose t)
+      (e-unit-set-reporter 'console)
+      (let ((results (e-unit-run-directory \"$TEST_DIR/unit\")))
+        (if (null results)
+            (progn (message \"No e-unit tests found\") (kill-emacs 1))
+          (let* ((failed (length (cl-remove-if-not
+                                  (lambda (r) (memq (plist-get r :status) '(fail error)))
+                                  results))))
+            (kill-emacs (if (zerop failed) 0 1))))))" 2>&1
 fi
-
-emacs -q --batch \
-  -l "$BOOTSTRAP" \
-  $TEST_LOADS \
-  -f ert-run-tests-batch-and-exit 2>&1
 
 echo ""
 echo "=== TESTS COMPLETE ==="
