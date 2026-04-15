@@ -1,10 +1,13 @@
-;;; test-bootstrap.el --- Bootstrap for running config.org ERT tests -*- lexical-binding: t; -*-
+;;; test-bootstrap.el --- Bootstrap for running config.org e-unit tests -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 ;;
 ;; Loads config.el in a way that extracts function definitions without
 ;; requiring the full package/use-package infrastructure.  Used by
 ;; run-tests.sh.
+;;
+;; Uses e-unit (codeberg.org/Trevoke/e-unit.el.git) as the test framework.
+;; e-unit provides deftest, assert-equal, assert-true, assert-nil, etc.
 
 ;;; Code:
 
@@ -12,6 +15,11 @@
 (require 'org)
 (require 'org-agenda)
 (require 'org-habit)
+
+;; Load e-unit test framework from vendor directory
+(add-to-list 'load-path (expand-file-name "vendor/e-unit" (file-name-directory (directory-file-name (file-name-directory load-file-name)))))
+(require 'e-unit)
+(e-unit-initialize)
 
 ;; Save original use-package
 (defvar test-bootstrap--orig-use-package (symbol-function 'use-package))
