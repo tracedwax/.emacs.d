@@ -209,10 +209,19 @@ Returns nil if balanced, or a plist with error details if not:
 
     error-count))
 
-;; --- Entry point ---
-(let* ((file (or (getenv "CONFIG_ORG")
-                 (expand-file-name "~/.emacs.d/config.org")))
-       (errors (pdr--run file)))
-  (kill-emacs (if (zerop errors) 0 1)))
+;; --- Entry point (only when run directly via emacs --batch -l, not via require) ---
+;; When loaded as a library, callers set pdr--inhibit-entry before require.
+(defvar pdr--inhibit-entry nil
+  "When non-nil, skip the auto-run entry point.
+Set this before `require'ing paren-deep-research to use it as a library.")
+
+(provide 'paren-deep-research)
+
+(when (and noninteractive
+           (not pdr--inhibit-entry))
+  (let* ((file (or (getenv "CONFIG_ORG")
+                   (expand-file-name "~/.emacs.d/config.org")))
+         (errors (pdr--run file)))
+    (kill-emacs (if (zerop errors) 0 1))))
 
 ;;; paren-deep-research.el ends here

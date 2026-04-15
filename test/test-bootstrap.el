@@ -21,6 +21,9 @@
 (require 'e-unit)
 (e-unit-initialize)
 
+;; Add scripts directory to load-path (for paren-deep-research, etc.)
+(add-to-list 'load-path (expand-file-name "scripts" (file-name-directory (directory-file-name (file-name-directory load-file-name)))))
+
 ;; Save original use-package
 (defvar test-bootstrap--orig-use-package (symbol-function 'use-package))
 
