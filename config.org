@@ -768,6 +768,10 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     "Return non-nil if current entry is tagged :on_fire:."
     (tdw/has-tag-p "on_fire"))
 
+  (defun tdw/on-deck-p ()
+    "Return non-nil if current entry is tagged :on_deck:."
+    (tdw/has-tag-p "on_deck"))
+
   (defun tdw/big-rock-p ()
     "Return non-nil if current entry has score >= 10."
     (let* ((tags (org-get-tags nil t))
