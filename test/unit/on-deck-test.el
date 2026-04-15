@@ -92,4 +92,44 @@ Sets score_15 tag for a high-scoring entry (>= 10)."
   (on-deck-test--with-scored-entry '("on_deck" "l_urgency" "l_impact") nil
     (should-not (tdw/skip-unless-unestimated))))
 
+;;;; ——— Prefix emoji for on_deck ———
+
+(ert-deftest on-deck/resolve-score-includes-baseball-emoji ()
+  "org-gtd-agenda--resolve-score includes ⚾️ when entry has :on_deck: tag."
+  (with-temp-buffer
+    (org-mode)
+    (insert "* TODO Test task  :on_deck:l_urgency:l_impact:\n")
+    (goto-char (point-min))
+    (let ((result (org-gtd-agenda--resolve-score)))
+      (should (string-match-p "⚾️" result)))))
+
+(ert-deftest on-deck/resolve-urg-imp-includes-baseball-emoji ()
+  "org-gtd-agenda--resolve-urg-imp includes ⚾️ when entry has :on_deck: tag."
+  (with-temp-buffer
+    (org-mode)
+    (insert "* TODO Test task  :on_deck:l_urgency:l_impact:\n")
+    (goto-char (point-min))
+    (let ((result (org-gtd-agenda--resolve-urg-imp)))
+      (should (string-match-p "⚾️" result)))))
+
+(ert-deftest on-deck/resolve-score-shows-both-fire-and-deck ()
+  "resolve-score shows both 🔥 and ⚾️ when entry has both tags."
+  (with-temp-buffer
+    (org-mode)
+    (insert "* TODO Test task  :on_fire:on_deck:l_urgency:l_impact:\n")
+    (goto-char (point-min))
+    (let ((result (org-gtd-agenda--resolve-score)))
+      (should (string-match-p "🔥" result))
+      (should (string-match-p "⚾️" result)))))
+
+(ert-deftest on-deck/resolve-urg-imp-shows-both-fire-and-deck ()
+  "resolve-urg-imp shows both 🔥 and ⚾️ when entry has both tags."
+  (with-temp-buffer
+    (org-mode)
+    (insert "* TODO Test task  :on_fire:on_deck:l_urgency:l_impact:\n")
+    (goto-char (point-min))
+    (let ((result (org-gtd-agenda--resolve-urg-imp)))
+      (should (string-match-p "🔥" result))
+      (should (string-match-p "⚾️" result)))))
+
 ;;; on-deck-test.el ends here
