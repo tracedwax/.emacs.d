@@ -132,4 +132,32 @@ Sets score_15 tag for a high-scoring entry (>= 10)."
       (should (string-match-p "🔥" result))
       (should (string-match-p "⚾️" result)))))
 
+;;;; ——— Toggle function: tdw/agenda-toggle-on-deck ———
+
+;; Note: The toggle function requires `org-get-at-bol 'org-hd-marker` which
+;; is only available in an agenda buffer.  We test the existence and core
+;; tag-toggling behavior separately.
+
+(ert-deftest on-deck/toggle-function-exists ()
+  "tdw/agenda-toggle-on-deck should be defined as a function."
+  (should (fboundp 'tdw/agenda-toggle-on-deck)))
+
+(ert-deftest on-deck/toggle-adds-on-deck-tag ()
+  "Toggling on_deck on an untagged entry should add the tag."
+  (with-temp-buffer
+    (org-mode)
+    (insert "* TODO Test task\n")
+    (goto-char (point-min))
+    (org-toggle-tag "on_deck" 'on)
+    (should (member "on_deck" (org-get-tags nil t)))))
+
+(ert-deftest on-deck/toggle-removes-on-deck-tag ()
+  "Toggling on_deck off on a tagged entry should remove the tag."
+  (with-temp-buffer
+    (org-mode)
+    (insert "* TODO Test task  :on_deck:\n")
+    (goto-char (point-min))
+    (org-toggle-tag "on_deck" 'off)
+    (should-not (member "on_deck" (org-get-tags nil t)))))
+
 ;;; on-deck-test.el ends here
