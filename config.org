@@ -1613,59 +1613,47 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
       (list score effort-mins (member "on_fire" tags) (org-entry-is-done-p) (member "gc_next" tags) (member "flyby" tags))))
 
   (defun tdw/skip-unless-big-rock ()
-    "Skip unless score >= 10 and not on_fire, gc_next, or flyby."
+    "Skip unless score >= 10."
     (let* ((end (org-entry-end-position))
            (info (tdw--score-effort-at-point))
            (score (nth 0 info))
-           (on-fire (nth 2 info))
-           (done (nth 3 info))
-           (gc-next (nth 4 info))
-           (flyby (nth 5 info)))
-      (if (and (not done) (not on-fire) (not gc-next) (not flyby) (>= score 10))
+           (done (nth 3 info)))
+      (if (and (not done) (>= score 10))
           nil
         end)))
 
   (defun tdw/skip-unless-quick-win ()
-    "Skip unless score < 10, effort > 0 and <= 5 min, not on_fire, gc_next, or flyby."
+    "Skip unless score < 10, effort > 0 and <= 5 min."
     (let* ((end (org-entry-end-position))
            (info (tdw--score-effort-at-point))
            (score (nth 0 info))
            (effort-mins (nth 1 info))
-           (on-fire (nth 2 info))
-           (done (nth 3 info))
-           (gc-next (nth 4 info))
-           (flyby (nth 5 info)))
-      (if (and (not done) (not on-fire) (not gc-next) (not flyby) (< score 10)
+           (done (nth 3 info)))
+      (if (and (not done) (< score 10)
                effort-mins (> effort-mins 0))
           nil
         end)))
 
   (defun tdw/skip-unless-other-rock ()
-    "Skip unless score < 10, effort > 5 min, not on_fire, gc_next, or flyby."
+    "Skip unless score < 10, effort > 5 min."
     (let* ((end (org-entry-end-position))
            (info (tdw--score-effort-at-point))
            (score (nth 0 info))
            (effort-mins (nth 1 info))
-           (on-fire (nth 2 info))
-           (done (nth 3 info))
-           (gc-next (nth 4 info))
-           (flyby (nth 5 info)))
-      (if (and (not done) (not on-fire) (not gc-next) (not flyby) (< score 10)
+           (done (nth 3 info)))
+      (if (and (not done) (< score 10)
                (and effort-mins (> effort-mins 5)))
           nil
         end)))
 
   (defun tdw/skip-unless-unestimated ()
-    "Skip unless score < 10, no effort or effort = 0, not on_fire, gc_next, or flyby."
+    "Skip unless score < 10, no effort or effort = 0."
     (let* ((end (org-entry-end-position))
            (info (tdw--score-effort-at-point))
            (score (nth 0 info))
            (effort-mins (nth 1 info))
-           (on-fire (nth 2 info))
-           (done (nth 3 info))
-           (gc-next (nth 4 info))
-           (flyby (nth 5 info)))
-      (if (and (not done) (not on-fire) (not gc-next) (not flyby) (< score 10)
+           (done (nth 3 info)))
+      (if (and (not done) (< score 10)
                (or (not effort-mins) (<= effort-mins 0)))
           nil
         end)))
