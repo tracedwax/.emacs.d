@@ -992,13 +992,18 @@ Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
     "Individual tags excluded from the missing-tag check (people/meta).")
 
   (defun tdw/generate-tgl-blocks (prefix-type)
-    "Generate a single agenda block matching all active tgl_* tags.
-PREFIX-TYPE is either \='score or \='urg-imp.  Returns a list
-containing one native agenda block alist, or nil if no tgl_* tags exist."
+    "Generate one agenda block per active tgl_* tag.
+PREFIX-TYPE is either \\='score or \\='urg-imp.  Returns a list of
+native agenda block alists, or nil if no tgl_* tags exist.
+Each block uses a simple single-tag match (e.g., +tgl_admin),
+identical to how hardcoded tag sections work."
     (let ((tgl-tags nil)
           (sort-strat (if (eq prefix-type 'score)
                           '(user-defined-down priority-down alpha-up)
-                        '(category-keep))))
+                        '(category-keep)))
+          (pfx-chain (if (eq prefix-type 'score)
+                         "(effort \" \" score \" — \")"
+                       "(effort \" \" urg-imp \" — \")")))
       (let ((gtd-file (expand-file-name "~/my-life/orgnotes/gtd/org-gtd-tasks.org")))
         (when (file-exists-p gtd-file)
           (with-temp-buffer
@@ -1017,19 +1022,21 @@ containing one native agenda block alist, or nil if no tgl_* tags exist."
                       (push extra-tag tgl-tags)))))))))
       (when tgl-tags
         (setq tgl-tags (sort tgl-tags #'string<))
-        (let* ((or-match (format "LEVEL>0+ORG_GTD=\"Actions\"+{%s}"
-                                 (mapconcat #'identity tgl-tags "|")))
-               (pfx-chain (if (eq prefix-type 'score)
-                              "(effort \" \" score \" — \")"
-                            "(effort \" \" urg-imp \" — \")"))
-               (pfx-format (format " %%i %%-25:(org-gtd-agenda--resolve-prefix-chain '%s 25) " pfx-chain)))
-          (list
-           `((native . (tags-todo
-                        ,or-match
-                        ((org-agenda-overriding-header "Toggl Projects")
-                         (org-agenda-todo-keyword-format "")
-                         (org-agenda-prefix-format '((tags . ,pfx-format)))
-                         (org-agenda-sorting-strategy ',sort-strat))))))))))
+        (let ((pfx-format (format " %%i %%-25:(org-gtd-agenda--resolve-prefix-chain '%s 25) " pfx-chain)))
+          (mapcar
+           (lambda (tag)
+             (let* ((readable (mapconcat #'capitalize
+                                         (split-string (substring tag 4) "_")
+                                         " "))
+                    (match-str (format "LEVEL>0+ORG_GTD=\"Actions\"+%s" tag)))
+               `((native . (tags-todo
+                            ,match-str
+                            ((org-agenda-overriding-header ,readable)
+                             (org-agenda-todo-keyword-format "")
+                             (org-agenda-prefix-format '((tags . ,pfx-format)))
+                             (org-agenda-sorting-strategy ',sort-strat)))))))
+           tgl-tags)))))
+
 
   (defun tdw/check-missing-tag-sections ()
     "After agenda finalization, check if any Actions tags lack a view section.
@@ -2150,13 +2157,13 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
 
-                    ;; Toggl Projects
+                    ;; Toggl Projects (regex matches all tgl_* tags in one query)
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+{tgl_.+}"
                                 ((org-agenda-overriding-header "Toggl Projects")
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
-                                 (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
+                                 (org-agenda-sorting-strategy '(tag-up user-defined-down priority-down alpha-up))))))
                     ))) (or keys "s")))))
 
   (defun tdw-unordered-view (&optional keys)
@@ -2548,13 +2555,13 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
-                    ;; Toggl Projects
+                    ;; Toggl Projects (regex matches all tgl_* tags in one query)
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+{tgl_.+}"
                                 ((org-agenda-overriding-header "Toggl Projects")
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
-                                 (org-agenda-sorting-strategy '(category-keep))))))
+                                 (org-agenda-sorting-strategy '(tag-up category-keep))))))
                     ))) (or keys "u")))))
 
   (defun tdw-decision-view ()
@@ -2788,18 +2795,38 @@ With this configuration, using C-f in a status buffer will trigger the gitflow s
          (pri-geom (assoc 'geometry primary))
          (first-frame (selected-frame)))
 
-    ;; 1. Setup Sanity View on Secondary Monitor (Frame 1)
-    (set-frame-position first-frame (nth 1 sec-geom) (nth 2 sec-geom))
-    (with-selected-frame first-frame
-      (tdw-sanity-view "s")
-      (delete-other-windows))
-
-    ;; 2. Setup Unordered View on Primary Monitor (Frame 2)
-    (let ((second-frame (make-frame `((top . ,(nth 2 pri-geom))
-                                      (left . ,(nth 1 pri-geom))))))
-      (with-selected-frame second-frame
-        (tdw-unordered-view "u")
-        (delete-other-windows)))))
+    ;; Defer view rendering until a GUI frame is actually created.
+    ;; In daemon mode, this fires when emacsclient connects — not at init.
+    (let ((ff first-frame)
+          (sg sec-geom)
+          (pg pri-geom))
+      (if (not (daemonp))
+          ;; Non-daemon: render immediately
+          (progn
+            (set-frame-position ff (nth 1 sg) (nth 2 sg))
+            (with-selected-frame ff
+              (tdw-sanity-view "s")
+              (delete-other-windows))
+            (let ((second-frame (make-frame `((top . ,(nth 2 pg))
+                                              (left . ,(nth 1 pg))))))
+              (with-selected-frame second-frame
+                (tdw-unordered-view "u")
+                (delete-other-windows))))
+        ;; Daemon: use a wall-clock timer (not idle — daemon is always idle).
+        ;; 3 seconds gives the daemon time to finish init and accept connections.
+        (run-with-timer
+         3 nil
+         (lambda (ff sg pg)
+           (set-frame-position ff (nth 1 sg) (nth 2 sg))
+           (with-selected-frame ff
+             (tdw-sanity-view "s")
+             (delete-other-windows))
+           (let ((second-frame (make-frame `((top . ,(nth 2 pg))
+                                             (left . ,(nth 1 pg))))))
+             (with-selected-frame second-frame
+               (tdw-unordered-view "u")
+               (delete-other-windows))))
+         ff sg pg)))))
 
 (add-hook 'emacs-startup-hook #'tdw/startup-dual-frames)
 #+END_SRC
