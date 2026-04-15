@@ -130,6 +130,35 @@ Returns nil if balanced, or a plist with error details if not:
                   :message "Block ends inside an unterminated block comment"))
            (t nil)))))))
 
+(defun pdr--defun-depth-report (code)
+  "Walk through CODE incrementally, reporting paren depth at each (defun.
+Returns a list of plists, one per defun found:
+  :name - function name
+  :line-1indexed - 1-indexed line within the block
+  :depth-before - paren depth just before this (defun
+Uses incremental `parse-partial-sexp' (O(n) single pass, not O(n²))."
+  (with-temp-buffer
+    (insert code)
+    (goto-char (point-min))
+    (emacs-lisp-mode)
+    (let ((results nil)
+          (parse-state nil)
+          (last-pos (point-min)))
+      ;; Single forward pass: find each defun, parse incrementally to it
+      (while (re-search-forward "^[[:space:]]*(defun \\([^ \t\n(]+\\)" nil t)
+        (let* ((name (match-string 1))
+               (defun-start (match-beginning 0))
+               (line-1 (line-number-at-pos defun-start)))
+          ;; Incremental parse from where we left off
+          (setq parse-state (parse-partial-sexp last-pos defun-start nil nil parse-state))
+          (let ((depth-before (nth 0 parse-state)))
+            (push (list :name name
+                        :line-1indexed line-1
+                        :depth-before depth-before)
+                  results))
+          (setq last-pos defun-start)))
+      (nreverse results))))
+
 (defun pdr--run (file)
   "Run paren-deep-research on FILE. Print results. Return error count."
   (let ((error-count 0)
@@ -200,6 +229,23 @@ Returns nil if balanced, or a plist with error details if not:
                 (princ (format "Type: %s\n" err-msg))
                 (princ (format "\nContext:\n"))
                 (princ formatted-ctx)
+
+                ;; Per-defun depth report for blocks with errors
+                (let ((defun-report (pdr--defun-depth-report code)))
+                  (when defun-report
+                    (princ (format "\nDefun depth report (%d functions):\n" (length defun-report)))
+                    (let ((expected-depth (plist-get (car defun-report) :depth-before)))
+                      (dolist (entry defun-report)
+                        (let* ((name (plist-get entry :name))
+                               (line (plist-get entry :line-1indexed))
+                               (d-before (plist-get entry :depth-before))
+                               (org-line (+ org-begin line))
+                               (marker (if (/= d-before expected-depth)
+                                           (format " *** WRONG (expected %d)" expected-depth)
+                                         "")))
+                          (princ (format "  %s line %d (org:%d) depth %d%s\n"
+                                         name line org-line d-before marker)))))))
+
                 (princ (format "══════════════════════════════════════════════════════════════\n"))))))))
 
     ;; Summary
