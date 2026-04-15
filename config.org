@@ -798,6 +798,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
   (defun tdw/get-sanity-effort-totals ()
     "Return a list (TOTAL ON-FIRE BIG-ROCKS QUICK-WINS OTHER) formatted as H:MM."
     (let ((mins-fire 0)
+          (mins-deck 0)
           (mins-big 0)
           (mins-quick 0)
           (mins-other 0)
@@ -833,6 +834,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     "Return alist of (SECTION . WARNING-STRING) for capacity violations.
 Only alerts on on-fire count exceeding 5."
     (let ((n-fire 0)
+          (n-deck 0)
           (warnings nil))
       (dolist (file (org-agenda-files))
         (let ((expanded-file (expand-file-name file)))
@@ -845,7 +847,8 @@ Only alerts on on-fire count exceeding 5."
                   (let ((todo (org-get-todo-state))
                         (tags (org-get-tags nil t)))
                     (when (member todo '("NEXT" "TODO"))
-                      (when (member "on_fire" tags) (cl-incf n-fire)))))
+                      (when (member "on_fire" tags) (cl-incf n-fire))
+                      (when (member "on_deck" tags) (cl-incf n-deck)))))
                 nil nil))))))
       (if (> n-fire 5)
           (push (cons "🔥🔥 On Fire"
@@ -853,6 +856,13 @@ Only alerts on on-fire count exceeding 5."
                 warnings)
         (push (cons "🔥🔥 On Fire"
                      " [blocking someone | due <24h | big commitment at risk] 🔥🔥")
+              warnings))
+      (if (> n-deck 5)
+          (push (cons "⚾️ ⚾️ On Deck"
+                       (format " *** WARNING: %d on-deck items — remove %d *** ⚾️⚾️" n-deck (- n-deck 5)))
+                warnings)
+        (push (cons "⚾️ ⚾️ On Deck"
+                     " [next up after on-fire clears] ⚾️⚾️")
               warnings))
       (push (cons "🪨🪨 Big Rocks" " 🪨🪨") warnings)
       (push (cons "💨💨 Quick Wins" " 💨💨") warnings)
@@ -965,7 +975,7 @@ Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
     "Tags that have dedicated sections in the Sanity/Unordered views.")
 
   (defvar tdw--excluded-tag-prefixes
-    '("on_fire" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
+    '("on_fire" "on_deck" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
       "for_" "ARCHIVE" "FLAGGED")
     "Tag prefixes excluded from the missing-tag check (urgency/impact/score/meta).")
 
@@ -1402,6 +1412,49 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-urg-imp))))))
       (message "%s on_fire" (if has-tag "Removed" "Added"))))
+
+  (defun tdw/agenda-toggle-on-deck ()
+    "Toggle :on_deck: tag on the task at point and update prefix in-place."
+    (interactive)
+    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
+                         (org-agenda-error)))
+           (buffer (marker-buffer hdmarker))
+           has-tag)
+      (with-current-buffer buffer
+        (org-with-wide-buffer
+         (goto-char hdmarker)
+         (setq has-tag (member "on_deck" (org-get-tags nil t)))
+         (if has-tag
+             (org-toggle-tag "on_deck" 'off)
+           (org-toggle-tag "on_deck" 'on))))
+      ;; In-place update of the prefix
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (beginning-of-line)
+          (cond
+           ;; Sanity View: replace full score annotation
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+            (let* ((mbeg (match-beginning 0))
+                   (mend (match-end 0))
+                   (new-score (with-current-buffer buffer
+                                (org-with-wide-buffer
+                                 (goto-char hdmarker)
+                                 (org-gtd-agenda--resolve-score)))))
+              (delete-region mbeg mend)
+              (goto-char mbeg)
+              (insert new-score)))
+           ;; Unordered View: replace urg-imp annotation
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+            (let* ((mbeg (match-beginning 0))
+                   (mend (match-end 0))
+                   (new-urg-imp (with-current-buffer buffer
+                                  (org-with-wide-buffer
+                                   (goto-char hdmarker)
+                                   (org-gtd-agenda--resolve-urg-imp)))))
+              (delete-region mbeg mend)
+              (goto-char mbeg)
+              (insert new-urg-imp))))))
+      (message "%s on_deck" (if has-tag "Removed" "Added"))))
 
   (defun tdw/agenda-toggle-gc-next ()
     "Toggle :gc_next: tag on the task at point and update prefix in-place."
