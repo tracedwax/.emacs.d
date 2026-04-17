@@ -1278,6 +1278,18 @@ Groups tasks by their specific tgl_* tag with readable dividers."
                                   (progn (goto-char (match-end 0)) (insert (if (string= new-state "") "" (concat new-state " "))))
                                 (insert (if (string= new-state "") "" (concat new-state " ")))))))
                         (message "→ %s" new-state)))))))
+  ;; Wrap clock-in/out: suppress change-all-lines to prevent
+  ;; tags, keywords, and priority cookies from reappearing.
+  (advice-add 'org-agenda-clock-in :around
+              (lambda (orig-fn &rest args)
+                (let ((tdw--skip-change-all-lines t))
+                  (apply orig-fn args))))
+
+  (advice-add 'org-agenda-clock-out :around
+              (lambda (orig-fn &rest args)
+                (let ((tdw--skip-change-all-lines t))
+                  (apply orig-fn args))))
+
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
     (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
