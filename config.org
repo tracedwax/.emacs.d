@@ -801,14 +801,16 @@ The task line stays in place with a NEXT indicator."
             (insert (propertize "NEXT " 'face 'success)))))
       (message "→ Next Actions: %s" heading)))
 
-  ;; Override I/O/y/s in org-agenda-mode-map via hook so it always wins,
+  ;; Override I/O/y/s/j/k in org-agenda-mode-map via hook so it always wins,
   ;; even after org-agenda (re)sets its keymap.
   (add-hook 'org-agenda-mode-hook
             (lambda ()
               (local-set-key (kbd "I") #'org-agenda-clock-in)
               (local-set-key (kbd "O") #'org-agenda-clock-out)
               (local-set-key (kbd "y") #'tdw/agenda-move-to-someday)
-              (local-set-key (kbd "s") #'tdw/agenda-move-to-next)))
+              (local-set-key (kbd "s") #'tdw/agenda-move-to-next)
+              (local-set-key (kbd "j") #'org-agenda-next-line)
+              (local-set-key (kbd "k") #'org-agenda-previous-line)))
 
   (defun tdw/get-effort-minutes (effort-str)
     "Convert EFFORT-STR (H:MM) to minutes."
