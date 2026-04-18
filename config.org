@@ -833,7 +833,12 @@ Updates the agenda-line marker after refile so change-your-mind works."
         (save-excursion
           (beginning-of-line)
           (when (re-search-forward "— +" (line-end-position) t)
-            (insert (propertize "NEXT " 'face 'success)))))
+            (insert (propertize "NEXT " 'face 'success)))
+          ;; Fallback: truncated prefix ends with '… '
+          (unless (save-excursion (beginning-of-line) (re-search-forward "NEXT " (line-end-position) t))
+            (beginning-of-line)
+            (when (re-search-forward "… " (line-end-position) t)
+              (insert (propertize "NEXT " 'face 'success))))))
       (message "→ Next Actions: %s" heading)))
 
   ;; Override I/O/m/y/n/s/j/k in org-agenda-mode-map via hook so it always wins,
