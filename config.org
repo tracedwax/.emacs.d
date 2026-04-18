@@ -1500,10 +1500,10 @@ Always shows brackets — empty [] if no score tag found."
 
   (defun tdw-someday-priority-view ()
     "Someday/Maybe items — uses Aldric's exact view language.
-Press ', n' to flag for promotion, ', <letter>' to reprioritize."
+Press 'n' or 's' to promote to Next Actions, ',\u003cletter\u003e' to reprioritize."
     (interactive)
     (org-gtd-view-show
-     '((name . "Someday/Maybe — ', n' to flag for promotion")
+     '((name . "Someday/Maybe — 'n' to promote to Next Actions")
        (type . someday)
        (prefix-width . 25)
        (prefix . (effort " " score " — ")))))
