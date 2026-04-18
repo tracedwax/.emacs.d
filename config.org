@@ -743,18 +743,20 @@ Inheritance respects `my/org-gtd-inherit-priority' and
   ;; ——— Agenda single-task move commands ———
 
   (defun tdw/agenda-move-to-someday ()
-    "Move the task at point from Next Actions to Someday/Maybe.
-The task line stays in place with a SOMEDAY indicator."
+    "Move the task at point to Someday/Maybe.
+Updates the agenda-line marker after refile so change-your-mind works."
     (interactive)
     (let ((marker (or (org-get-at-bol 'org-marker)
                       (org-agenda-error)))
-          (heading nil))
+          (heading nil)
+          (task-id nil))
       ;; Backend: change properties and refile
       (org-with-point-at marker
         (let ((gtd-type (org-entry-get (point) "ORG_GTD")))
           (unless (string= gtd-type "Actions")
             (user-error "Task is not a Next Action (ORG_GTD=%s)" gtd-type))
           (setq heading (org-get-heading t t t t))
+          (setq task-id (org-id-get (point) 'create))
           (org-entry-put (point) "ORG_GTD" org-gtd-someday)
           (org-todo "")
           (let ((org-gtd-organize-hooks nil))
@@ -763,8 +765,21 @@ The task line stays in place with a SOMEDAY indicator."
                   (user-error "No Someday refile targets found")
                 (org-refile nil nil (car targets)))))
           (save-buffer)))
-      ;; Visual: mark line in agenda buffer
+      ;; Update marker to new location so change-your-mind works
+      (when task-id
+        (let ((new-pos (org-id-find task-id 'marker)))
+          (when new-pos
+            (let ((inhibit-read-only t))
+              (put-text-property (line-beginning-position) (line-end-position)
+                                 'org-marker new-pos)
+              (put-text-property (line-beginning-position) (line-end-position)
+                                 'org-hd-marker new-pos)))))
+      ;; Visual: replace any existing indicator, then insert SOMEDAY
       (let ((inhibit-read-only t))
+        (save-excursion
+          (beginning-of-line)
+          (when (re-search-forward "\\(SOMEDAY\\|NEXT\\) " (line-end-position) t)
+            (replace-match "")))
         (save-excursion
           (beginning-of-line)
           (when (re-search-forward "— +" (line-end-position) t)
