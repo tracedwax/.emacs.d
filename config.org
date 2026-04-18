@@ -783,7 +783,12 @@ Updates the agenda-line marker after refile so change-your-mind works."
         (save-excursion
           (beginning-of-line)
           (when (re-search-forward "— +" (line-end-position) t)
-            (insert (propertize "SOMEDAY " 'face 'warning)))))
+            (insert (propertize "SOMEDAY " 'face 'warning)))
+          ;; Fallback: truncated prefix ends with '… '
+          (unless (save-excursion (beginning-of-line) (re-search-forward "SOMEDAY " (line-end-position) t))
+            (beginning-of-line)
+            (when (re-search-forward "… " (line-end-position) t)
+              (insert (propertize "SOMEDAY " 'face 'warning))))))
       (message "→ Someday: %s" heading)))
 
   (defun tdw/agenda-move-to-next ()
