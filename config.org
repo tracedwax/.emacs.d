@@ -740,12 +740,75 @@ Inheritance respects `my/org-gtd-inherit-priority' and
      ("C-c ?" . org-gtd-agenda-transient)
      ("C-c c" . org-gtd-clarify-agenda-item)))
 
-  ;; Override I/O in org-agenda-mode-map via hook so it always wins,
+  ;; ——— Agenda single-task move commands ———
+
+  (defun tdw/agenda-move-to-someday ()
+    "Move the task at point from Next Actions to Someday/Maybe.
+The task line stays in place with a SOMEDAY indicator."
+    (interactive)
+    (let ((marker (or (org-get-at-bol 'org-marker)
+                      (org-agenda-error)))
+          (heading nil))
+      ;; Backend: change properties and refile
+      (org-with-point-at marker
+        (let ((gtd-type (org-entry-get (point) "ORG_GTD")))
+          (unless (string= gtd-type "Actions")
+            (user-error "Task is not a Next Action (ORG_GTD=%s)" gtd-type))
+          (setq heading (org-get-heading t t t t))
+          (org-entry-put (point) "ORG_GTD" org-gtd-someday)
+          (org-todo "")
+          (let ((org-gtd-organize-hooks nil))
+            (let ((targets (org-gtd-refile--get-targets "Someday")))
+              (if (null targets)
+                  (user-error "No Someday refile targets found")
+                (org-refile nil nil (car targets)))))
+          (save-buffer)))
+      ;; Visual: mark line in agenda buffer
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (beginning-of-line)
+          (when (re-search-forward "— +" (line-end-position) t)
+            (insert (propertize "SOMEDAY " 'face 'warning)))))
+      (message "→ Someday: %s" heading)))
+
+  (defun tdw/agenda-move-to-next ()
+    "Move the task at point from Someday/Maybe back to Next Actions.
+The task line stays in place with a NEXT indicator."
+    (interactive)
+    (let ((marker (or (org-get-at-bol 'org-marker)
+                      (org-agenda-error)))
+          (heading nil))
+      ;; Backend: change properties and refile
+      (org-with-point-at marker
+        (let ((gtd-type (org-entry-get (point) "ORG_GTD")))
+          (unless (string= gtd-type org-gtd-someday)
+            (user-error "Task is not Someday/Maybe (ORG_GTD=%s)" gtd-type))
+          (setq heading (org-get-heading t t t t))
+          (org-entry-delete (point) "ORG_GTD_TIMESTAMP")
+          (org-entry-put (point) "ORG_GTD" "Actions")
+          (org-todo "NEXT")
+          (let ((org-gtd-organize-hooks nil))
+            (let ((targets (org-gtd-refile--get-targets "Actions")))
+              (if (null targets)
+                  (user-error "No Actions refile targets found")
+                (org-refile nil nil (car targets)))))
+          (save-buffer)))
+      ;; Visual: mark line in agenda buffer
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (beginning-of-line)
+          (when (re-search-forward "— +" (line-end-position) t)
+            (insert (propertize "NEXT " 'face 'success)))))
+      (message "→ Next Actions: %s" heading)))
+
+  ;; Override I/O/y/s in org-agenda-mode-map via hook so it always wins,
   ;; even after org-agenda (re)sets its keymap.
   (add-hook 'org-agenda-mode-hook
             (lambda ()
               (local-set-key (kbd "I") #'org-agenda-clock-in)
-              (local-set-key (kbd "O") #'org-agenda-clock-out)))
+              (local-set-key (kbd "O") #'org-agenda-clock-out)
+              (local-set-key (kbd "y") #'tdw/agenda-move-to-someday)
+              (local-set-key (kbd "s") #'tdw/agenda-move-to-next)))
 
   (defun tdw/get-effort-minutes (effort-str)
     "Convert EFFORT-STR (H:MM) to minutes."
