@@ -1864,7 +1864,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
   ;; Extracted from inline lambdas so both Sanity View and Unordered View
   ;; can reference them by name instead of duplicating escaped code.
 
-  (defvar tdw--ritual-habits '("Daily meeting prep" "GTD Daily Plan" "Start Time Out" "Vivian Vyvanse")
+  (defvar tdw--ritual-habits '("Daily meeting prep" "GTD Daily Plan" "Start Time Out" "Vivian Vyvanse" "Create weekly plan")
     "Habit headings shown in the Daily Rituals section.")
 
   (defun tdw/skip-unless-daily-ritual ()
