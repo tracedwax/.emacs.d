@@ -1368,12 +1368,21 @@ Groups tasks by their specific tgl_* tag with readable dividers."
                         ;; Non-habit: insert the keyword in-place as before
                         (save-excursion
                           (beginning-of-line)
-                          (when (re-search-forward " — " (line-end-position) t)
-                            (if (looking-at "\\(?:\\(?:TODO\\|NEXT\\|WAIT\\|DONE\\|CNCL\\|SOMEDAY\\)[ \t]*\\)+")
-                                (replace-match (if (string= new-state "") "" (concat new-state " ")))
-                              (if (looking-at "\\[#.\\] ")
-                                  (progn (goto-char (match-end 0)) (insert (if (string= new-state "") "" (concat new-state " "))))
-                                (insert (if (string= new-state "") "" (concat new-state " ")))))))
+                          (let ((found-sep nil))
+                            ;; Try primary separator ' — '
+                            (when (re-search-forward " — " (line-end-position) t)
+                              (setq found-sep t))
+                            ;; Fallback: truncated prefix ends with '… '
+                            (unless found-sep
+                              (beginning-of-line)
+                              (when (re-search-forward "… " (line-end-position) t)
+                                (setq found-sep t)))
+                            (when found-sep
+                              (if (looking-at "\\(?:\\(?:TODO\\|NEXT\\|WAIT\\|DONE\\|CNCL\\|SOMEDAY\\)[ \t]*\\)+")
+                                  (replace-match (if (string= new-state "") "" (concat new-state " ")))
+                                (if (looking-at "\\[#.\\] ")
+                                    (progn (goto-char (match-end 0)) (insert (if (string= new-state "") "" (concat new-state " "))))
+                                  (insert (if (string= new-state "") "" (concat new-state " "))))))))
                         (message "→ %s" new-state)))))))
   ;; Wrap clock-in/out: suppress change-all-lines to prevent
   ;; tags, keywords, and priority cookies from reappearing.
