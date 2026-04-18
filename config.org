@@ -787,18 +787,20 @@ Updates the agenda-line marker after refile so change-your-mind works."
       (message "→ Someday: %s" heading)))
 
   (defun tdw/agenda-move-to-next ()
-    "Move the task at point from Someday/Maybe back to Next Actions.
-The task line stays in place with a NEXT indicator."
+    "Move the task at point to Next Actions.
+Updates the agenda-line marker after refile so change-your-mind works."
     (interactive)
     (let ((marker (or (org-get-at-bol 'org-marker)
                       (org-agenda-error)))
-          (heading nil))
+          (heading nil)
+          (task-id nil))
       ;; Backend: change properties and refile
       (org-with-point-at marker
         (let ((gtd-type (org-entry-get (point) "ORG_GTD")))
           (unless (string= gtd-type org-gtd-someday)
             (user-error "Task is not Someday/Maybe (ORG_GTD=%s)" gtd-type))
           (setq heading (org-get-heading t t t t))
+          (setq task-id (org-id-get (point) 'create))
           (org-entry-delete (point) "ORG_GTD_TIMESTAMP")
           (org-entry-put (point) "ORG_GTD" "Actions")
           (org-todo "NEXT")
@@ -808,8 +810,21 @@ The task line stays in place with a NEXT indicator."
                   (user-error "No Actions refile targets found")
                 (org-refile nil nil (car targets)))))
           (save-buffer)))
-      ;; Visual: mark line in agenda buffer
+      ;; Update marker to new location so change-your-mind works
+      (when task-id
+        (let ((new-pos (org-id-find task-id 'marker)))
+          (when new-pos
+            (let ((inhibit-read-only t))
+              (put-text-property (line-beginning-position) (line-end-position)
+                                 'org-marker new-pos)
+              (put-text-property (line-beginning-position) (line-end-position)
+                                 'org-hd-marker new-pos)))))
+      ;; Visual: replace any existing indicator, then insert NEXT
       (let ((inhibit-read-only t))
+        (save-excursion
+          (beginning-of-line)
+          (when (re-search-forward "\\(SOMEDAY\\|NEXT\\) " (line-end-position) t)
+            (replace-match "")))
         (save-excursion
           (beginning-of-line)
           (when (re-search-forward "— +" (line-end-position) t)
