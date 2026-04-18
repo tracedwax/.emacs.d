@@ -815,6 +815,12 @@ Updates the agenda-line marker after refile so change-your-mind works."
           (org-entry-delete (point) "ORG_GTD_TIMESTAMP")
           (org-entry-put (point) "ORG_GTD" "Actions")
           (org-todo "NEXT")
+          ;; Clear stale CLOSED timestamp (left behind by DONE/CNCL)
+          (save-excursion
+            (org-back-to-heading t)
+            (forward-line 1)
+            (when (looking-at "CLOSED: ")
+              (delete-region (point) (1+ (line-end-position)))))
           (let ((org-gtd-organize-hooks nil))
             (let ((targets (org-gtd-refile--get-targets "Actions")))
               (if (null targets)
