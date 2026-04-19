@@ -1530,16 +1530,242 @@ Always shows brackets — empty [] if no score tag found."
       (format "%s%s%s%sU:%s I:%s" gc-next flyby fire deck urg imp)))
 
   (defun tdw-someday-priority-view ()
-    "Someday/Maybe items — uses Aldric's exact view language.
-Press 'n' or 's' to promote to Next Actions, ',\u003cletter\u003e' to reprioritize."
+    "Someday/Maybe items grouped by project — mirrors Unordered View layout.
+Press 'n' or 's' to promote to Next Actions, ',<letter>' to reprioritize."
     (interactive)
+    (when-let ((buf (get-buffer "*Org Agenda(S)*"))) (kill-buffer buf))
     (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
       (org-gtd-view-show
-       '((name . "Someday/Maybe — 'n' to promote to Next Actions")
-         (type . someday)
+       `((name . "Someday/Maybe — 'n' to promote to Next Actions")
          (prefix-width . 25)
-         (prefix . (effort " " score " — "))))))
+         (prefix . (effort " " score " — "))
+         (blocks . (
+                    ;; 📋 Admin
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+admin"
+                                ((org-agenda-overriding-header "📋 Admin")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 🤖 AGY
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+agy"
+                                ((org-agenda-overriding-header "🤖 AGY")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 🔶 Alteryx
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+alteryx"
+                                ((org-agenda-overriding-header "🔶 Alteryx")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 🏢 BFC
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+bfc"
+                                ((org-agenda-overriding-header "🏢 BFC")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 💬 Comms
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+comms"
+                                ((org-agenda-overriding-header "💬 Comms")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 🌐 GCA General
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+gca"
+                                ((org-agenda-overriding-header "🌐 GCA General")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 📦 GCA Delivery
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+gca_delivery"
+                                ((org-agenda-overriding-header "📦 GCA Delivery")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 🧪 GCA Incubation
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+gca_incubation"
+                                ((org-agenda-overriding-header "🧪 GCA Incubation")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 🎓 GCA Onboarding
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+gca_onboarding"
+                                ((org-agenda-overriding-header "🎓 GCA Onboarding")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; ⚙️ GCA Operations
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+gca_operations"
+                                ((org-agenda-overriding-header "⚙️ GCA Operations")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 🛠️ GCA Product
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+gca_product"
+                                ((org-agenda-overriding-header "🛠️ GCA Product")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 💼 GCA Sales
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+gca_sales"
+                                ((org-agenda-overriding-header "💼 GCA Sales")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 💎 Gemini
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+gemini"
+                                ((org-agenda-overriding-header "💎 Gemini")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 🔵 Google
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+google"
+                                ((org-agenda-overriding-header "🔵 Google")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; ✅ GTD
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+gtd"
+                                ((org-agenda-overriding-header "✅ GTD")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; ✨ Inspired
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+inspired"
+                                ((org-agenda-overriding-header "✨ Inspired")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 🏦 Key Bank
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+key_bank"
+                                ((org-agenda-overriding-header "🏦 Key Bank")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; ⚖️ Legal
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+legal"
+                                ((org-agenda-overriding-header "⚖️ Legal")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 🎮 MLG
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+mlg"
+                                ((org-agenda-overriding-header "🎮 MLG")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 👾 Monster
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+monster"
+                                ((org-agenda-overriding-header "👾 Monster")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 🤝 Networking
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+networking"
+                                ((org-agenda-overriding-header "🤝 Networking")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 🏠 Personal
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+personal"
+                                ((org-agenda-overriding-header "🏠 Personal")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 💰 Sales
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+sales"
+                                ((org-agenda-overriding-header "💰 Sales")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 📊 Scaled Pilots
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+scaled_pilots"
+                                ((org-agenda-overriding-header "📊 Scaled Pilots")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 📅 Scheduling
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+scheduling"
+                                ((org-agenda-overriding-header "📅 Scheduling")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 👥 Staffing
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+staffing"
+                                ((org-agenda-overriding-header "👥 Staffing")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 🏡 THD
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+thd"
+                                ((org-agenda-overriding-header "🏡 THD")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; 🔧 Tools
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+tools"
+                                ((org-agenda-overriding-header "🔧 Tools")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ))) (or keys "S"))))
 
 
   ;;; ——— Sanity View: Urgency/Impact cycling ———
