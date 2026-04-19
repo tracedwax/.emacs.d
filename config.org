@@ -943,7 +943,7 @@ Updates the agenda-line marker after refile so change-your-mind works."
                 (lambda ()
                   (let ((todo (org-get-todo-state)))
                     (when (member todo '("NEXT" "TODO"))
-                      (let ((effort (tdw/get-subtree-effort-minutes)))
+                      (let ((effort (or (tdw/get-subtree-effort-minutes) 0)))
                         (cond ((tdw/on-fire-p) (setq mins-fire (+ mins-fire effort)))
                               ((tdw/on-deck-p) (setq mins-deck (+ mins-deck effort)))
                               ((tdw/big-rock-p) (setq mins-big (+ mins-big effort)))
