@@ -1541,6 +1541,15 @@ Press 'n' or 's' to promote to Next Actions, ',<letter>' to reprioritize."
          (prefix-width . 25)
          (prefix . (effort " " score " — "))
          (blocks . (
+                    ;; 🗂 Uncategorized (items with no known project tag)
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\""
+                                ((org-agenda-overriding-header "🗂 Uncategorized")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))
+                                 (org-agenda-skip-function 'tdw/skip-unless-someday-uncategorized)))))
+
                     ;; 📋 Admin
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+admin"
@@ -2185,6 +2194,21 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                (or (not effort-mins) (<= effort-mins 0)))
           nil
         end)))
+
+  (defun tdw/skip-unless-someday-uncategorized ()
+    "Skip unless this Someday item has none of the known project tags."
+    (let* ((known-tags '("admin" "agy" "alteryx" "bfc" "comms"
+                         "gca" "gca_delivery" "gca_incubation" "gca_onboarding"
+                         "gca_operations" "gca_product" "gca_recruiting" "gca_sales"
+                         "gemini" "gemini_enterprise" "google" "gtd" "inspired"
+                         "key_bank" "legal" "meeting" "mlg" "mmb" "monster" "mtp"
+                         "networking" "personal" "sales" "scaled_pilots"
+                         "scheduling" "staffing" "thd" "tools"))
+           (item-tags (org-get-tags nil t)))
+      (if (cl-some (lambda (tag) (member tag item-tags)) known-tags)
+          (org-entry-end-position)
+        nil)))
+
 
   (defun tdw-sanity-view (&optional keys)
     "Tag-based GTD view: Calendar/Habits, On Fire, Big Rocks, Quick Wins, Other Rocks, Delegated."
