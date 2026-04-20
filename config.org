@@ -1594,6 +1594,38 @@ Press 'n' or 's' to promote to Next Actions, ',<letter>' to reprioritize."
          (prefix-width . 25)
          (prefix . (effort " " score " — "))
          (blocks . (
+                    ;; On Fire
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+on_fire"
+                                ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; Bells Ringing
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+bells_ringing"
+                                ((org-agenda-overriding-header ,(format "🔔🔔 Bells Ringing (%s)" effort-bell))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; On Deck
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+on_deck"
+                                ((org-agenda-overriding-header ,(format "⚾️ ⚾️ On Deck (%s)" effort-deck))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; Flyby
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+flyby"
+                                ((org-agenda-overriding-header "🛸 Flyby")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
                     ;; Big Rocks — score >= 10
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\""
