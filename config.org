@@ -1383,8 +1383,8 @@ Groups tasks by their specific tgl_* tag with readable dividers."
   ;; Wrap todo state changes: skip change-all-lines, show new keyword in-place.
   ;; Keywords are hidden (todo-keyword-format=""), so we must clean up any manually
   ;; inserted or residual keywords before inserting the new ones.
-  ;; Special handling for habits: they auto-reset to TODO after DONE, so we
-  ;; skip keyword insertion (since keywords are hidden) and show a clear message.
+  ;; Habits auto-reset to TODO after DONE, so we use display-state to show
+  ;; the completion visually even though the underlying state resets.
   (advice-add 'org-agenda-todo :around
               (lambda (orig-fn &rest args)
                 (let* ((tdw--skip-change-all-lines t)
@@ -1400,30 +1400,30 @@ Groups tasks by their specific tgl_* tag with readable dividers."
                                        (org-with-wide-buffer
                                         (goto-char (marker-position hdm))
                                         (or (org-get-todo-state) ""))))
+                           ;; Habits reset to TODO after DONE — show DONE visually
+                           (display-state (if (and is-habit (string= new-state "TODO"))
+                                              "DONE" new-state))
                            (inhibit-read-only t))
-                      (if is-habit
-                          ;; Habits reset to TODO after DONE — don't insert keyword
-                          ;; (keywords are hidden by format=""), just show a clear message
-                          (message "✓ Habit completed — reset for next repeat")
-                        ;; Non-habit: insert the keyword in-place as before
-                        (save-excursion
-                          (beginning-of-line)
-                          (let ((found-sep nil))
-                            ;; Try primary separator ' — '
-                            (when (re-search-forward " — " (line-end-position) t)
-                              (setq found-sep t))
-                            ;; Fallback: truncated prefix ends with '… '
-                            (unless found-sep
-                              (beginning-of-line)
-                              (when (re-search-forward "… " (line-end-position) t)
-                                (setq found-sep t)))
+                      ;; Insert keyword in-place for all items (habits + non-habits)
+                      (save-excursion
+                        (beginning-of-line)
+                        (let ((found-sep nil))
+                          ;; Try primary separator ' — '
+                          (when (re-search-forward " — " (line-end-position) t)
+                            (setq found-sep t))
+                          ;; Fallback: truncated prefix ends with '… '
+                          (unless found-sep
+                            (beginning-of-line)
+                            (when (re-search-forward "… " (line-end-position) t)
+                              (setq found-sep t)))
                             (when found-sep
                               (if (looking-at "\\(?:\\(?:TODO\\|NEXT\\|WAIT\\|DONE\\|CNCL\\|SOMEDAY\\)[ \t]*\\)+")
-                                  (replace-match (if (string= new-state "") "" (concat new-state " ")))
+                                  (replace-match (if (string= display-state "") "" (concat display-state " ")))
                                 (if (looking-at "\\[#.\\] ")
-                                    (progn (goto-char (match-end 0)) (insert (if (string= new-state "") "" (concat new-state " "))))
-                                  (insert (if (string= new-state "") "" (concat new-state " "))))))))
-                        (message "→ %s" new-state)))))))
+                                    (progn (goto-char (match-end 0)) (insert (if (string= display-state "") "" (concat display-state " "))))
+                                  (insert (if (string= display-state "") "" (concat display-state " "))))))))
+                      (message "%s" (if is-habit "✓ Habit completed" (concat "→ " display-state))))))))
+
   ;; Wrap clock-in/out: suppress change-all-lines to prevent
   ;; tags, keywords, and priority cookies from reappearing.
   (advice-add 'org-agenda-clock-in :around
