@@ -1471,6 +1471,7 @@ Groups tasks by their specific tgl_* tag with readable dividers."
     (define-key org-agenda-mode-map (kbd "i") #'tdw/agenda-cycle-impact)
     (define-key org-agenda-mode-map (kbd "I") #'org-agenda-diary-entry)
     (define-key org-agenda-mode-map (kbd "f") #'tdw/agenda-toggle-on-fire)
+    (define-key org-agenda-mode-map (kbd "b") #'tdw/agenda-toggle-bells-ringing)
     (define-key org-agenda-mode-map (kbd "d") #'tdw/agenda-toggle-on-deck)
     (define-key org-agenda-mode-map (kbd "g") #'tdw/agenda-toggle-gc-next)
     (define-key org-agenda-mode-map (kbd "l") #'tdw/agenda-toggle-flyby)
