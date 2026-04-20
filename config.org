@@ -1529,7 +1529,7 @@ Always shows brackets — empty [] if no score tag found."
                       (t "--"))))
       (format "%s%s%s%sU:%s I:%s" gc-next flyby fire deck urg imp)))
 
-  (defun tdw-someday-priority-view ()
+  (defun tdw-someday-priority-view (&optional keys)
     "Someday/Maybe items grouped by project — mirrors Unordered View layout.
 Press 'n' or 's' to promote to Next Actions, ',<letter>' to reprioritize."
     (interactive)
