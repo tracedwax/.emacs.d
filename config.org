@@ -1089,6 +1089,10 @@ Set by `tdw-unordered-view', cleared by `tdw-ordered-view'.")
               (goto-char (point-min))
               (while (re-search-forward "\\bNEXT \\|\\bTODO \\|\\bWAIT " nil t)
                 (replace-match "")))
+            ;; Strip trailing org tags (:tag1:tag2:) and empty :: from all lines
+            (goto-char (point-min))
+            (while (re-search-forward " +:[a-zA-Z0-9_:]+: *$" nil t)
+              (replace-match ""))
             ;; Inject capacity warnings
             (let ((warnings (tdw/sanity-view-warnings)))
               (dolist (w warnings)
