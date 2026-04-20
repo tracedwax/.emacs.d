@@ -1072,6 +1072,10 @@ Set by `tdw-unordered-view', cleared by `tdw-ordered-view'.")
             (goto-char (point-min))
             (while (re-search-forward "\\(🔥🔥 On Fire\\( ([^)]*)\\)?\\)" nil t)
               (replace-match (format "🔥🔥 On Fire (%s)" effort-fire) t t nil 1))
+            ;; Bells Ringing effort
+            (goto-char (point-min))
+            (while (re-search-forward "\\(🔔🔔 Bells Ringing\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "🔔🔔 Bells Ringing (%s)" effort-bell) t t nil 1))
             ;; On Deck effort
             (goto-char (point-min))
             (while (re-search-forward "\\(⚾️ ⚾️ On Deck\\( ([^)]*)\\)?\\)" nil t)
