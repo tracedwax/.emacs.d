@@ -985,8 +985,9 @@ Updates the agenda-line marker after refile so change-your-mind works."
 
   (defun tdw/sanity-view-warnings ()
     "Return alist of (SECTION . WARNING-STRING) for capacity violations.
-Only alerts on on-fire count exceeding 5."
+Alerts on on-fire > 5, bells-ringing > 10, on-deck > 5."
     (let ((n-fire 0)
+          (n-bell 0)
           (n-deck 0)
           (warnings nil))
       (dolist (file (org-agenda-files))
@@ -1001,6 +1002,7 @@ Only alerts on on-fire count exceeding 5."
                         (tags (org-get-tags nil t)))
                     (when (member todo '("NEXT" "TODO"))
                       (when (member "on_fire" tags) (cl-incf n-fire))
+                      (when (member "bells_ringing" tags) (cl-incf n-bell))
                       (when (member "on_deck" tags) (cl-incf n-deck)))))
                 nil nil))))))
       (if (> n-fire 5)
@@ -1009,6 +1011,13 @@ Only alerts on on-fire count exceeding 5."
                 warnings)
         (push (cons "🔥🔥 On Fire"
                      " [blocking someone | due <24h | big commitment at risk] 🔥🔥")
+              warnings))
+      (if (> n-bell 10)
+          (push (cons "🔔🔔 Bells Ringing"
+                       (format " *** WARNING: %d bells-ringing items — remove %d *** 🔔🔔" n-bell (- n-bell 10)))
+                warnings)
+        (push (cons "🔔🔔 Bells Ringing"
+                     " [next up — needs attention soon] 🔔🔔")
               warnings))
       (if (> n-deck 5)
           (push (cons "⚾️ ⚾️ On Deck"
