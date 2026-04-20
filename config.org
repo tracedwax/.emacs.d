@@ -867,10 +867,24 @@ Updates the agenda-line marker after refile so change-your-mind works."
               (local-set-key (kbd "k") #'org-agenda-previous-line)))
 
   (defun tdw/get-effort-minutes (effort-str)
-    "Convert EFFORT-STR (H:MM) to minutes."
-    (when (and effort-str (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
+    "Convert EFFORT-STR to minutes. Handles H:MM, NNmin, NNh, bare numbers."
+    (cond
+     ((null effort-str) 0)
+     ;; H:MM format
+     ((string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str)
       (+ (* 60 (string-to-number (match-string 1 effort-str)))
-         (string-to-number (match-string 2 effort-str)))))
+         (string-to-number (match-string 2 effort-str))))
+     ;; NNmin format (e.g. "30min")
+     ((string-match "\\([0-9]+\\)min" effort-str)
+      (string-to-number (match-string 1 effort-str)))
+     ;; NNh format (e.g. "2h")
+     ((string-match "\\([0-9]+\\)h" effort-str)
+      (* 60 (string-to-number (match-string 1 effort-str))))
+     ;; Bare number (assume minutes)
+     ((string-match "^[0-9]+$" effort-str)
+      (string-to-number effort-str))
+     ;; Fallback
+     (t 0)))
 
   (defun tdw/get-subtree-effort-minutes ()
     "Sum effort of current entry and all its children in minutes."
