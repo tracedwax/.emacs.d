@@ -1534,10 +1534,9 @@ Always shows brackets — empty [] if no score tag found."
     (let* ((tags (org-get-tags nil t))
            (gc-next (if (member "gc_next" tags) "☁️ " ""))
            (flyby (if (member "flyby" tags) "🛸 " ""))
-           (cat-emoji (cond ((member "on_fire" tags) "🔥 ")
-                           ((member "bells_ringing" tags) "🔔 ")
-                           ((member "on_deck" tags) "⚾️ ")
-                           (t "")))
+           (fire (if (member "on_fire" tags) "🔥 " ""))
+           (bell (if (member "bells_ringing" tags) "🔔 " ""))
+           (deck (if (member "on_deck" tags) "⚾️ " ""))
            (urg (cond ((member "wh_urgency" tags) "wh")
                       ((member "vh_urgency" tags) "vh")
                       ((member "h_urgency" tags)  "hi")
@@ -1556,17 +1555,16 @@ Always shows brackets — empty [] if no score tag found."
            (score-str (if score-tag
                           (substring score-tag 6)
                         "")))
-      (format "%s%s%sU:%s I:%s [%s]" gc-next flyby cat-emoji urg imp score-str)))
+      (format "%s%s%s%s%sU:%s I:%s [%s]" gc-next flyby fire bell deck urg imp score-str)))
 
   (defun org-gtd-agenda--resolve-urg-imp ()
     "Return compact urgency/impact string without the numeric score, like '🔥 ⚾️ U:vh I:h'."
     (let* ((tags (org-get-tags nil t))
            (gc-next (if (member "gc_next" tags) "☁️ " ""))
            (flyby (if (member "flyby" tags) "🛸 " ""))
-           (cat-emoji (cond ((member "on_fire" tags) "🔥 ")
-                           ((member "bells_ringing" tags) "🔔 ")
-                           ((member "on_deck" tags) "⚾️ ")
-                           (t "")))
+           (fire (if (member "on_fire" tags) "🔥 " ""))
+           (bell (if (member "bells_ringing" tags) "🔔 " ""))
+           (deck (if (member "on_deck" tags) "⚾️ " ""))
            (urg (cond ((member "wh_urgency" tags) "wh")
                       ((member "vh_urgency" tags) "vh")
                       ((member "h_urgency" tags)  "hi")
@@ -1581,7 +1579,7 @@ Always shows brackets — empty [] if no score tag found."
                       ((member "m_impact" tags)   "md")
                       ((member "l_impact" tags)   "lo")
                       (t "--"))))
-      (format "%s%s%sU:%s I:%s" gc-next flyby cat-emoji urg imp)))
+      (format "%s%s%s%s%sU:%s I:%s" gc-next flyby fire bell deck urg imp)))
 
   (defun tdw-someday-priority-view (&optional keys)
     "Someday/Maybe items grouped by project — mirrors Unordered View layout.
@@ -1986,7 +1984,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (cond
            ;; Ordered View: replace full score annotation (🔥 U:xx I:xx [nn])
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:🔔 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             ;; Save match positions NOW — resolve-score uses regex internally
             ;; and will destroy the match data if we don't capture first
             (let* ((mbeg (match-beginning 0))
@@ -1999,7 +1997,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation (🔥 U:xx I:xx)
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:🔔 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
@@ -2031,7 +2029,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (cond
            ;; Ordered View: replace full score annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:🔔 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-score (with-current-buffer buffer
@@ -2042,7 +2040,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:🔔 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
@@ -2074,7 +2072,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (cond
            ;; Ordered View: replace full score annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:🔔 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-score (with-current-buffer buffer
@@ -2085,7 +2083,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:🔔 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
