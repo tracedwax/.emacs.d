@@ -1276,21 +1276,31 @@ Groups tasks by their specific tgl_* tag with readable dividers."
               ;; Recalculate score tag after effort change
               (tdw/compute-and-set-score))
             ;; Update effort prefix in-place instead of full refresh
+            ;; Restrict search to prefix area (before " — ") to avoid
+            ;; matching habit graph brackets or scheduled times
             (let ((inhibit-read-only t))
               (save-excursion
                 (beginning-of-line)
-                (when (re-search-forward "[0-9]+:[0-9]+" (line-end-position) t)
-                  (replace-match new-effort))
-                ;; Also update score bracket
-                (beginning-of-line)
-                (when (re-search-forward "\\[\\w*\\]" (line-end-position) t)
-                  (let ((new-score-str (with-current-buffer (marker-buffer marker)
-                                         (org-with-wide-buffer
-                                          (goto-char (marker-position marker))
-                                          (let* ((tags (org-get-tags nil t))
-                                                 (stag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags)))
-                                            (if stag (format "[%s]" (substring stag 6)) "[]"))))))
-                    (replace-match new-score-str)))))
+                (let ((prefix-end (save-excursion
+                                    (if (re-search-forward " — " (line-end-position) t)
+                                        (match-beginning 0)
+                                      (line-end-position)))))
+                  (when (re-search-forward "[0-9]+:[0-9]+" prefix-end t)
+                    (replace-match new-effort))
+                  ;; Also update score bracket — search only in prefix
+                  (beginning-of-line)
+                  (setq prefix-end (save-excursion
+                                     (if (re-search-forward " — " (line-end-position) t)
+                                         (match-beginning 0)
+                                       (line-end-position))))
+                  (when (re-search-forward "\\[\\w*\\]" prefix-end t)
+                    (let ((new-score-str (with-current-buffer (marker-buffer marker)
+                                           (org-with-wide-buffer
+                                            (goto-char (marker-position marker))
+                                            (let* ((tags (org-get-tags nil t))
+                                                   (stag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags)))
+                                              (if stag (format "[%s]" (substring stag 6)) "[]"))))))
+                      (replace-match new-score-str))))))
             (message "Effort: %s" new-effort))
         (message "No task at point"))))
 
