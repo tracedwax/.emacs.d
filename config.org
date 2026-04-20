@@ -718,7 +718,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                               "GCA Product"
                               "GCA Sales"
                               "Personal"))
-    (org-habit-graph-column 100) ;; Moved from tdw-sanity-view let-binding
+    (org-habit-graph-column 100) ;; Moved from tdw-ordered-view let-binding
     :config
     (org-edna-mode 1)
     (org-gtd-mode 1)
@@ -726,7 +726,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     (("C-c d c" . org-gtd-capture)
      ("C-c d e" . org-gtd-engage)
      ("C-c d b" . tdw-decision-view)
-     ("C-c d a" . tdw-sanity-view)
+     ("C-c d o" . tdw-ordered-view)
      ("C-c d p" . org-gtd-process-inbox)
      ("C-c d n" . org-gtd-show-all-next)
      ("C-c d s" . org-gtd-show-stuck-projects)
@@ -902,7 +902,7 @@ Updates the agenda-line marker after refile so change-your-mind works."
             (outline-next-heading))))
       total))
 
-  ;;; ——— Sanity View: Tag-based helpers ———
+  ;;; ——— Ordered View: Tag-based helpers ———
 
   (defun tdw/has-tag-p (tag)
     "Return non-nil if current entry has TAG."
@@ -937,7 +937,7 @@ Updates the agenda-line marker after refile so change-your-mind works."
            (mins (when effort-str (tdw/get-effort-minutes effort-str))))
       (or (not effort-str) (not mins) (<= mins 0))))
 
-  ;;; ——— Sanity View: Effort totals by section ———
+  ;;; ——— Ordered View: Effort totals by section ———
 
   (defun tdw/get-sanity-effort-totals ()
     "Return a list (TOTAL ON-FIRE BIG-ROCKS QUICK-WINS OTHER) formatted as H:MM."
@@ -974,7 +974,7 @@ Updates the agenda-line marker after refile so change-your-mind works."
               (funcall fmt mins-other)
               n-unestimated))))
 
-  ;;; ——— Sanity View: Capacity warnings ———
+  ;;; ——— Ordered View: Capacity warnings ———
 
   (defun tdw/sanity-view-warnings ()
     "Return alist of (SECTION . WARNING-STRING) for capacity violations.
@@ -1015,21 +1015,21 @@ Only alerts on on-fire count exceeding 5."
       (push (cons "🪨 Other Rocks" " 🪨") warnings)
       warnings))
 
-  ;;; ——— Sanity View: Buffer-local state ———
+  ;;; ——— Ordered View: Buffer-local state ———
 
   (defvar tdw--is-unordered-view nil
     "Non-nil when the current agenda is an Unordered View.
-Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
+Set by `tdw-unordered-view', cleared by `tdw-ordered-view'.")
 
-  ;;; ——— Sanity View: Header updater ———
+  ;;; ——— Ordered View: Header updater ———
 
   (defun tdw/update-sanity-view-headers ()
     "Update headers in the current agenda buffer with fresh effort totals and warnings."
     (let ((inhibit-read-only t))
       (save-excursion
         (goto-char (point-min))
-        ;; Detect if we are in Sanity/Decision View
-        (when (or (re-search-forward "Sanity View" nil t)
+        ;; Detect if we are in Ordered/Decision View
+        (when (or (re-search-forward "Ordered View" nil t)
                   (re-search-forward "Unordered View" nil t)
                   (re-search-forward "Decision View" nil t)
                   (re-search-forward "🔥🔥 On Fire" nil t)
@@ -1040,10 +1040,10 @@ Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
                   (re-search-forward "Priority C" nil t)
                   (re-search-forward "Priority D" nil t))
           (pcase-let ((`(,total ,effort-fire ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
-            ;; Update Sanity View total
+            ;; Update Ordered View total
             (goto-char (point-min))
-            (while (re-search-forward "\\(Sanity View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
-              (replace-match (format "Sanity View (Total Effort: %s)" total) t t nil 1))
+            (while (re-search-forward "\\(Ordered View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
+              (replace-match (format "Ordered View (Total Effort: %s)" total) t t nil 1))
             ;; Update Unordered View total
             (goto-char (point-min))
             (while (re-search-forward "\\(Unordered View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
@@ -1123,7 +1123,7 @@ Set by `tdw-unordered-view', cleared by `tdw-sanity-view'.")
       "apex_bank" "legal" "meeting" "muggitch" "mmb" "muggitch" "mtp"
       "networking" "onboarding" "personal" "sales" "scaled_pilots" "scheduling"
       "staffing" "plant_parenthood" "tools")
-    "Tags that have dedicated sections in the Sanity/Unordered views.")
+    "Tags that have dedicated sections in the Ordered/Unordered views.")
 
   (defvar tdw--excluded-tag-prefixes
     '("on_fire" "on_deck" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
@@ -1821,7 +1821,7 @@ Press 'n' or 's' to promote to Next Actions, ',<letter>' to reprioritize."
                     ))) (or keys "S")))))
 
 
-  ;;; ——— Sanity View: Urgency/Impact cycling ———
+  ;;; ——— Ordered View: Urgency/Impact cycling ———
 
   (defun tdw/agenda-cycle-tag (prefix levels)
     "Cycle a tag with PREFIX through LEVELS on the task at point.
@@ -1860,7 +1860,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
         (save-excursion
           (beginning-of-line)
           (cond
-           ;; Sanity View: replace full score annotation (U:xx I:xx [nn])
+           ;; Ordered View: replace full score annotation (U:xx I:xx [nn])
            ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
@@ -1913,7 +1913,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
         (save-excursion
           (beginning-of-line)
           (cond
-           ;; Sanity View: replace full score annotation (🔥 U:xx I:xx [nn])
+           ;; Ordered View: replace full score annotation (🔥 U:xx I:xx [nn])
            ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             ;; Save match positions NOW — resolve-score uses regex internally
             ;; and will destroy the match data if we don't capture first
@@ -1958,7 +1958,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
         (save-excursion
           (beginning-of-line)
           (cond
-           ;; Sanity View: replace full score annotation
+           ;; Ordered View: replace full score annotation
            ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
@@ -2001,7 +2001,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
         (save-excursion
           (beginning-of-line)
           (cond
-           ;; Sanity View: replace full score annotation
+           ;; Ordered View: replace full score annotation
            ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
@@ -2044,7 +2044,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
         (save-excursion
           (beginning-of-line)
           (cond
-           ;; Sanity View: replace full score annotation
+           ;; Ordered View: replace full score annotation
            ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
@@ -2117,7 +2117,7 @@ Removes any existing score_* tags, then adds :score_N:."
       ;; Add new score tag
       (org-toggle-tag (format "score_%d" new-score) 'on)))
 
-  ;;; ——— Sanity View ———
+  ;;; ——— Ordered View ———
 
 
   (defun tdw/agenda-score-at-marker (marker)
@@ -2142,7 +2142,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
   (setq org-agenda-cmp-user-defined #'tdw/agenda-cmp-score)
 
   ;; ——— Shared Agenda Skip Functions ———
-  ;; Extracted from inline lambdas so both Sanity View and Unordered View
+  ;; Extracted from inline lambdas so both Ordered View and Unordered View
   ;; can reference them by name instead of duplicating escaped code.
 
   (defvar tdw--ritual-habits '("Daily meeting prep" "GTD Daily Plan" "Start Time Out" "Vivian Vyvanse" "Create weekly plan")
@@ -2239,17 +2239,17 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
           nil
         end)))
 
-  (defun tdw-sanity-view (&optional keys)
+  (defun tdw-ordered-view (&optional keys)
     "Tag-based GTD view: Calendar/Habits, On Fire, Big Rocks, Quick Wins, Other Rocks, Delegated."
     (interactive)
     ;; Kill existing sticky buffer so we always regenerate fresh
-    (when-let ((buf (get-buffer "*Org Agenda(s)*"))) (kill-buffer buf))
+    (when-let ((buf (get-buffer "*Org Agenda(o)*"))) (kill-buffer buf))
     (setq tdw--is-unordered-view nil)
     (pcase-let ((`(,total ,effort-fire ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
        (org-gtd-view-show
-       `((name . ,(format "Sanity View (Total Effort: %s)" total))
+       `((name . ,(format "Ordered View (Total Effort: %s)" total))
          (prefix-width . 25)
          (prefix . (effort " " score " — "))
          (blocks . (
@@ -2634,10 +2634,10 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(tag-up user-defined-down priority-down alpha-up))))))
-                    ))) (or keys "s")))))
+                    ))) (or keys "o")))))
 
   (defun tdw-unordered-view (&optional keys)
-    "Like Sanity View but without score annotations, priority cookies, or custom sorting."
+    "Like Ordered View but without score annotations, priority cookies, or custom sorting."
     (interactive)
     ;; Kill existing sticky buffer so we always regenerate fresh
     (when-let ((buf (get-buffer "*Org Agenda(u)*"))) (kill-buffer buf))
@@ -3247,7 +3247,7 @@ With this configuration, using C-f in a status buffer will trigger the gitflow s
 * Dual-Frame Startup
 #+BEGIN_SRC emacs-lisp
 (defun tdw/startup-dual-frames ()
-  "Automatically open Sanity View on secondary monitor and Unordered View on primary monitor."
+  "Automatically open Ordered View on secondary monitor and Unordered View on primary monitor."
   (let* ((monitors (display-monitor-attributes-list))
          (primary (cl-find-if (lambda (m)
                                 (let ((geom (assoc 'geometry m)))
@@ -3271,7 +3271,7 @@ With this configuration, using C-f in a status buffer will trigger the gitflow s
     (unless (daemonp)
       (set-frame-position first-frame (nth 1 sec-geom) (nth 2 sec-geom))
       (with-selected-frame first-frame
-        (tdw-sanity-view "s")
+        (tdw-ordered-view "o")
         (delete-other-windows))
       (let ((second-frame (make-frame `((top . ,(nth 2 pri-geom))
                                         (left . ,(nth 1 pri-geom))))))
