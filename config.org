@@ -1055,7 +1055,7 @@ Set by `tdw-unordered-view', cleared by `tdw-ordered-view'.")
                   (re-search-forward "For Today" nil t)
                   (re-search-forward "Priority C" nil t)
                   (re-search-forward "Priority D" nil t))
-          (pcase-let ((`(,total ,effort-fire ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
+          (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
             ;; Update Ordered View total
             (goto-char (point-min))
             (while (re-search-forward "\\(Ordered View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
@@ -1580,7 +1580,7 @@ Always shows brackets — empty [] if no score tag found."
 Press 'n' or 's' to promote to Next Actions, ',<letter>' to reprioritize."
     (interactive)
     (when-let ((buf (get-buffer "*Org Agenda(S)*"))) (kill-buffer buf))
-    (pcase-let ((`(,total ,_fire ,_deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,_fire ,_bell ,_deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
     (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
       (org-gtd-view-show
@@ -2277,7 +2277,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
     ;; Kill existing sticky buffer so we always regenerate fresh
     (when-let ((buf (get-buffer "*Org Agenda(o)*"))) (kill-buffer buf))
     (setq tdw--is-unordered-view nil)
-    (pcase-let ((`(,total ,effort-fire ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
        (org-gtd-view-show
@@ -2675,7 +2675,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
     (when-let ((buf (get-buffer "*Org Agenda(u)*"))) (kill-buffer buf))
     ;; Signal to the finalize hook that this is an Unordered View.
     (setq tdw--is-unordered-view t)
-    (pcase-let ((`(,total ,effort-fire ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
             (org-agenda-hide-tags-regexp "."))
        (org-gtd-view-show
@@ -3069,7 +3069,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
   (defun tdw-decision-view ()
     "A broad GTD view for decision making: Priority A, B, C, and D."
     (interactive)
-    (pcase-let ((`(,total ,effort-a ,effort-b ,effort-c ,effort-d) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,_fire ,_bell ,_deck ,effort-a ,effort-b ,effort-c ,effort-d) (tdw/get-sanity-effort-totals)))
       (org-gtd-view-show
        `((name . ,(format "Decision View (Total Effort: %s)" total))
          (prefix . (effort "—"))
