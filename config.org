@@ -1529,6 +1529,7 @@ Always shows brackets — empty [] if no score tag found."
            (gc-next (if (member "gc_next" tags) "☁️ " ""))
            (flyby (if (member "flyby" tags) "🛸 " ""))
            (fire (if (member "on_fire" tags) "🔥 " ""))
+           (bell (if (member "bells_ringing" tags) "🔔 " ""))
            (deck (if (member "on_deck" tags) "⚾️ " ""))
            (urg (cond ((member "wh_urgency" tags) "wh")
                       ((member "vh_urgency" tags) "vh")
@@ -1548,7 +1549,7 @@ Always shows brackets — empty [] if no score tag found."
            (score-str (if score-tag
                           (substring score-tag 6)
                         "")))
-      (format "%s%s%s%sU:%s I:%s [%s]" gc-next flyby fire deck urg imp score-str)))
+      (format "%s%s%s%s%sU:%s I:%s [%s]" gc-next flyby fire bell deck urg imp score-str)))
 
   (defun org-gtd-agenda--resolve-urg-imp ()
     "Return compact urgency/impact string without the numeric score, like '🔥 ⚾️ U:vh I:h'."
