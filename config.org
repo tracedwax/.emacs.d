@@ -2353,6 +2353,14 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
 
+                    ;; 1a. Bells Ringing — tasks tagged :bells_ringing:
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+bells_ringing"
+                                ((org-agenda-overriding-header ,(format "🔔🔔 Bells Ringing (%s)" effort-bell))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
+
                     ;; 1b. On Deck — tasks tagged :on_deck:
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+on_deck"
