@@ -1146,7 +1146,7 @@ Set by `tdw-unordered-view', cleared by `tdw-ordered-view'.")
     "Tags that have dedicated sections in the Ordered/Unordered views.")
 
   (defvar tdw--excluded-tag-prefixes
-    '("on_fire" "on_deck" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
+    '("on_fire" "bells_ringing" "on_deck" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
       "for_" "ARCHIVE" "FLAGGED")
     "Tag prefixes excluded from the missing-tag check (urgency/impact/score/meta).")
 
