@@ -1586,7 +1586,7 @@ Always shows brackets — empty [] if no score tag found."
 Press 'n' or 's' to promote to Next Actions, ',<letter>' to reprioritize."
     (interactive)
     (when-let ((buf (get-buffer "*Org Agenda(S)*"))) (kill-buffer buf))
-    (pcase-let ((`(,total ,_fire ,_bell ,_deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
     (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
       (org-gtd-view-show
