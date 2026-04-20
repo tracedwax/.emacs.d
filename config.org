@@ -2014,6 +2014,49 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (insert new-urg-imp))))))
       (message "%s on_deck" (if has-tag "Removed" "Added"))))
 
+  (defun tdw/agenda-toggle-bells-ringing ()
+    "Toggle :bells_ringing: tag on the task at point and update prefix in-place."
+    (interactive)
+    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
+                         (org-agenda-error)))
+           (buffer (marker-buffer hdmarker))
+           has-tag)
+      (with-current-buffer buffer
+        (org-with-wide-buffer
+         (goto-char hdmarker)
+         (setq has-tag (member "bells_ringing" (org-get-tags nil t)))
+         (if has-tag
+             (org-toggle-tag "bells_ringing" 'off)
+           (org-toggle-tag "bells_ringing" 'on))))
+      ;; In-place update of the prefix
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (beginning-of-line)
+          (cond
+           ;; Ordered View: replace full score annotation
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:🔔 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+            (let* ((mbeg (match-beginning 0))
+                   (mend (match-end 0))
+                   (new-score (with-current-buffer buffer
+                                (org-with-wide-buffer
+                                 (goto-char hdmarker)
+                                 (org-gtd-agenda--resolve-score)))))
+              (delete-region mbeg mend)
+              (goto-char mbeg)
+              (insert new-score)))
+           ;; Unordered View: replace urg-imp annotation
+           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:🔔 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+            (let* ((mbeg (match-beginning 0))
+                   (mend (match-end 0))
+                   (new-urg-imp (with-current-buffer buffer
+                                  (org-with-wide-buffer
+                                   (goto-char hdmarker)
+                                   (org-gtd-agenda--resolve-urg-imp)))))
+              (delete-region mbeg mend)
+              (goto-char mbeg)
+              (insert new-urg-imp))))))
+      (message "%s bells_ringing" (if has-tag "Removed" "Added"))))
+
   (defun tdw/agenda-toggle-gc-next ()
     "Toggle :gc_next: tag on the task at point and update prefix in-place."
     (interactive)
