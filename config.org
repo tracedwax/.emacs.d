@@ -944,8 +944,9 @@ Updates the agenda-line marker after refile so change-your-mind works."
   ;;; ——— Ordered View: Effort totals by section ———
 
   (defun tdw/get-sanity-effort-totals ()
-    "Return a list (TOTAL ON-FIRE BIG-ROCKS QUICK-WINS OTHER) formatted as H:MM."
+    "Return a list (TOTAL ON-FIRE BELLS DECK BIG-ROCKS QUICK-WINS OTHER UNEST) formatted as H:MM."
     (let ((mins-fire 0)
+          (mins-bell 0)
           (mins-deck 0)
           (mins-big 0)
           (mins-quick 0)
@@ -963,6 +964,7 @@ Updates the agenda-line marker after refile so change-your-mind works."
                     (when (member todo '("NEXT" "TODO"))
                       (let ((effort (or (tdw/get-subtree-effort-minutes) 0)))
                         (cond ((tdw/on-fire-p) (setq mins-fire (+ mins-fire effort)))
+                              ((tdw/bells-ringing-p) (setq mins-bell (+ mins-bell effort)))
                               ((tdw/on-deck-p) (setq mins-deck (+ mins-deck effort)))
                               ((tdw/big-rock-p) (setq mins-big (+ mins-big effort)))
                               ((tdw/unestimated-p) (cl-incf n-unestimated))
@@ -970,8 +972,9 @@ Updates the agenda-line marker after refile so change-your-mind works."
                               (t (setq mins-other (+ mins-other effort))))))))
                 nil nil))))))
       (let ((fmt (lambda (m) (format "%d:%02d" (/ m 60) (% m 60)))))
-        (list (funcall fmt (+ mins-fire mins-deck mins-big mins-quick mins-other))
+        (list (funcall fmt (+ mins-fire mins-bell mins-deck mins-big mins-quick mins-other))
               (funcall fmt mins-fire)
+              (funcall fmt mins-bell)
               (funcall fmt mins-deck)
               (funcall fmt mins-big)
               (funcall fmt mins-quick)
