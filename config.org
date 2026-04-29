@@ -2371,6 +2371,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 ((org-agenda-overriding-header "⏰ Daily Rituals")
                                  (org-agenda-span 1)
                                  (org-agenda-start-day nil)
+                                 (org-agenda-include-diary nil)
                                  (org-agenda-entry-types '(:scheduled))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
@@ -2405,6 +2406,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                     ((native . (agenda ""
                                 ((org-agenda-span 1)
                                  (org-agenda-start-day nil)
+                                 (org-agenda-include-diary nil)
                                  (org-agenda-skip-additional-timestamps-same-entry t)
                                  (org-agenda-skip-function 'tdw/skip-ritual-habits-or-non-calendar)
                                  (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
@@ -2777,6 +2779,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                 ((org-agenda-overriding-header "⏰ Daily Rituals")
                                  (org-agenda-span 1)
                                  (org-agenda-start-day nil)
+                                 (org-agenda-include-diary nil)
                                  (org-agenda-entry-types '(:scheduled))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
@@ -2811,6 +2814,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                     ((native . (agenda ""
                                 ((org-agenda-span 1)
                                  (org-agenda-start-day nil)
+                                 (org-agenda-include-diary nil)
                                  (org-agenda-skip-additional-timestamps-same-entry t)
                                  (org-agenda-skip-function 'tdw/skip-ritual-habits-or-non-calendar)
                                  (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
