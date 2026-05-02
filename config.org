@@ -3379,38 +3379,14 @@ With this configuration, using C-f in a status buffer will trigger the gitflow s
 
 * Dual-Frame Startup
 #+BEGIN_SRC emacs-lisp
-(defun tdw/startup-dual-frames ()
-  "Automatically open Ordered View on secondary monitor and Unordered View on primary monitor."
-  (let* ((monitors (display-monitor-attributes-list))
-         (primary (cl-find-if (lambda (m)
-                                (let ((geom (assoc 'geometry m)))
-                                  (and (= (nth 1 geom) 0)
-                                       (= (nth 2 geom) 0))))
-                              monitors))
-         (secondary (cl-find-if (lambda (m)
-                                  (let ((geom (assoc 'geometry m)))
-                                    (or (/= (nth 1 geom) 0)
-                                        (/= (nth 2 geom) 0))))
-                                monitors))
-         ;; Fallback to primary if no secondary
-         (secondary (or secondary primary))
-         (sec-geom (assoc 'geometry secondary))
-         (pri-geom (assoc 'geometry primary))
-         (first-frame (selected-frame)))
+(defun tdw/startup-single-frame ()
+  "Automatically open Unordered View on startup."
+  ;; Only render views when we have a real GUI frame (non-daemon).
+  ;; In daemon mode, no GUI frame exists at startup — user triggers
+  ;; views manually with C-c d a / C-c d u after connecting.
+  (unless (daemonp)
+    (tdw-unordered-view "u")
+    (delete-other-windows)))
 
-    ;; Only render views when we have a real GUI frame (non-daemon).
-    ;; In daemon mode, no GUI frame exists at startup — user triggers
-    ;; views manually with C-c d a / C-c d u after connecting.
-    (unless (daemonp)
-      (set-frame-position first-frame (nth 1 sec-geom) (nth 2 sec-geom))
-      (with-selected-frame first-frame
-        (tdw-ordered-view "o")
-        (delete-other-windows))
-      (let ((second-frame (make-frame `((top . ,(nth 2 pri-geom))
-                                        (left . ,(nth 1 pri-geom))))))
-        (with-selected-frame second-frame
-          (tdw-unordered-view "u")
-          (delete-other-windows))))))
-
-(add-hook 'emacs-startup-hook #'tdw/startup-dual-frames)
+(add-hook 'emacs-startup-hook #'tdw/startup-single-frame)
 #+END_SRC
