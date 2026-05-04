@@ -1010,7 +1010,7 @@ Alerts on on-fire > 5, bells-ringing > 10, on-deck > 5."
                        (format " *** WARNING: %d on-fire items — remove %d *** 🔥🔥" n-fire (- n-fire 5)))
                 warnings)
         (push (cons "🔥🔥 On Fire"
-                     " [blocking someone | due <24h | big commitment at risk] 🔥🔥")
+                     " [Something or someone is trapped inside a burning building. Drop absolutely everything to rescue.] 🔥🔥")
               warnings))
       (if (> n-bell 10)
           (push (cons "🔔🔔 Bells Ringing"
