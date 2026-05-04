@@ -1024,7 +1024,7 @@ Alerts on on-fire > 5, bells-ringing > 10, on-deck > 5."
                        (format " *** WARNING: %d on-deck items — remove %d *** ⚾️⚾️" n-deck (- n-deck 5)))
                 warnings)
         (push (cons "⚾️ ⚾️ On Deck"
-                     " [next up after on-fire clears] ⚾️⚾️")
+                     " [next up after the bells are quiet] ⚾️⚾️")
               warnings))
       (push (cons "🪨🪨 Big Rocks" " 🪨🪨") warnings)
       (push (cons "💨💨 Quick Wins" " 💨💨") warnings)
