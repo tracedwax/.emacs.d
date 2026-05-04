@@ -1017,7 +1017,7 @@ Alerts on on-fire > 5, bells-ringing > 10, on-deck > 5."
                        (format " *** WARNING: %d bells-ringing items — remove %d *** 🔔🔔" n-bell (- n-bell 10)))
                 warnings)
         (push (cons "🔔🔔 Bells Ringing"
-                     " [next up — needs attention soon] 🔔🔔")
+                     " [keeps coming up as must do next] 🔔🔔")
               warnings))
       (if (> n-deck 5)
           (push (cons "⚾️ ⚾️ On Deck"
