@@ -1237,40 +1237,58 @@ Displays a message listing uncovered tags, if any."
 
   (defun tdw/insert-tgl-subheaders ()
     "Insert visual sub-headers within the Toggl Projects section.
-Groups tasks by their specific tgl_* tag with readable dividers."
+Collects all task lines, groups them by tgl_* tag, rewrites the
+section with grouped lines, and inserts readable dividers."
     (when (get-text-property (point-min) 'org-agenda-type)
       (save-excursion
         (goto-char (point-min))
         (when (re-search-forward "^Toggl Projects$" nil t)
           (forward-line 1)
           (let ((inhibit-read-only t)
-                (current-tag nil)
-                (section-end nil))
+                (section-start (point))
+                (section-end nil)
+                (entries nil))
             ;; Find where the next section header starts (or end of buffer)
             (save-excursion
               (if (re-search-forward "^[^\n ].+$" nil t)
                   (setq section-end (line-beginning-position))
                 (setq section-end (point-max))))
+            ;; Pass 1: collect all lines with their tgl tag and text properties
             (while (and (< (point) section-end) (not (eobp)))
-              (let ((tags (get-text-property (point) 'tags)))
+              (let* ((line-start (line-beginning-position))
+                     (line-end (min (1+ (line-end-position)) section-end))
+                     (line-text (buffer-substring line-start line-end))
+                     (tags (get-text-property (point) 'tags))
+                     (tgl-tag nil))
                 (when tags
-                  (let ((tgl-tag (cl-find-if
-                                  (lambda (tg)
-                                    (let ((s (if (symbolp tg) (symbol-name tg) tg)))
-                                      (and (stringp s) (string-prefix-p "tgl_" s))))
-                                  tags)))
-                    (when tgl-tag
-                      (let ((tag-str (if (symbolp tgl-tag) (symbol-name tgl-tag) tgl-tag)))
-                        (unless (equal tag-str current-tag)
-                          (setq current-tag tag-str)
-                          (let* ((readable (mapconcat #'capitalize
-                                                      (split-string (substring tag-str 4) "_")
-                                                      " "))
-                                 (header (concat "  — " readable " —\n")))
-                            (beginning-of-line)
-                            (insert (propertize header 'face 'org-agenda-structure))
-                            (setq section-end (+ section-end (length header))))))))))
-              (forward-line 1)))))))
+                  (let ((found (cl-find-if
+                                (lambda (tg)
+                                  (let ((s (if (symbolp tg) (symbol-name tg) tg)))
+                                    (and (stringp s) (string-prefix-p "tgl_" s))))
+                                tags)))
+                    (when found
+                      (setq tgl-tag (if (symbolp found) (symbol-name found) found)))))
+                (push (list (or tgl-tag "zzz_no_tag") line-text) entries))
+              (forward-line 1))
+            ;; Pass 2: sort entries by tgl tag, then rewrite the section
+            (setq entries (sort (nreverse entries)
+                                (lambda (a b) (string< (car a) (car b)))))
+            (delete-region section-start section-end)
+            (goto-char section-start)
+            (let ((current-tag nil))
+              (dolist (entry entries)
+                (let ((tag (car entry))
+                      (text (cadr entry)))
+                  (unless (equal tag current-tag)
+                    (setq current-tag tag)
+                    (unless (equal tag "zzz_no_tag")
+                      (let* ((readable (mapconcat #'capitalize
+                                                  (split-string (substring tag 4) "_")
+                                                  " "))
+                             (header (concat "  — " readable " —\n")))
+                        (insert (propertize header 'face 'org-agenda-structure)))))
+                  (insert text)))))))))
+
 
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
   (add-hook 'org-agenda-finalize-hook #'tdw/insert-tgl-subheaders)
