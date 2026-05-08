@@ -1244,7 +1244,7 @@ Groups tasks by their specific tgl_* tag with readable dividers."
         (when (re-search-forward "^Toggl Projects$" nil t)
           (forward-line 1)
           (let ((inhibit-read-only t)
-                (current-tag nil)
+                (seen-tags nil)
                 (section-end nil))
             ;; Find where the next section header starts (or end of buffer)
             (save-excursion
@@ -1261,8 +1261,8 @@ Groups tasks by their specific tgl_* tag with readable dividers."
                                   tags)))
                     (when tgl-tag
                       (let ((tag-str (if (symbolp tgl-tag) (symbol-name tgl-tag) tgl-tag)))
-                        (unless (equal tag-str current-tag)
-                          (setq current-tag tag-str)
+                        (unless (member tag-str seen-tags)
+                          (push tag-str seen-tags)
                           (let* ((readable (mapconcat #'capitalize
                                                       (split-string (substring tag-str 4) "_")
                                                       " "))
