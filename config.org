@@ -2750,8 +2750,13 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
 
-                    ;; Toggl Projects — one block per active tgl_* tag
-                    ,@(tdw/generate-tgl-blocks 'score)
+                    ;; Toggl Projects (regex matches all tgl_* tags in one query)
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+{tgl_.+}"
+                                ((org-agenda-overriding-header "Toggl Projects")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(tag-up user-defined-down priority-down alpha-up))))))
                     ))) (or keys "o")))))
 
   (defun tdw-unordered-view (&optional keys)
@@ -3153,8 +3158,13 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
-                    ;; Toggl Projects — one block per active tgl_* tag
-                    ,@(tdw/generate-tgl-blocks 'urg-imp)
+                    ;; Toggl Projects (regex matches all tgl_* tags in one query)
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+{tgl_.+}"
+                                ((org-agenda-overriding-header "Toggl Projects")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(tag-up category-keep))))))
                     ))) (or keys "u")))))
 
   (defun tdw-decision-view ()
