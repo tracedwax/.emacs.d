@@ -2823,15 +2823,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
-                    ;; 1b. On Deck
-                    ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+on_deck"
-                                ((org-agenda-overriding-header ,(format "⚾️ ⚾️ On Deck (%s)" effort-deck))
-                                 (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
-                                 (org-agenda-sorting-strategy '(category-keep))))))
-
-                    ;; 2. Today's Schedule
+                    ;; 1b. Today's Schedule
                     ((native . (agenda ""
                                 ((org-agenda-span 1)
                                  (org-agenda-start-day nil)
@@ -2841,6 +2833,14 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-hide-tags-regexp ".")
                                  (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(time-up category-keep))))))
+
+                    ;; 1c. On Deck
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+on_deck"
+                                ((org-agenda-overriding-header ,(format "⚾️ ⚾️ On Deck (%s)" effort-deck))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; 3. Delegated: overdue
                     ((name . "Delegated (Overdue)")
