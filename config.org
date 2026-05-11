@@ -2413,15 +2413,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
 
-                    ;; 1b. On Deck — tasks tagged :on_deck:
-                    ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+on_deck"
-                                ((org-agenda-overriding-header ,(format "⚾️ ⚾️ On Deck (%s)" effort-deck))
-                                 (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
-                                 (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
-
-                    ;; 2. Today's Schedule (Calendar + Habits)
+                    ;; 1b. Today's Schedule (Calendar + Habits)
                     ((native . (agenda ""
                                 ((org-agenda-span 1)
                                  (org-agenda-start-day nil)
@@ -2431,6 +2423,14 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-hide-tags-regexp ".")
                                  (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down time-up alpha-up))))))
+
+                    ;; 1c. On Deck — tasks tagged :on_deck:
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+on_deck"
+                                ((org-agenda-overriding-header ,(format "⚾️ ⚾️ On Deck (%s)" effort-deck))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(user-defined-down priority-down alpha-up))))))
 
                     ;; 3. Delegated: overdue
                     ((name . "Delegated (Overdue)")
