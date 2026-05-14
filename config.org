@@ -1289,6 +1289,17 @@ section with grouped lines, and inserts readable dividers."
                   (insert text)))))))))
 
 
+  (defun tdw/strip-tag-separators ()
+    "Remove lingering ' ::' tag separators from agenda lines.
+When `org-agenda-hide-tags-regexp' hides all tags, the '::' separator
+between heading text and tags remains.  This strips it."
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (point-min))
+        (while (re-search-forward " ::" nil t)
+          (replace-match "")))))
+
+  (add-hook 'org-agenda-finalize-hook #'tdw/strip-tag-separators)
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
   (add-hook 'org-agenda-finalize-hook #'tdw/insert-tgl-subheaders)
   (add-hook 'org-agenda-finalize-hook #'tdw/check-missing-tag-sections)
