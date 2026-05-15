@@ -2313,9 +2313,11 @@ the ORG_GTD property — these are external calendar events."
                       tdw--ritual-habits))
         (outline-next-heading))
        ;; Admit external calendar entries: no ORG_GTD property but has
-       ;; an active timestamp → let it through (return nil = don't skip)
+       ;; an active timestamp in the body → let it through (return nil)
        ((and (not (org-entry-get (point) "ORG_GTD"))
-             (org-entry-get (point) "TIMESTAMP"))
+             (save-excursion
+               (let ((end (save-excursion (outline-next-heading) (point))))
+                 (re-search-forward org-ts-regexp end t))))
         nil)
        ;; Everything else: delegate to org-gtd's standard skip
        (t (org-gtd-view-lang--skip-unless-calendar-or-habit)))))
