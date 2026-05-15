@@ -2302,23 +2302,13 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
         (outline-next-heading))))
 
   (defun tdw/skip-ritual-habits-or-non-calendar ()
-    "Skip ritual habits (shown in Daily Rituals) and non-calendar items.
-Also admit plain timestamped entries (e.g. gcal.org imports) that lack
-the ORG_GTD property — these are external calendar events."
+    "Skip ritual habits (shown in Daily Rituals) and non-calendar items."
     (let ((hdl (org-get-heading t t t t)))
-      (cond
-       ;; Skip ritual habits (they appear in the Daily Rituals block)
-       ((and (stringp hdl)
-             (cl-some (lambda (name) (string-match-p name hdl))
-                      tdw--ritual-habits))
-        (outline-next-heading))
-       ;; Admit external calendar entries from gcal.org — these have no
-       ;; ORG_GTD property but should appear in Today's Schedule
-       ((and (buffer-file-name)
-             (string-match-p "gcal\\.org\\'" (buffer-file-name)))
-        nil)
-       ;; Everything else: delegate to org-gtd's standard skip
-       (t (org-gtd-view-lang--skip-unless-calendar-or-habit)))))
+      (if (and (stringp hdl)
+               (cl-some (lambda (name) (string-match-p name hdl))
+                         tdw--ritual-habits))
+          (outline-next-heading)
+        (org-gtd-view-lang--skip-unless-calendar-or-habit))))
 
   (defun tdw/skip-unless-tickler-due ()
     "Skip unless this is an incubated item scheduled for today or earlier."
