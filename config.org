@@ -2302,13 +2302,21 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
         (outline-next-heading))))
 
   (defun tdw/skip-ritual-habits-or-non-calendar ()
-    "Skip ritual habits (shown in Daily Rituals) and non-calendar items."
+    "Skip ritual habits (shown in Daily Rituals) and non-calendar items.
+Inlines the Calendar/habit check to avoid org-gtd internal that hangs
+on entries without TODO keywords (e.g., gcal.org)."
     (let ((hdl (org-get-heading t t t t)))
       (if (and (stringp hdl)
                (cl-some (lambda (name) (string-match-p name hdl))
                          tdw--ritual-habits))
           (outline-next-heading)
-        (org-gtd-view-lang--skip-unless-calendar-or-habit))))
+        ;; Inline version of org-gtd-view-lang--skip-unless-calendar-or-habit
+        (let ((org-gtd-value (org-entry-get (point) "ORG_GTD")))
+          (if (and (or (equal org-gtd-value "Calendar")
+                       (equal org-gtd-value (org-gtd-type-org-gtd-value 'habit)))
+                   (not (org-entry-is-done-p)))
+              nil
+            (org-entry-end-position))))))
 
   (defun tdw/skip-unless-tickler-due ()
     "Skip unless this is an incubated item scheduled for today or earlier."
@@ -2431,7 +2439,7 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
                                  (org-agenda-skip-additional-timestamps-same-entry t)
                                  (org-agenda-skip-function 'tdw/skip-ritual-habits-or-non-calendar)
                                  (org-agenda-hide-tags-regexp ".")
-                                 (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((agenda . "  %i %?-12t% s")))
                                  (org-agenda-sorting-strategy '(time-up category-keep))))))
 
                     ;; 1c. On Deck
