@@ -2312,12 +2312,10 @@ the ORG_GTD property — these are external calendar events."
              (cl-some (lambda (name) (string-match-p name hdl))
                       tdw--ritual-habits))
         (outline-next-heading))
-       ;; Admit external calendar entries: no ORG_GTD property but has
-       ;; an active timestamp in the body → let it through (return nil)
-       ((and (not (org-entry-get (point) "ORG_GTD"))
-             (save-excursion
-               (let ((end (save-excursion (outline-next-heading) (point))))
-                 (re-search-forward org-ts-regexp end t))))
+       ;; Admit external calendar entries from gcal.org — these have no
+       ;; ORG_GTD property but should appear in Today's Schedule
+       ((and (buffer-file-name)
+             (string-match-p "gcal\\.org\\'" (buffer-file-name)))
         nil)
        ;; Everything else: delegate to org-gtd's standard skip
        (t (org-gtd-view-lang--skip-unless-calendar-or-habit)))))
