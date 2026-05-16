@@ -2940,6 +2940,13 @@ dired-jump is awesome (=C-x C-j= in any buffer)
 ;; Auto-refresh silently
  (setq global-auto-revert-non-file-buffers t)
  (setq auto-revert-verbose nil)
+
+;; Auto-revert gcal.org — written every 15 min by gcal-to-org.py launchd agent
+ (add-hook 'find-file-hook
+           (lambda ()
+             (when (and buffer-file-name
+                        (string-match-p "/gcal\\.org\\'" buffer-file-name))
+               (auto-revert-mode 1))))
 #+END_SRC
 
 This will make dired behave kinda like a two-pane file manager: with two direds open, you can copy/rename and the default target will be the other pane.
