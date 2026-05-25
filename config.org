@@ -919,6 +919,10 @@ Updates the agenda-line marker after refile so change-your-mind works."
     "Return non-nil if current entry is tagged :on_deck:."
     (tdw/has-tag-p "on_deck"))
 
+  (defun tdw/recently-considered-p ()
+    "Return non-nil if current entry is tagged :recently_considered:."
+    (tdw/has-tag-p "recently_considered"))
+
   (defun tdw/big-rock-p ()
     "Return non-nil if current entry has score >= 10."
     (let* ((tags (org-get-tags nil t))
@@ -943,10 +947,11 @@ Updates the agenda-line marker after refile so change-your-mind works."
   ;;; ——— Ordered View: Effort totals by section ———
 
   (defun tdw/get-sanity-effort-totals ()
-    "Return a list (TOTAL ON-FIRE BELLS DECK BIG-ROCKS QUICK-WINS OTHER UNEST) formatted as H:MM."
+    "Return a list (TOTAL ON-FIRE BELLS DECK BIG-ROCKS QUICK-WINS OTHER UNEST CONSIDERED) formatted as H:MM."
     (let ((mins-fire 0)
           (mins-bell 0)
           (mins-deck 0)
+          (mins-considered 0)
           (mins-big 0)
           (mins-quick 0)
           (mins-other 0)
@@ -965,20 +970,22 @@ Updates the agenda-line marker after refile so change-your-mind works."
                         (cond ((tdw/on-fire-p) (setq mins-fire (+ mins-fire effort)))
                               ((tdw/bells-ringing-p) (setq mins-bell (+ mins-bell effort)))
                               ((tdw/on-deck-p) (setq mins-deck (+ mins-deck effort)))
+                              ((tdw/recently-considered-p) (setq mins-considered (+ mins-considered effort)))
                               ((tdw/big-rock-p) (setq mins-big (+ mins-big effort)))
                               ((tdw/unestimated-p) (cl-incf n-unestimated))
                               ((tdw/quick-win-p) (setq mins-quick (+ mins-quick effort)))
                               (t (setq mins-other (+ mins-other effort))))))))
                 nil nil))))))
       (let ((fmt (lambda (m) (format "%d:%02d" (/ m 60) (% m 60)))))
-        (list (funcall fmt (+ mins-fire mins-bell mins-deck mins-big mins-quick mins-other))
+        (list (funcall fmt (+ mins-fire mins-bell mins-deck mins-considered mins-big mins-quick mins-other))
               (funcall fmt mins-fire)
               (funcall fmt mins-bell)
               (funcall fmt mins-deck)
               (funcall fmt mins-big)
               (funcall fmt mins-quick)
               (funcall fmt mins-other)
-              n-unestimated))))
+              n-unestimated
+              (funcall fmt mins-considered)))))
 
   ;;; ——— Ordered View: Capacity warnings ———
 
@@ -1050,12 +1057,13 @@ Set by `tdw-unordered-view'.")
                   (re-search-forward "🔥🔥 On Fire" nil t)
                   (re-search-forward "🔔🔔 Bells Ringing" nil t)
                   (re-search-forward "⚾️ ⚾️ On Deck" nil t)
+                  (re-search-forward "💭 💭 Recently Considered" nil t)
                   (re-search-forward "🪨🪨 Big Rocks" nil t)
                   (re-search-forward "Hot Tickets" nil t)
                   (re-search-forward "For Today" nil t)
                   (re-search-forward "Priority C" nil t)
                   (re-search-forward "Priority D" nil t))
-          (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
+          (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered) (tdw/get-sanity-effort-totals)))
             ;; Update Ordered View total
             (goto-char (point-min))
             (while (re-search-forward "\\(Ordered View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
@@ -1080,6 +1088,10 @@ Set by `tdw-unordered-view'.")
             (goto-char (point-min))
             (while (re-search-forward "\\(⚾️ ⚾️ On Deck\\( ([^)]*)\\)?\\)" nil t)
               (replace-match (format "⚾️ ⚾️ On Deck (%s)" effort-deck) t t nil 1))
+            ;; Recently Considered effort
+            (goto-char (point-min))
+            (while (re-search-forward "\\(💭 💭 Recently Considered\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "💭 💭 Recently Considered (%s)" effort-considered) t t nil 1))
             ;; Big Rocks effort
             (goto-char (point-min))
             (while (re-search-forward "\\(🪨🪨 Big Rocks\\( ([^)]*)\\)? ?🪨?🪨?\\)" nil t)
@@ -1140,17 +1152,17 @@ Set by `tdw-unordered-view'.")
                   (apply orig-fn args))))
 
   (defvar tdw--known-tag-sections
-    '("admin" "agy" "honey_smacks" "bfc" "comms" "flyby" "gc_next"
+    '("admin" "agy" "honey_smacks" "bfc" "comms" "flyby"
       "gca" "gca_delivery" "gca_incubation" "gca_onboarding"
       "gca_operations" "gca_product" "gca_recruiting" "gca_sales"
       "gemini" "gemini_enterprise" "google" "gtd" "weber"
       "apex_bank" "legal" "meeting" "muggitch" "mmb" "muggitch" "mtp"
       "networking" "onboarding" "personal" "sales" "scaled_pilots" "scheduling"
-      "staffing" "plant_parenthood" "tools")
+      "staffing" "plant_parenthood" "recently_considered" "tools")
     "Tags that have dedicated sections in the Ordered/Unordered views.")
 
   (defvar tdw--excluded-tag-prefixes
-    '("on_fire" "bells_ringing" "on_deck" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
+    '("on_fire" "bells_ringing" "on_deck" "recently_considered" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
       "for_" "ARCHIVE" "FLAGGED")
     "Tag prefixes excluded from the missing-tag check (urgency/impact/score/meta).")
 
@@ -1503,10 +1515,11 @@ between heading text and tags remains.  This strips it."
     (define-key org-agenda-mode-map (kbd "u") #'tdw/agenda-cycle-urgency)
     (define-key org-agenda-mode-map (kbd "i") #'tdw/agenda-cycle-impact)
     (define-key org-agenda-mode-map (kbd "I") #'org-agenda-diary-entry)
-    (define-key org-agenda-mode-map (kbd "f") #'tdw/agenda-toggle-on-fire)
-    (define-key org-agenda-mode-map (kbd "b") #'tdw/agenda-toggle-bells-ringing)
+    (define-key org-agenda-mode-map (kbd "c") #'tdw/agenda-toggle-recently-considered)
     (define-key org-agenda-mode-map (kbd "d") #'tdw/agenda-toggle-on-deck)
-    (define-key org-agenda-mode-map (kbd "g") #'tdw/agenda-toggle-gc-next)
+    (define-key org-agenda-mode-map (kbd "f") #'tdw/agenda-toggle-on-fire)
+    (define-key org-agenda-mode-map (kbd "g") #'tdw/agenda-toggle-google)
+    (define-key org-agenda-mode-map (kbd "b") #'tdw/agenda-toggle-bells-ringing)
     (define-key org-agenda-mode-map (kbd "l") #'tdw/agenda-toggle-flyby)
     (define-key org-agenda-mode-map (kbd "r") #'tdw/sanity-refresh))
 
@@ -1560,11 +1573,12 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
     "Return compact urgency/impact string with score like '🔥 ⚾️ U:vh I:h [13]'.
 Always shows brackets — empty [] if no score tag found."
     (let* ((tags (org-get-tags nil t))
-           (gc-next (if (member "gc_next" tags) "☁️ " ""))
+           (google-cloud (if (member "google" tags) "☁️ " ""))
            (flyby (if (member "flyby" tags) "🛸 " ""))
            (fire (if (member "on_fire" tags) "🔥 " ""))
            (bell (if (member "bells_ringing" tags) "🔔 " ""))
            (deck (if (member "on_deck" tags) "⚾️ " ""))
+           (considered (if (member "recently_considered" tags) "💭 " ""))
            (urg (cond ((member "wh_urgency" tags) "wh")
                       ((member "vh_urgency" tags) "vh")
                       ((member "h_urgency" tags)  "hi")
@@ -1583,16 +1597,17 @@ Always shows brackets — empty [] if no score tag found."
            (score-str (if score-tag
                           (substring score-tag 6)
                         "")))
-      (format "%s%s%s%s%sU:%s I:%s [%s]" gc-next flyby fire bell deck urg imp score-str)))
+      (format "%s%s%s%s%s%sU:%s I:%s [%s]" google-cloud flyby fire bell deck considered urg imp score-str)))
 
   (defun org-gtd-agenda--resolve-urg-imp ()
     "Return compact urgency/impact string without the numeric score, like '🔥 ⚾️ U:vh I:h'."
     (let* ((tags (org-get-tags nil t))
-           (gc-next (if (member "gc_next" tags) "☁️ " ""))
+           (google-cloud (if (member "google" tags) "☁️ " ""))
            (flyby (if (member "flyby" tags) "🛸 " ""))
            (fire (if (member "on_fire" tags) "🔥 " ""))
            (bell (if (member "bells_ringing" tags) "🔔 " ""))
            (deck (if (member "on_deck" tags) "⚾️ " ""))
+           (considered (if (member "recently_considered" tags) "💭 " ""))
            (urg (cond ((member "wh_urgency" tags) "wh")
                       ((member "vh_urgency" tags) "vh")
                       ((member "h_urgency" tags)  "hi")
@@ -1607,14 +1622,14 @@ Always shows brackets — empty [] if no score tag found."
                       ((member "m_impact" tags)   "md")
                       ((member "l_impact" tags)   "lo")
                       (t "--"))))
-      (format "%s%s%s%s%sU:%s I:%s" gc-next flyby fire bell deck urg imp)))
+      (format "%s%s%s%s%s%sU:%s I:%s" google-cloud flyby fire bell deck considered urg imp)))
 
   (defun tdw-someday-priority-view (&optional keys)
     "Someday/Maybe items grouped by project — mirrors Unordered View layout.
 Press 'n' or 's' to promote to Next Actions, ',<letter>' to reprioritize."
     (interactive)
     (when-let ((buf (get-buffer "*Org Agenda(S)*"))) (kill-buffer buf))
-    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered) (tdw/get-sanity-effort-totals)))
     (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
       (org-gtd-view-show
@@ -1642,6 +1657,14 @@ Press 'n' or 's' to promote to Next Actions, ',<letter>' to reprioritize."
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+on_deck"
                                 ((org-agenda-overriding-header ,(format "⚾️ ⚾️ On Deck (%s)" effort-deck))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; Recently Considered
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+recently_considered"
+                                ((org-agenda-overriding-header ,(format "💭 💭 Recently Considered (%s)" effort-considered))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))))))
@@ -1796,10 +1819,10 @@ Press 'n' or 's' to promote to Next Actions, ',<letter>' to reprioritize."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))))))
 
-                    ;; 🔵 Google
+                    ;; ☁️ Google
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+google"
-                                ((org-agenda-overriding-header "🔵 Google")
+                                ((org-agenda-overriding-header "☁️ Google")
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))))))
@@ -1959,7 +1982,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (cond
            ;; Ordered View: replace full score annotation (U:xx I:xx [nn])
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-score (with-current-buffer buffer
@@ -1970,7 +1993,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation (U:xx I:xx)
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
@@ -2123,8 +2146,8 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (insert new-urg-imp))))))
       (message "%s bells_ringing" (if has-tag "Removed" "Added"))))
 
-  (defun tdw/agenda-toggle-gc-next ()
-    "Toggle :gc_next: tag on the task at point and update prefix in-place."
+  (defun tdw/agenda-toggle-google ()
+    "Toggle :google: tag on the task at point and update prefix in-place."
     (interactive)
     (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
                          (org-agenda-error)))
@@ -2133,17 +2156,17 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
       (with-current-buffer buffer
         (org-with-wide-buffer
          (goto-char hdmarker)
-         (setq has-tag (member "gc_next" (org-get-tags nil t)))
+         (setq has-tag (member "google" (org-get-tags nil t)))
          (if has-tag
-             (org-toggle-tag "gc_next" 'off)
-           (org-toggle-tag "gc_next" 'on))))
+             (org-toggle-tag "google" 'off)
+           (org-toggle-tag "google" 'on))))
       ;; In-place update of the prefix
       (let ((inhibit-read-only t))
         (save-excursion
           (beginning-of-line)
           (cond
            ;; Ordered View: replace full score annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-score (with-current-buffer buffer
@@ -2154,7 +2177,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
@@ -2164,7 +2187,50 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (delete-region mbeg mend)
               (goto-char mbeg)
               (insert new-urg-imp))))))
-      (message "%s gc_next" (if has-tag "Removed" "Added"))))
+      (message "%s google" (if has-tag "Removed" "Added"))))
+
+  (defun tdw/agenda-toggle-recently-considered ()
+    "Toggle :recently_considered: tag on the task at point and update prefix in-place."
+    (interactive)
+    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
+                         (org-agenda-error)))
+           (buffer (marker-buffer hdmarker))
+           has-tag)
+      (with-current-buffer buffer
+        (org-with-wide-buffer
+         (goto-char hdmarker)
+         (setq has-tag (member "recently_considered" (org-get-tags nil t)))
+         (if has-tag
+             (org-toggle-tag "recently_considered" 'off)
+           (org-toggle-tag "recently_considered" 'on))))
+      ;; In-place update of the prefix
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (beginning-of-line)
+          (cond
+           ;; Ordered View: replace full score annotation
+           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+            (let* ((mbeg (match-beginning 0))
+                   (mend (match-end 0))
+                   (new-score (with-current-buffer buffer
+                                (org-with-wide-buffer
+                                 (goto-char hdmarker)
+                                 (org-gtd-agenda--resolve-score)))))
+              (delete-region mbeg mend)
+              (goto-char mbeg)
+              (insert new-score)))
+           ;; Unordered View: replace urg-imp annotation
+           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
+            (let* ((mbeg (match-beginning 0))
+                   (mend (match-end 0))
+                   (new-urg-imp (with-current-buffer buffer
+                                  (org-with-wide-buffer
+                                   (goto-char hdmarker)
+                                   (org-gtd-agenda--resolve-urg-imp)))))
+              (delete-region mbeg mend)
+              (goto-char mbeg)
+              (insert new-urg-imp))))))
+      (message "%s recently_considered" (if has-tag "Removed" "Added"))))
 
   (defun tdw/agenda-toggle-flyby ()
     "Toggle :flyby: tag on the task at point and update prefix in-place."
@@ -2186,7 +2252,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           (beginning-of-line)
           (cond
            ;; Ordered View: replace full score annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-score (with-current-buffer buffer
@@ -2197,7 +2263,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-score)))
            ;; Unordered View: replace urg-imp annotation
-           ((re-search-forward "\\(?:☁️ \\)?\\(?:🛸 \\)?\\(?:🔥 \\)?\\(?:⚾️ \\)?U:[^ ]* I:[^ ]*" (line-end-position) t)
+           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
             (let* ((mbeg (match-beginning 0))
                    (mend (match-end 0))
                    (new-urg-imp (with-current-buffer buffer
@@ -2394,7 +2460,7 @@ on entries without TODO keywords (e.g., gcal.org)."
     (when-let ((buf (get-buffer "*Org Agenda(u)*"))) (kill-buffer buf))
     ;; Signal to the finalize hook that this is an Unordered View.
     (setq tdw--is-unordered-view t)
-    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered) (tdw/get-sanity-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
             (org-agenda-hide-tags-regexp "."))
        (org-gtd-view-show
@@ -2446,6 +2512,14 @@ on entries without TODO keywords (e.g., gcal.org)."
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+on_deck"
                                 ((org-agenda-overriding-header ,(format "⚾️ ⚾️ On Deck (%s)" effort-deck))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))))))
+
+                    ;; 1d. Recently Considered
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+recently_considered"
+                                ((org-agenda-overriding-header ,(format "💭 💭 Recently Considered (%s)" effort-considered))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
@@ -2556,14 +2630,6 @@ on entries without TODO keywords (e.g., gcal.org)."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
-                    ;; ☁️ Google Cloud Next
-                    ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+gc_next"
-                                ((org-agenda-overriding-header "☁️ Google Cloud Next")
-                                 (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
-                                 (org-agenda-sorting-strategy '(category-keep))))))
-
                     ;; 🌐 GCA General
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+gca"
@@ -2644,10 +2710,10 @@ on entries without TODO keywords (e.g., gcal.org)."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
-                    ;; 🔵 Google
+                    ;; ☁️ Google
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+google"
-                                ((org-agenda-overriding-header "🔵 Google")
+                                ((org-agenda-overriding-header "☁️ Google")
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
