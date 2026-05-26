@@ -702,7 +702,12 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     (org-gtd-agenda-property-list '("DELEGATED_TO"))
     (org-gtd-agenda-property-position 'where-it-fits)
     (org-gtd-directory stag-org-gtd-directory)
-    (org-agenda-files (list org-gtd-directory))
+    (org-agenda-files (seq-filter #'file-exists-p
+                                  '("/Users/trace/my-life/orgnotes/gtd/org-gtd-tasks.org"
+                                    "/Users/trace/my-google-life/orgnotes/gtd/org-gtd-tasks.org"
+                                    "/Users/trace/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org"
+                                    "/Users/trace/my-bfc-partner-life/orgnotes/gtd/org-gtd-tasks.org"
+                                    "/Users/trace/workspace/non-oss/tracedwax/my-personal-life/docs/orgnotes/org-gtd-tasks.org")))
     (org-edna-use-inheritance t)
     (org-gtd-refile-to-any-target t)
     (org-gtd-organize-hooks '(my/org-gtd-inherit-parent-metadata))
