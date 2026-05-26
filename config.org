@@ -22,14 +22,14 @@ I set a [[*Bookmarks][bookmark]] with =C-x r m= and I can get back here with =C-
   (setq stag-easy-hugo-basedir "~/src/projects/trevoke.github.io-source"
         stag-easy-hugo-root "~/src/projects/trevoke.github.io"
         stag-org-reveal-root "/home/stag/mnt/internal/src/vendor/reveal.js"
-        stag-org-directory "~/my-life/orgnotes/"
-        stag-org-gtd-directory "~/my-life/orgnotes/gtd"
-        stag-org-roam-directory "~/my-life/orgnotes/roam"
+        stag-org-directory "~/my-venndoor-life/orgnotes/"
+        stag-org-gtd-directory "~/my-venndoor-life/orgnotes/gtd"
+        stag-org-roam-directory "~/my-venndoor-life/orgnotes/roam"
         stag-org-roam-db-location "~/.emacs.d/local-files/org-roam.db"
-        stag-bbdb-file "~/my-life/orgnotes/bbdb/big-brother-database"
-        stag-bibliography-file "~/my-life/orgnotes/references/library.bib"
-        stag-cite-export-processors '((t . (csl "/home/trevoke/my-life/orgnotes/references/modern-language-association.csl")))
-        stag-ledger-journal "~/my-life/accounting-personal/2025.ledger"
+        stag-bbdb-file "~/my-venndoor-life/orgnotes/bbdb/big-brother-database"
+        stag-bibliography-file "~/my-venndoor-life/orgnotes/references/library.bib"
+        stag-cite-export-processors '((t . (csl "/home/trevoke/my-venndoor-life/orgnotes/references/modern-language-association.csl")))
+        stag-ledger-journal "~/my-venndoor-life/accounting-personal/2025.ledger"
         )
   ;; CRITICAL: Set org-gtd-directory here so it is defined BEFORE custom-file loads org-gtd-mode
   (setq org-gtd-directory stag-org-gtd-directory)
@@ -396,7 +396,7 @@ avy is kinda badass.
     :config
     (claude-code-ide-emacs-tools-setup)
     :custom
-    (claude-code-ide-cli-path "/Users/trace/.local/share/mise/installs/node/20.19.2/bin/claude"))
+    (claude-code-ide-cli-path "/Users/thecleverone/.local/share/mise/installs/node/20.19.2/bin/claude"))
 #+end_src
 * Engines
 
@@ -703,11 +703,11 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     (org-gtd-agenda-property-position 'where-it-fits)
     (org-gtd-directory stag-org-gtd-directory)
     (org-agenda-files (seq-filter #'file-exists-p
-                                  '("/Users/trace/my-life/orgnotes/gtd/org-gtd-tasks.org"
-                                    "/Users/trace/my-google-life/orgnotes/gtd/org-gtd-tasks.org"
-                                    "/Users/trace/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org"
-                                    "/Users/trace/my-bfc-partner-life/orgnotes/gtd/org-gtd-tasks.org"
-                                    "/Users/trace/workspace/non-oss/tracedwax/my-personal-life/docs/orgnotes/org-gtd-tasks.org")))
+                                  '("/Users/thecleverone/my-venndoor-life/orgnotes/gtd/org-gtd-tasks.org"
+                                    "/Users/thecleverone/my-google-life/orgnotes/gtd/org-gtd-tasks.org"
+                                    "/Users/thecleverone/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org"
+                                    "/Users/thecleverone/my-bfc-partner-life/orgnotes/gtd/org-gtd-tasks.org"
+                                    "/Users/thecleverone/my-personal-life/docs/orgnotes/org-gtd-tasks.org")))
     (org-edna-use-inheritance t)
     (org-gtd-refile-to-any-target t)
     (org-gtd-organize-hooks '(my/org-gtd-inherit-parent-metadata))

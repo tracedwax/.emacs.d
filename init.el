@@ -45,7 +45,7 @@
   :demand t
   :ensure t
   :init
-  (setq org-directory "~/my-life/orgnotes/")
+  (setq org-directory "~/my-venndoor-life/orgnotes/")
   (setq org-id-track-globally t)
   (setq org-generic-id-locations-file
         "~/.emacs.d/local-files/org-generic-id-locations")
