@@ -110,11 +110,11 @@ This is first because nano-theme, while providing a gorgeous UI, has lots of opi
   (setq visible-bell t)
   (setq system-uses-terminfo nil)
 
-  ;; Fix terminal redraw corruption on downward cursor movement.
-  ;; The bidi scanner miscalculates line widths for emoji characters
-  ;; (⏰🔥🔔⚾💭🪨) in terminal mode, causing incremental redraws
-  ;; to place content at wrong positions. Disabling bidi scanning
-  ;; fixes this since we don't use right-to-left text.
+  ;; Fix terminal display: disable bidi scanning (safe perf win, we
+  ;; don't use RTL text).  The original ⚾ (U+26BE) was also replaced
+  ;; with 🥎 (U+1F94E) throughout because ⚾ has East Asian Width
+  ;; "Ambiguous" which caused width disagreements between Emacs and
+  ;; iTerm2, corrupting incremental terminal redraws.
   (setq-default bidi-paragraph-direction 'left-to-right)
   (setq bidi-inhibit-bpa t)
 #+END_SRC
@@ -1043,11 +1043,11 @@ Alerts on on-fire > 5, bells-ringing > 10, on-deck > 5."
                      " [keeps coming up as must do next] 🔔🔔")
               warnings))
       (if (> n-deck 5)
-          (push (cons "⚾️ ⚾️ On Deck"
-                       (format " *** WARNING: %d on-deck items — remove %d *** ⚾️⚾️" n-deck (- n-deck 5)))
+          (push (cons "🥎 🥎 On Deck"
+                       (format " *** WARNING: %d on-deck items — remove %d *** 🥎🥎" n-deck (- n-deck 5)))
                 warnings)
-        (push (cons "⚾️ ⚾️ On Deck"
-                     " [next up after the bells are quiet] ⚾️⚾️")
+        (push (cons "🥎 🥎 On Deck"
+                     " [next up after the bells are quiet] 🥎🥎")
               warnings))
       (push (cons "🪨🪨 Big Rocks" " 🪨🪨") warnings)
       (push (cons "💨💨 Quick Wins" " 💨💨") warnings)
@@ -1073,7 +1073,7 @@ Set by `tdw-unordered-view'.")
                   (re-search-forward "Decision View" nil t)
                   (re-search-forward "🔥🔥 On Fire" nil t)
                   (re-search-forward "🔔🔔 Bells Ringing" nil t)
-                  (re-search-forward "⚾️ ⚾️ On Deck" nil t)
+                  (re-search-forward "🥎 🥎 On Deck" nil t)
                   (re-search-forward "💭 💭 Recently Considered" nil t)
                   (re-search-forward "🪨🪨 Big Rocks" nil t)
                   (re-search-forward "Hot Tickets" nil t)
@@ -1103,8 +1103,8 @@ Set by `tdw-unordered-view'.")
               (replace-match (format "🔔🔔 Bells Ringing (%s)" effort-bell) t t nil 1))
             ;; On Deck effort
             (goto-char (point-min))
-            (while (re-search-forward "\\(⚾️ ⚾️ On Deck\\( ([^)]*)\\)?\\)" nil t)
-              (replace-match (format "⚾️ ⚾️ On Deck (%s)" effort-deck) t t nil 1))
+            (while (re-search-forward "\\(🥎 🥎 On Deck\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "🥎 🥎 On Deck (%s)" effort-deck) t t nil 1))
             ;; Recently Considered effort
             (goto-char (point-min))
             (while (re-search-forward "\\(💭 💭 Recently Considered\\( ([^)]*)\\)?\\)" nil t)
@@ -1587,14 +1587,14 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
         (truncate-string-to-width (or result "") width nil ?\s org-gtd-agenda-truncate-ellipsis))))
 
   (defun org-gtd-agenda--resolve-score ()
-    "Return compact urgency/impact string with score like '🔥 ⚾️ U:vh I:h [13]'.
+    "Return compact urgency/impact string with score like '🔥 🥎 U:vh I:h [13]'.
 Always shows brackets — empty [] if no score tag found."
     (let* ((tags (org-get-tags nil t))
            (google-cloud (if (member "google" tags) "☁️ " ""))
            (flyby (if (member "flyby" tags) "🛸 " ""))
            (fire (if (member "on_fire" tags) "🔥 " ""))
            (bell (if (member "bells_ringing" tags) "🔔 " ""))
-           (deck (if (member "on_deck" tags) "⚾️ " ""))
+           (deck (if (member "on_deck" tags) "🥎 " ""))
            (considered (if (member "recently_considered" tags) "💭 " ""))
            (urg (cond ((member "wh_urgency" tags) "wh")
                       ((member "vh_urgency" tags) "vh")
@@ -1617,13 +1617,13 @@ Always shows brackets — empty [] if no score tag found."
       (format "%s%s%s%s%s%sU:%s I:%s [%s]" google-cloud flyby fire bell deck considered urg imp score-str)))
 
   (defun org-gtd-agenda--resolve-urg-imp ()
-    "Return compact urgency/impact string without the numeric score, like '🔥 ⚾️ U:vh I:h'."
+    "Return compact urgency/impact string without the numeric score, like '🔥 🥎 U:vh I:h'."
     (let* ((tags (org-get-tags nil t))
            (google-cloud (if (member "google" tags) "☁️ " ""))
            (flyby (if (member "flyby" tags) "🛸 " ""))
            (fire (if (member "on_fire" tags) "🔥 " ""))
            (bell (if (member "bells_ringing" tags) "🔔 " ""))
-           (deck (if (member "on_deck" tags) "⚾️ " ""))
+           (deck (if (member "on_deck" tags) "🥎 " ""))
            (considered (if (member "recently_considered" tags) "💭 " ""))
            (urg (cond ((member "wh_urgency" tags) "wh")
                       ((member "vh_urgency" tags) "vh")
@@ -1673,7 +1673,7 @@ Press 'n' or 's' to promote to Next Actions, ',<letter>' to reprioritize."
                     ;; On Deck
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+on_deck"
-                                ((org-agenda-overriding-header ,(format "⚾️ ⚾️ On Deck (%s)" effort-deck))
+                                ((org-agenda-overriding-header ,(format "🥎 🥎 On Deck (%s)" effort-deck))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))))))
@@ -2528,7 +2528,7 @@ on entries without TODO keywords (e.g., gcal.org)."
                     ;; 1c. On Deck
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+on_deck"
-                                ((org-agenda-overriding-header ,(format "⚾️ ⚾️ On Deck (%s)" effort-deck))
+                                ((org-agenda-overriding-header ,(format "🥎 🥎 On Deck (%s)" effort-deck))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
