@@ -109,6 +109,14 @@ This is first because nano-theme, while providing a gorgeous UI, has lots of opi
   (setq ring-bell-function 'ignore)
   (setq visible-bell t)
   (setq system-uses-terminfo nil)
+
+  ;; Fix terminal redraw corruption on downward cursor movement.
+  ;; The bidi scanner miscalculates line widths for emoji characters
+  ;; (⏰🔥🔔⚾💭🪨) in terminal mode, causing incremental redraws
+  ;; to place content at wrong positions. Disabling bidi scanning
+  ;; fixes this since we don't use right-to-left text.
+  (setq-default bidi-paragraph-direction 'left-to-right)
+  (setq bidi-inhibit-bpa t)
 #+END_SRC
 
 ** Default font
