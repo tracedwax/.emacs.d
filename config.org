@@ -744,6 +744,9 @@ Inheritance respects `my/org-gtd-inherit-priority' and
      ("C-c ?" . org-gtd-agenda-transient)
      ("C-c c" . org-gtd-clarify-agenda-item)))
 
+  ;; Automatically load the primary Unordered View agenda when an emacsclient frame is created
+  (add-hook 'server-after-make-frame-hook #'tdw-unordered-view)
+
   ;; ——— Agenda single-task move commands ———
 
   (defun tdw/agenda-move-to-someday ()
