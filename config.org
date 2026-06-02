@@ -736,6 +736,9 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     :config
     (org-edna-mode 1)
     (org-gtd-mode 1)
+    ;; Don't scan archive files for org-id — archived tasks don't need
+    ;; ID tracking, and internal duplicates in the archive cause warnings.
+    (setq org-id-search-archives nil)
     :bind
     (("C-c d c" . org-gtd-capture)
      ("C-c d e" . org-gtd-engage)
