@@ -943,6 +943,15 @@ Updates the agenda-line marker after refile so change-your-mind works."
     "Return non-nil if current entry is tagged :recently_considered:."
     (tdw/has-tag-p "recently_considered"))
 
+  (defun tdw/paused-p ()
+    "Return non-nil if current entry is tagged :paused:."
+    (tdw/has-tag-p "paused"))
+
+  (defvar tdw--tier-tags
+    '("on_fire" "bells_ringing" "on_deck" "recently_considered" "paused")
+    "Priority tiers, highest to lowest. Mutually exclusive: a task carries at most one.
+Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
+
   (defun tdw/big-rock-p ()
     "Return non-nil if current entry has score >= 10."
     (let* ((tags (org-get-tags nil t))
@@ -967,11 +976,13 @@ Updates the agenda-line marker after refile so change-your-mind works."
   ;;; ——— Ordered View: Effort totals by section ———
 
   (defun tdw/get-sanity-effort-totals ()
-    "Return a list (TOTAL ON-FIRE BELLS DECK BIG-ROCKS QUICK-WINS OTHER UNEST CONSIDERED) formatted as H:MM."
+    "Return a list (TOTAL ON-FIRE BELLS DECK BIG-ROCKS QUICK-WINS OTHER UNEST CONSIDERED PAUSED) formatted as H:MM.
+TOTAL excludes PAUSED — paused work is parked and does not count toward active load."
     (let ((mins-fire 0)
           (mins-bell 0)
           (mins-deck 0)
           (mins-considered 0)
+          (mins-paused 0)
           (mins-big 0)
           (mins-quick 0)
           (mins-other 0)
@@ -991,6 +1002,7 @@ Updates the agenda-line marker after refile so change-your-mind works."
                               ((tdw/bells-ringing-p) (setq mins-bell (+ mins-bell effort)))
                               ((tdw/on-deck-p) (setq mins-deck (+ mins-deck effort)))
                               ((tdw/recently-considered-p) (setq mins-considered (+ mins-considered effort)))
+                              ((tdw/paused-p) (setq mins-paused (+ mins-paused effort)))
                               ((tdw/big-rock-p) (setq mins-big (+ mins-big effort)))
                               ((tdw/unestimated-p) (cl-incf n-unestimated))
                               ((tdw/quick-win-p) (setq mins-quick (+ mins-quick effort)))
@@ -1005,7 +1017,8 @@ Updates the agenda-line marker after refile so change-your-mind works."
               (funcall fmt mins-quick)
               (funcall fmt mins-other)
               n-unestimated
-              (funcall fmt mins-considered)))))
+              (funcall fmt mins-considered)
+              (funcall fmt mins-paused)))))
 
   ;;; ——— Ordered View: Capacity warnings ———
 
@@ -1078,12 +1091,13 @@ Set by `tdw-unordered-view'.")
                   (re-search-forward "🔔🔔 Bells Ringing" nil t)
                   (re-search-forward "🥎 🥎 On Deck" nil t)
                   (re-search-forward "💭 💭 Recently Considered" nil t)
+                  (re-search-forward "🕐 Paused" nil t)
                   (re-search-forward "🪨🪨 Big Rocks" nil t)
                   (re-search-forward "Hot Tickets" nil t)
                   (re-search-forward "For Today" nil t)
                   (re-search-forward "Priority C" nil t)
                   (re-search-forward "Priority D" nil t))
-          (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered) (tdw/get-sanity-effort-totals)))
+          (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
             ;; Update Ordered View total
             (goto-char (point-min))
             (while (re-search-forward "\\(Ordered View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
@@ -1112,6 +1126,10 @@ Set by `tdw-unordered-view'.")
             (goto-char (point-min))
             (while (re-search-forward "\\(💭 💭 Recently Considered\\( ([^)]*)\\)?\\)" nil t)
               (replace-match (format "💭 💭 Recently Considered (%s)" effort-considered) t t nil 1))
+            ;; Paused effort
+            (goto-char (point-min))
+            (while (re-search-forward "\\(🕐 Paused\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "🕐 Paused (%s)" effort-paused) t t nil 1))
             ;; Big Rocks effort
             (goto-char (point-min))
             (while (re-search-forward "\\(🪨🪨 Big Rocks\\( ([^)]*)\\)? ?🪨?🪨?\\)" nil t)
@@ -1182,7 +1200,7 @@ Set by `tdw-unordered-view'.")
     "Tags that have dedicated sections in the Ordered/Unordered views.")
 
   (defvar tdw--excluded-tag-prefixes
-    '("on_fire" "bells_ringing" "on_deck" "recently_considered" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
+    '("on_fire" "bells_ringing" "on_deck" "recently_considered" "paused" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
       "for_" "ARCHIVE" "FLAGGED")
     "Tag prefixes excluded from the missing-tag check (urgency/impact/score/meta).")
 
@@ -1535,12 +1553,13 @@ between heading text and tags remains.  This strips it."
     (define-key org-agenda-mode-map (kbd "u") #'tdw/agenda-cycle-urgency)
     (define-key org-agenda-mode-map (kbd "i") #'tdw/agenda-cycle-impact)
     (define-key org-agenda-mode-map (kbd "I") #'org-agenda-diary-entry)
-    (define-key org-agenda-mode-map (kbd "c") #'tdw/agenda-toggle-recently-considered)
-    (define-key org-agenda-mode-map (kbd "d") #'tdw/agenda-toggle-on-deck)
-    (define-key org-agenda-mode-map (kbd "f") #'tdw/agenda-toggle-on-fire)
+    (define-key org-agenda-mode-map (kbd "c") (lambda () (interactive) (tdw/agenda-set-tier "recently_considered")))
+    (define-key org-agenda-mode-map (kbd "d") (lambda () (interactive) (tdw/agenda-set-tier "on_deck")))
+    (define-key org-agenda-mode-map (kbd "f") (lambda () (interactive) (tdw/agenda-set-tier "on_fire")))
     (define-key org-agenda-mode-map (kbd "g") #'tdw/agenda-toggle-google)
-    (define-key org-agenda-mode-map (kbd "b") #'tdw/agenda-toggle-bells-ringing)
+    (define-key org-agenda-mode-map (kbd "b") (lambda () (interactive) (tdw/agenda-set-tier "bells_ringing")))
     (define-key org-agenda-mode-map (kbd "l") #'tdw/agenda-toggle-flyby)
+    (define-key org-agenda-mode-map (kbd "p") (lambda () (interactive) (tdw/agenda-set-tier "paused")))
     (define-key org-agenda-mode-map (kbd "r") #'tdw/sanity-refresh))
 
   (defun tdw/sanity-refresh ()
@@ -1599,6 +1618,7 @@ Always shows brackets — empty [] if no score tag found."
            (bell (if (member "bells_ringing" tags) "🔔 " ""))
            (deck (if (member "on_deck" tags) "🥎 " ""))
            (considered (if (member "recently_considered" tags) "💭 " ""))
+           (paused (if (member "paused" tags) "🕐 " ""))
            (urg (cond ((member "wh_urgency" tags) "wh")
                       ((member "vh_urgency" tags) "vh")
                       ((member "h_urgency" tags)  "hi")
@@ -1617,7 +1637,7 @@ Always shows brackets — empty [] if no score tag found."
            (score-str (if score-tag
                           (substring score-tag 6)
                         "")))
-      (format "%s%s%s%s%s%sU:%s I:%s [%s]" google-cloud flyby fire bell deck considered urg imp score-str)))
+      (format "%s%s%s%s%s%s%sU:%s I:%s [%s]" google-cloud flyby fire bell deck considered paused urg imp score-str)))
 
   (defun org-gtd-agenda--resolve-urg-imp ()
     "Return compact urgency/impact string without the numeric score, like '🔥 🥎 U:vh I:h'."
@@ -1628,6 +1648,7 @@ Always shows brackets — empty [] if no score tag found."
            (bell (if (member "bells_ringing" tags) "🔔 " ""))
            (deck (if (member "on_deck" tags) "🥎 " ""))
            (considered (if (member "recently_considered" tags) "💭 " ""))
+           (paused (if (member "paused" tags) "🕐 " ""))
            (urg (cond ((member "wh_urgency" tags) "wh")
                       ((member "vh_urgency" tags) "vh")
                       ((member "h_urgency" tags)  "hi")
@@ -1642,14 +1663,14 @@ Always shows brackets — empty [] if no score tag found."
                       ((member "m_impact" tags)   "md")
                       ((member "l_impact" tags)   "lo")
                       (t "--"))))
-      (format "%s%s%s%s%s%sU:%s I:%s" google-cloud flyby fire bell deck considered urg imp)))
+      (format "%s%s%s%s%s%s%sU:%s I:%s" google-cloud flyby fire bell deck considered paused urg imp)))
 
   (defun tdw-someday-priority-view (&optional keys)
     "Someday/Maybe items grouped by project — mirrors Unordered View layout.
 Press 'n' or 's' to promote to Next Actions, ',<letter>' to reprioritize."
     (interactive)
     (when-let ((buf (get-buffer "*Org Agenda(S)*"))) (kill-buffer buf))
-    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
     (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
       (org-gtd-view-show
@@ -1685,6 +1706,14 @@ Press 'n' or 's' to promote to Next Actions, ',<letter>' to reprioritize."
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+recently_considered"
                                 ((org-agenda-overriding-header ,(format "💭 💭 Recently Considered (%s)" effort-considered))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(priority-down alpha-up))))))
+
+                    ;; Paused
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Someday\"+paused"
+                                ((org-agenda-overriding-header ,(format "🕐 Paused (%s)" effort-paused))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" score \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(priority-down alpha-up))))))
@@ -2035,136 +2064,60 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
     (interactive)
     (tdw/agenda-cycle-tag "impact" '("l" "m" "sh" "h" "vh" "wh")))
 
-  (defun tdw/agenda-toggle-on-fire ()
-    "Toggle :on_fire: tag on the task at point and update prefix in-place."
-    (interactive)
-    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
-                         (org-agenda-error)))
-           (buffer (marker-buffer hdmarker))
-           has-tag)
-      (with-current-buffer buffer
-        (org-with-wide-buffer
-         (goto-char hdmarker)
-         (setq has-tag (member "on_fire" (org-get-tags nil t)))
-         (if has-tag
-             (org-toggle-tag "on_fire" 'off)
-           (org-toggle-tag "on_fire" 'on))))
-      ;; In-place update of the prefix
-      (let ((inhibit-read-only t))
-        (save-excursion
-          (beginning-of-line)
-          (cond
-           ;; Ordered View: replace full score annotation (🔥 U:xx I:xx [nn])
-           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
-            ;; Save match positions NOW — resolve-score uses regex internally
-            ;; and will destroy the match data if we don't capture first
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-score (with-current-buffer buffer
-                                (org-with-wide-buffer
-                                 (goto-char hdmarker)
-                                 (org-gtd-agenda--resolve-score)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-score)))
-           ;; Unordered View: replace urg-imp annotation (🔥 U:xx I:xx)
-           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-urg-imp (with-current-buffer buffer
-                                  (org-with-wide-buffer
-                                   (goto-char hdmarker)
-                                   (org-gtd-agenda--resolve-urg-imp)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-urg-imp))))))
-      (message "%s on_fire" (if has-tag "Removed" "Added"))))
+  (defun tdw/agenda--refresh-prefix (hdmarker buffer)
+    "Re-resolve the agenda prefix annotation for the line at point, in place.
+Refreshes the tier glyph (🔥/🔔/🥎/💭/🕐) after a tier change without rebuilding
+the whole agenda. Handles the Ordered-View score form (`U:.. I:.. [n]') and the
+Unordered-View form (`U:.. I:..')."
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (beginning-of-line)
+        (cond
+         ;; Ordered View: replace full score annotation (… U:xx I:xx [nn])
+         ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
+          (let ((mbeg (match-beginning 0))
+                (mend (match-end 0))
+                (new (with-current-buffer buffer
+                       (org-with-wide-buffer
+                        (goto-char hdmarker)
+                        (org-gtd-agenda--resolve-score)))))
+            (delete-region mbeg mend)
+            (goto-char mbeg)
+            (insert new)))
+         ;; Unordered View: replace urg-imp annotation (… U:xx I:xx)
+         ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
+          (let ((mbeg (match-beginning 0))
+                (mend (match-end 0))
+                (new (with-current-buffer buffer
+                       (org-with-wide-buffer
+                        (goto-char hdmarker)
+                        (org-gtd-agenda--resolve-urg-imp)))))
+            (delete-region mbeg mend)
+            (goto-char mbeg)
+            (insert new)))))))
 
-  (defun tdw/agenda-toggle-on-deck ()
-    "Toggle :on_deck: tag on the task at point and update prefix in-place."
-    (interactive)
+  (defun tdw/agenda-set-tier (tag)
+    "Set priority tier TAG on the agenda task at point, clearing every other tier.
+TAG is one of `tdw--tier-tags'. If the task already carries TAG, remove it instead
+\(back to no tier). Tiers are mutually exclusive: a task holds at most one."
     (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
                          (org-agenda-error)))
            (buffer (marker-buffer hdmarker))
-           has-tag)
+           had-tag)
       (with-current-buffer buffer
         (org-with-wide-buffer
          (goto-char hdmarker)
-         (setq has-tag (member "on_deck" (org-get-tags nil t)))
-         (if has-tag
-             (org-toggle-tag "on_deck" 'off)
-           (org-toggle-tag "on_deck" 'on))))
-      ;; In-place update of the prefix
-      (let ((inhibit-read-only t))
-        (save-excursion
-          (beginning-of-line)
-          (cond
-           ;; Ordered View: replace full score annotation
-           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-score (with-current-buffer buffer
-                                (org-with-wide-buffer
-                                 (goto-char hdmarker)
-                                 (org-gtd-agenda--resolve-score)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-score)))
-           ;; Unordered View: replace urg-imp annotation
-           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-urg-imp (with-current-buffer buffer
-                                  (org-with-wide-buffer
-                                   (goto-char hdmarker)
-                                   (org-gtd-agenda--resolve-urg-imp)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-urg-imp))))))
-      (message "%s on_deck" (if has-tag "Removed" "Added"))))
-
-  (defun tdw/agenda-toggle-bells-ringing ()
-    "Toggle :bells_ringing: tag on the task at point and update prefix in-place."
-    (interactive)
-    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
-                         (org-agenda-error)))
-           (buffer (marker-buffer hdmarker))
-           has-tag)
-      (with-current-buffer buffer
-        (org-with-wide-buffer
-         (goto-char hdmarker)
-         (setq has-tag (member "bells_ringing" (org-get-tags nil t)))
-         (if has-tag
-             (org-toggle-tag "bells_ringing" 'off)
-           (org-toggle-tag "bells_ringing" 'on))))
-      ;; In-place update of the prefix
-      (let ((inhibit-read-only t))
-        (save-excursion
-          (beginning-of-line)
-          (cond
-           ;; Ordered View: replace full score annotation
-           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-score (with-current-buffer buffer
-                                (org-with-wide-buffer
-                                 (goto-char hdmarker)
-                                 (org-gtd-agenda--resolve-score)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-score)))
-           ;; Unordered View: replace urg-imp annotation
-           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-urg-imp (with-current-buffer buffer
-                                  (org-with-wide-buffer
-                                   (goto-char hdmarker)
-                                   (org-gtd-agenda--resolve-urg-imp)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-urg-imp))))))
-      (message "%s bells_ringing" (if has-tag "Removed" "Added"))))
+         (let ((tags (org-get-tags nil t)))
+           (setq had-tag (member tag tags))
+           ;; Radio: clear any tier tag the task currently holds
+           (dolist (tier tdw--tier-tags)
+             (when (member tier tags)
+               (org-toggle-tag tier 'off))))
+         ;; Re-pressing the active tier clears to nothing; else apply the choice
+         (unless had-tag
+           (org-toggle-tag tag 'on))))
+      (tdw/agenda--refresh-prefix hdmarker buffer)
+      (message "%s %s" (if had-tag "Cleared" "Set") tag)))
 
   (defun tdw/agenda-toggle-google ()
     "Toggle :google: tag on the task at point and update prefix in-place."
@@ -2208,49 +2161,6 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
               (goto-char mbeg)
               (insert new-urg-imp))))))
       (message "%s google" (if has-tag "Removed" "Added"))))
-
-  (defun tdw/agenda-toggle-recently-considered ()
-    "Toggle :recently_considered: tag on the task at point and update prefix in-place."
-    (interactive)
-    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
-                         (org-agenda-error)))
-           (buffer (marker-buffer hdmarker))
-           has-tag)
-      (with-current-buffer buffer
-        (org-with-wide-buffer
-         (goto-char hdmarker)
-         (setq has-tag (member "recently_considered" (org-get-tags nil t)))
-         (if has-tag
-             (org-toggle-tag "recently_considered" 'off)
-           (org-toggle-tag "recently_considered" 'on))))
-      ;; In-place update of the prefix
-      (let ((inhibit-read-only t))
-        (save-excursion
-          (beginning-of-line)
-          (cond
-           ;; Ordered View: replace full score annotation
-           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-score (with-current-buffer buffer
-                                (org-with-wide-buffer
-                                 (goto-char hdmarker)
-                                 (org-gtd-agenda--resolve-score)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-score)))
-           ;; Unordered View: replace urg-imp annotation
-           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-urg-imp (with-current-buffer buffer
-                                  (org-with-wide-buffer
-                                   (goto-char hdmarker)
-                                   (org-gtd-agenda--resolve-urg-imp)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-urg-imp))))))
-      (message "%s recently_considered" (if has-tag "Removed" "Added"))))
 
   (defun tdw/agenda-toggle-flyby ()
     "Toggle :flyby: tag on the task at point and update prefix in-place."
@@ -2480,7 +2390,7 @@ on entries without TODO keywords (e.g., gcal.org)."
     (when-let ((buf (get-buffer "*Org Agenda(u)*"))) (kill-buffer buf))
     ;; Signal to the finalize hook that this is an Unordered View.
     (setq tdw--is-unordered-view t)
-    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
             (org-agenda-hide-tags-regexp "."))
        (org-gtd-view-show
@@ -2540,6 +2450,14 @@ on entries without TODO keywords (e.g., gcal.org)."
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+recently_considered"
                                 ((org-agenda-overriding-header ,(format "💭 💭 Recently Considered (%s)" effort-considered))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))))))
+
+                    ;; 1e. Paused
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+paused"
+                                ((org-agenda-overriding-header ,(format "🕐 Paused (%s)" effort-paused))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
