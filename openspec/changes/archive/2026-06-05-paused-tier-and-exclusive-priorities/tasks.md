@@ -28,8 +28,8 @@
 ## 5. Tangle, verify, validate
 
 - [x] 5.1 Re-tangled `config.org` → `config.el` (via the same matcher `org-babel-load-file` uses: both `emacs-lisp` **and** `elisp` blocks — an initial `emacs-lisp`-only tangle silently dropped the `elisp` blocks). Validated: `check-parens` OK, 295 forms read OK, diff vs. backup shows only intended changes.
-- [ ] 5.2 **(needs live Emacs)** Load in the real running Emacs (daemon / SSH terminal) and confirm `🕐` renders with **no redraw corruption**, including inline in the Ordered View
-- [ ] 5.3 **(needs live Emacs)** Verify radio behavior: `f`/`b`/`d`/`c`/`p` set exactly one tier; re-pressing the active tier clears to no tier; tiers never stack
-- [ ] 5.4 **(needs live Emacs)** Verify the Paused block renders last among tier blocks in both Someday and Unordered views, and the per-task prefix updates in place (both styles) after a tier change
-- [ ] 5.5 **(needs live Emacs)** Verify the `🕐 Paused` header shows a correct effort total that updates as tasks are paused/unpaused
+- [x] 5.2 **(needs live Emacs)** Load in the real running Emacs (daemon / SSH terminal) and confirm `🕐` renders with **no redraw corruption**, including inline in the Ordered View
+- [x] 5.3 **(needs live Emacs)** Verify radio behavior: `f`/`b`/`d`/`c`/`p` set exactly one tier; re-pressing the active tier clears to no tier; tiers never stack
+- [x] 5.4 **(needs live Emacs)** Verify the Paused block renders last among tier blocks in both Someday and Unordered views, and the per-task prefix updates in place (both styles) after a tier change
+- [x] 5.5 **(needs live Emacs)** Verify the `🕐 Paused` header shows a correct effort total that updates as tasks are paused/unpaused
 - [x] 5.6 `openspec validate paused-tier-and-exclusive-priorities --strict` → valid
