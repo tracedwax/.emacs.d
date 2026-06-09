@@ -883,7 +883,8 @@ Updates the agenda-line marker after refile so change-your-mind works."
               (local-set-key (kbd "n") #'tdw/agenda-move-to-next)
               (local-set-key (kbd "s") #'tdw/agenda-move-to-next)
               (local-set-key (kbd "j") #'org-agenda-next-line)
-              (local-set-key (kbd "k") #'org-agenda-previous-line)))
+              (local-set-key (kbd "k") #'org-agenda-previous-line)
+              (local-set-key (kbd "c") (lambda () (interactive) (org-agenda-todo "CNCL")))))
 
   (defun tdw/get-effort-minutes (effort-str)
     "Convert EFFORT-STR to minutes. Handles H:MM, NNmin, NNh, bare numbers."
