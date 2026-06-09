@@ -763,33 +763,44 @@ Inheritance respects `my/org-gtd-inherit-priority' and
 
   (defun tdw/agenda-move-to-someday ()
     "Move the task at point to Someday/Maybe.
+If the task is already in Someday (e.g. after pressing c by mistake), resets
+its TODO state in-place without refiling.  Strips any stale CNCL/NEXT markers.
 Updates the agenda-line marker after refile so change-your-mind works."
     (interactive)
     (let ((marker (or (org-get-at-bol 'org-marker)
                       (org-agenda-error)))
           (heading nil)
           (task-id nil))
-      ;; Backend: change properties and refile
+      ;; Backend: change properties and optionally refile
       (org-with-point-at marker
         (let ((gtd-type (org-entry-get (point) "ORG_GTD")))
-          (unless (string= gtd-type "Actions")
-            (user-error "Task is not a Next Action (ORG_GTD=%s)" gtd-type))
           (setq heading (org-get-heading t t t t))
           (setq task-id (org-id-get (point) 'create))
-          (org-entry-put (point) "ORG_GTD" org-gtd-someday)
-          (org-todo "")
-          ;; Clear stale CLOSED timestamp (left behind by DONE/CNCL)
-          (save-excursion
-            (org-back-to-heading t)
-            (forward-line 1)
-            (when (looking-at "CLOSED: ")
-              (delete-region (point) (1+ (line-end-position)))))
-          (let ((org-gtd-organize-hooks nil))
-            (let ((targets (org-gtd-refile--get-targets "Someday")))
-              (if (null targets)
-                  (user-error "No Someday refile targets found")
-                (org-refile nil nil (car targets)))))
-          (save-buffer)))
+          (if (string= gtd-type org-gtd-someday)
+              ;; Already in Someday — just reset TODO state (undo stray CNCL/etc.)
+              (progn
+                (org-todo "")
+                (save-excursion
+                  (org-back-to-heading t)
+                  (forward-line 1)
+                  (when (looking-at "CLOSED: ")
+                    (delete-region (point) (1+ (line-end-position)))))
+                (save-buffer))
+            ;; Coming from Actions — update ORG_GTD and refile
+            (org-entry-put (point) "ORG_GTD" org-gtd-someday)
+            (org-todo "")
+            ;; Clear stale CLOSED timestamp (left behind by DONE/CNCL)
+            (save-excursion
+              (org-back-to-heading t)
+              (forward-line 1)
+              (when (looking-at "CLOSED: ")
+                (delete-region (point) (1+ (line-end-position)))))
+            (let ((org-gtd-organize-hooks nil))
+              (let ((targets (org-gtd-refile--get-targets "Someday")))
+                (if (null targets)
+                    (user-error "No Someday refile targets found")
+                  (org-refile nil nil (car targets)))))
+            (save-buffer))))
       ;; Update marker to new location so change-your-mind works
       (when task-id
         (let ((new-pos (org-id-find task-id 'marker)))
@@ -799,11 +810,11 @@ Updates the agenda-line marker after refile so change-your-mind works."
                                  'org-marker new-pos)
               (put-text-property (line-beginning-position) (line-end-position)
                                  'org-hd-marker new-pos)))))
-      ;; Visual: replace any existing indicator, then insert SOMEDAY
+      ;; Visual: strip all state markers (incl. CNCL) then insert SOMEDAY
       (let ((inhibit-read-only t))
         (save-excursion
           (beginning-of-line)
-          (when (re-search-forward "\\(SOMEDAY\\|NEXT\\) " (line-end-position) t)
+          (when (re-search-forward "\\(SOMEDAY\\|NEXT\\|CNCL\\) " (line-end-position) t)
             (replace-match "")))
         (save-excursion
           (beginning-of-line)
@@ -818,34 +829,45 @@ Updates the agenda-line marker after refile so change-your-mind works."
 
   (defun tdw/agenda-move-to-next ()
     "Move the task at point to Next Actions.
+If the task is already in Actions (e.g. after pressing c by mistake), resets
+its TODO state in-place without refiling.  Strips any stale CNCL/SOMEDAY markers.
 Updates the agenda-line marker after refile so change-your-mind works."
     (interactive)
     (let ((marker (or (org-get-at-bol 'org-marker)
                       (org-agenda-error)))
           (heading nil)
           (task-id nil))
-      ;; Backend: change properties and refile
+      ;; Backend: change properties and optionally refile
       (org-with-point-at marker
         (let ((gtd-type (org-entry-get (point) "ORG_GTD")))
-          (unless (string= gtd-type org-gtd-someday)
-            (user-error "Task is not Someday/Maybe (ORG_GTD=%s)" gtd-type))
           (setq heading (org-get-heading t t t t))
           (setq task-id (org-id-get (point) 'create))
-          (org-entry-delete (point) "ORG_GTD_TIMESTAMP")
-          (org-entry-put (point) "ORG_GTD" "Actions")
-          (org-todo "NEXT")
-          ;; Clear stale CLOSED timestamp (left behind by DONE/CNCL)
-          (save-excursion
-            (org-back-to-heading t)
-            (forward-line 1)
-            (when (looking-at "CLOSED: ")
-              (delete-region (point) (1+ (line-end-position)))))
-          (let ((org-gtd-organize-hooks nil))
-            (let ((targets (org-gtd-refile--get-targets "Actions")))
-              (if (null targets)
-                  (user-error "No Actions refile targets found")
-                (org-refile nil nil (car targets)))))
-          (save-buffer)))
+          (if (string= gtd-type "Actions")
+              ;; Already in Actions — just reset TODO state (undo stray CNCL/etc.)
+              (progn
+                (org-todo "NEXT")
+                (save-excursion
+                  (org-back-to-heading t)
+                  (forward-line 1)
+                  (when (looking-at "CLOSED: ")
+                    (delete-region (point) (1+ (line-end-position)))))
+                (save-buffer))
+            ;; Coming from Someday — update ORG_GTD and refile
+            (org-entry-delete (point) "ORG_GTD_TIMESTAMP")
+            (org-entry-put (point) "ORG_GTD" "Actions")
+            (org-todo "NEXT")
+            ;; Clear stale CLOSED timestamp (left behind by DONE/CNCL)
+            (save-excursion
+              (org-back-to-heading t)
+              (forward-line 1)
+              (when (looking-at "CLOSED: ")
+                (delete-region (point) (1+ (line-end-position)))))
+            (let ((org-gtd-organize-hooks nil))
+              (let ((targets (org-gtd-refile--get-targets "Actions")))
+                (if (null targets)
+                    (user-error "No Actions refile targets found")
+                  (org-refile nil nil (car targets)))))
+            (save-buffer))))
       ;; Update marker to new location so change-your-mind works
       (when task-id
         (let ((new-pos (org-id-find task-id 'marker)))
@@ -855,11 +877,11 @@ Updates the agenda-line marker after refile so change-your-mind works."
                                  'org-marker new-pos)
               (put-text-property (line-beginning-position) (line-end-position)
                                  'org-hd-marker new-pos)))))
-      ;; Visual: replace any existing indicator, then insert NEXT
+      ;; Visual: strip all state markers (incl. CNCL) then insert NEXT
       (let ((inhibit-read-only t))
         (save-excursion
           (beginning-of-line)
-          (when (re-search-forward "\\(SOMEDAY\\|NEXT\\) " (line-end-position) t)
+          (when (re-search-forward "\\(SOMEDAY\\|NEXT\\|CNCL\\) " (line-end-position) t)
             (replace-match "")))
         (save-excursion
           (beginning-of-line)
@@ -872,19 +894,32 @@ Updates the agenda-line marker after refile so change-your-mind works."
               (insert (propertize "NEXT " 'face 'success))))))
       (message "→ Next Actions: %s" heading)))
 
-  ;; Override I/O/m/y/n/s/j/k in org-agenda-mode-map via hook so it always wins,
+  (defun tdw/agenda-cancel ()
+    "Cancel the task at point (set TODO to CNCL).
+Also strips any SOMEDAY/NEXT visual markers injected by our move commands,
+keeping the display clean when the user changes their mind."
+    (interactive)
+    (org-agenda-todo "CNCL")
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (beginning-of-line)
+        (when (re-search-forward "\\(SOMEDAY\\|NEXT\\) " (line-end-position) t)
+          (replace-match "")))))
+
+  ;; Override I/O/m/y/n/s/j/k/c in org-agenda-mode-map via hook so it always wins,
   ;; even after org-agenda (re)sets its keymap.
+  ;; Key semantics: n=Next Action  s=Someday  c=Cancel  (mnemonic: n/s/c)
   (add-hook 'org-agenda-mode-hook
             (lambda ()
               (local-set-key (kbd "I") #'org-agenda-clock-in)
               (local-set-key (kbd "O") #'org-agenda-clock-out)
               (local-set-key (kbd "m") #'tdw/agenda-move-to-someday)
               (local-set-key (kbd "y") #'tdw/agenda-move-to-someday)
+              (local-set-key (kbd "s") #'tdw/agenda-move-to-someday)
               (local-set-key (kbd "n") #'tdw/agenda-move-to-next)
-              (local-set-key (kbd "s") #'tdw/agenda-move-to-next)
               (local-set-key (kbd "j") #'org-agenda-next-line)
               (local-set-key (kbd "k") #'org-agenda-previous-line)
-              (local-set-key (kbd "c") (lambda () (interactive) (org-agenda-todo "CNCL")))))
+              (local-set-key (kbd "c") #'tdw/agenda-cancel)))
 
   (defun tdw/get-effort-minutes (effort-str)
     "Convert EFFORT-STR to minutes. Handles H:MM, NNmin, NNh, bare numbers."
@@ -1149,10 +1184,12 @@ Set by `tdw-unordered-view'.")
             (goto-char (point-min))
             (while (re-search-forward "\\(Hot Tickets\\( (Priority A - [^)]*)\\)?\\)" nil t)
               (replace-match (format "Hot Tickets (Priority A - %s)" effort-fire) t t nil 1))
-            ;; Unestimated count
-            (goto-char (point-min))
-            (while (re-search-forward "\\(Unestimated\\( ([^)]*)\\)?\\)" nil t)
-              (replace-match (format "Unestimated (%d items)" n-unest) t t nil 1))
+            ;; NOTE: Unestimated count is intentionally NOT updated here.
+            ;; Each view (Someday, Ordered, Unordered) computes its own accurate count
+            ;; at construction time using tdw/get-someday-unestimated-count or
+            ;; tdw/get-actions-unestimated-count. Patching it here with n-unest
+            ;; (which only counts NEXT/TODO items, not Someday items) would corrupt
+            ;; the Someday view's count.
             (goto-char (point-min))
             (while (re-search-forward "\\(For Today\\( (Priority B - [^)]*)\\)?\\)" nil t)
               (replace-match (format "For Today (Priority B - %s)" effort-big) t t nil 1))
@@ -1668,12 +1705,63 @@ Always shows brackets — empty [] if no score tag found."
                       (t "--"))))
       (format "%s%s%s%s%s%s%sU:%s I:%s" google-cloud flyby fire bell deck considered paused urg imp)))
 
+  (defun tdw/get-someday-unestimated-count ()
+    "Count Someday/Maybe items across all agenda files that have no effort estimate.
+Used to populate the Unestimated header in the Someday view (distinct from
+`tdw/get-sanity-effort-totals' which counts NEXT/TODO items, not Someday items)."
+    (let ((n 0))
+      (dolist (file (org-agenda-files))
+        (let ((expanded-file (expand-file-name file)))
+          (when (file-exists-p expanded-file)
+            (with-current-buffer (find-file-noselect expanded-file)
+              (org-with-wide-buffer
+               (goto-char (point-min))
+               (org-map-entries
+                (lambda ()
+                  (when (string= (org-entry-get (point) "ORG_GTD") org-gtd-someday)
+                    (let* ((effort-str (org-entry-get (point) "EFFORT"))
+                           (mins (when effort-str (tdw/get-effort-minutes effort-str))))
+                      (when (or (not effort-str) (not mins) (<= mins 0))
+                        (cl-incf n)))))
+                nil nil))))))
+      n))
+
+  (defun tdw/get-actions-unestimated-count ()
+    "Count Next Actions (ORG_GTD=Actions) items with score < 10 and no effort.
+This mirrors exactly what `tdw/skip-unless-unestimated' shows in the ordered/
+unordered views — items that are not done, not a big rock (score < 10), and
+have no effort estimate.  `tdw/get-sanity-effort-totals' under-counts because
+its cond chain excludes tier-tagged items (on_fire, bells_ringing, etc.) that
+are unestimated, but those items still appear in the Unestimated view block."
+    (let ((n 0))
+      (dolist (file (org-agenda-files))
+        (let ((expanded-file (expand-file-name file)))
+          (when (file-exists-p expanded-file)
+            (with-current-buffer (find-file-noselect expanded-file)
+              (org-with-wide-buffer
+               (goto-char (point-min))
+               (org-map-entries
+                (lambda ()
+                  (when (string= (org-entry-get (point) "ORG_GTD") "Actions")
+                    (let* ((todo (org-get-todo-state))
+                           (effort-str (org-entry-get (point) "EFFORT"))
+                           (mins (when effort-str (tdw/get-effort-minutes effort-str)))
+                           (score (tdw/compute-score-at-point)))
+                      (when (and todo
+                                 (not (member todo '("DONE" "CNCL")))
+                                 (< score 10)
+                                 (or (not effort-str) (not mins) (<= mins 0)))
+                        (cl-incf n)))))
+                nil nil))))))
+      n))
+
   (defun tdw-someday-priority-view (&optional keys)
     "Someday/Maybe items — mirrors Unordered View layout (minus habits/delegated/tickler).
 Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
     (interactive)
     (when-let ((buf (get-buffer "*Org Agenda(S)*"))) (kill-buffer buf))
-    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
+    (let ((n-someday-unest (tdw/get-someday-unestimated-count)))
+    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
     (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
       (org-gtd-view-show
@@ -1759,7 +1847,7 @@ Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
                     ;; Unestimated — no effort
                     ((native . (tags
                                 "LEVEL>0+ORG_GTD=\"Someday\""
-                                ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-unest))
+                                ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-someday-unest))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))
@@ -2174,7 +2262,8 @@ on entries without TODO keywords (e.g., gcal.org)."
     (when-let ((buf (get-buffer "*Org Agenda(u)*"))) (kill-buffer buf))
     ;; Signal to the finalize hook that this is an Unordered View.
     (setq tdw--is-unordered-view t)
-    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
+    (let ((n-actions-unest (tdw/get-actions-unestimated-count)))
+    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
             (org-agenda-hide-tags-regexp "."))
        (org-gtd-view-show
@@ -2296,7 +2385,7 @@ on entries without TODO keywords (e.g., gcal.org)."
                     ;; 7. Unestimated
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\""
-                                ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-unest))
+                                ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-actions-unest))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))
