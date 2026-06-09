@@ -1860,7 +1860,7 @@ Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
-                    ))) (or keys "S")))))
+                    ))) (or keys "S"))))))
 
 
   ;;; ——— Ordered View: Urgency/Impact cycling ———
@@ -2672,7 +2672,7 @@ on entries without TODO keywords (e.g., gcal.org)."
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
-                    ))) (or keys "u")))))
+                    ))) (or keys "u"))))))
 
   (defun tdw-decision-view ()
     "A broad GTD view for decision making: Priority A, B, C, and D."
