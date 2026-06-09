@@ -906,9 +906,9 @@ keeping the display clean when the user changes their mind."
         (when (re-search-forward "\\(SOMEDAY\\|NEXT\\) " (line-end-position) t)
           (replace-match "")))))
 
-  ;; Override I/O/m/y/n/s/j/k/c in org-agenda-mode-map via hook so it always wins,
+  ;; Override I/O/m/y/n/s/j/k/x in org-agenda-mode-map via hook so it always wins,
   ;; even after org-agenda (re)sets its keymap.
-  ;; Key semantics: n=Next Action  s=Someday  c=Cancel  (mnemonic: n/s/c)
+  ;; Key semantics: n=Next Action  s=Someday  x=Cancel  c=Recently Considered  (mnemonic: n/s/x/c)
   (add-hook 'org-agenda-mode-hook
             (lambda ()
               (local-set-key (kbd "I") #'org-agenda-clock-in)
@@ -919,7 +919,7 @@ keeping the display clean when the user changes their mind."
               (local-set-key (kbd "n") #'tdw/agenda-move-to-next)
               (local-set-key (kbd "j") #'org-agenda-next-line)
               (local-set-key (kbd "k") #'org-agenda-previous-line)
-              (local-set-key (kbd "c") #'tdw/agenda-cancel)))
+              (local-set-key (kbd "x") #'tdw/agenda-cancel)))
 
   (defun tdw/get-effort-minutes (effort-str)
     "Convert EFFORT-STR to minutes. Handles H:MM, NNmin, NNh, bare numbers."
@@ -1757,7 +1757,7 @@ are unestimated, but those items still appear in the Unestimated view block."
 
   (defun tdw-someday-priority-view (&optional keys)
     "Someday/Maybe items — mirrors Unordered View layout (minus habits/delegated/tickler).
-Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
+Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
     (interactive)
     (when-let ((buf (get-buffer "*Org Agenda(S)*"))) (kill-buffer buf))
     (let ((n-someday-unest (tdw/get-someday-unestimated-count)))
