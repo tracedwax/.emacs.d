@@ -1770,7 +1770,7 @@ Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
          (prefix . (effort " " urg-imp " — "))
          (blocks . (
                     ;; On Fire
-                    ((native . (tags-todo
+                    ((native . (tags
                                 "LEVEL>0+ORG_GTD=\"Someday\"+on_fire"
                                 ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
                                  (org-agenda-todo-keyword-format "")
@@ -1778,7 +1778,7 @@ Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; Bells Ringing
-                    ((native . (tags-todo
+                    ((native . (tags
                                 "LEVEL>0+ORG_GTD=\"Someday\"+bells_ringing"
                                 ((org-agenda-overriding-header ,(format "🔔🔔 Bells Ringing (%s)" effort-bell))
                                  (org-agenda-todo-keyword-format "")
@@ -1786,7 +1786,7 @@ Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; On Deck
-                    ((native . (tags-todo
+                    ((native . (tags
                                 "LEVEL>0+ORG_GTD=\"Someday\"+on_deck"
                                 ((org-agenda-overriding-header ,(format "🥎 🥎 On Deck (%s)" effort-deck))
                                  (org-agenda-todo-keyword-format "")
@@ -1794,7 +1794,7 @@ Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; Recently Considered
-                    ((native . (tags-todo
+                    ((native . (tags
                                 "LEVEL>0+ORG_GTD=\"Someday\"+recently_considered"
                                 ((org-agenda-overriding-header ,(format "💭 💭 Recently Considered (%s)" effort-considered))
                                  (org-agenda-todo-keyword-format "")
@@ -1802,7 +1802,7 @@ Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; Paused
-                    ((native . (tags-todo
+                    ((native . (tags
                                 "LEVEL>0+ORG_GTD=\"Someday\"+paused"
                                 ((org-agenda-overriding-header ,(format "🕐 Paused (%s)" effort-paused))
                                  (org-agenda-todo-keyword-format "")
@@ -1810,7 +1810,7 @@ Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; Flyby
-                    ((native . (tags-todo
+                    ((native . (tags
                                 "LEVEL>0+ORG_GTD=\"Someday\"+flyby"
                                 ((org-agenda-overriding-header "🛸 Flyby")
                                  (org-agenda-todo-keyword-format "")
@@ -1818,7 +1818,7 @@ Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; Big Rocks — score >= 10
-                    ((native . (tags-todo
+                    ((native . (tags
                                 "LEVEL>0+ORG_GTD=\"Someday\""
                                 ((org-agenda-overriding-header ,(format "🪨🪨 Big Rocks (%s)" effort-big))
                                  (org-agenda-todo-keyword-format "")
@@ -1827,7 +1827,7 @@ Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
                                  (org-agenda-skip-function 'tdw/skip-unless-big-rock)))))
 
                     ;; Quick Wins — effort <= 5 min
-                    ((native . (tags-todo
+                    ((native . (tags
                                 "LEVEL>0+ORG_GTD=\"Someday\"+Effort<=\"0:05\""
                                 ((org-agenda-overriding-header ,(format "💨💨 Quick Wins (%s)" effort-quick))
                                  (org-agenda-todo-keyword-format "")
@@ -1836,7 +1836,7 @@ Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
                                  (org-agenda-skip-function 'tdw/skip-unless-quick-win)))))
 
                     ;; Other Rocks — estimated > 5 min, score < 10
-                    ((native . (tags-todo
+                    ((native . (tags
                                 "LEVEL>0+ORG_GTD=\"Someday\""
                                 ((org-agenda-overriding-header ,(format "🪨 Other Rocks (%s)" effort-other))
                                  (org-agenda-todo-keyword-format "")
@@ -1845,7 +1845,7 @@ Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
                                  (org-agenda-skip-function 'tdw/skip-unless-other-rock)))))
 
                     ;; Unestimated — no effort
-                    ((native . (tags-todo
+                    ((native . (tags
                                 "LEVEL>0+ORG_GTD=\"Someday\""
                                 ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-someday-unest))
                                  (org-agenda-todo-keyword-format "")
@@ -1854,7 +1854,7 @@ Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
                                  (org-agenda-skip-function 'tdw/skip-unless-unestimated)))))
 
                     ;; Toggl Projects (regex matches all tgl_* tags in one query)
-                    ((native . (tags-todo
+                    ((native . (tags
                                 "LEVEL>0+ORG_GTD=\"Someday\"+{tgl_.+}"
                                 ((org-agenda-overriding-header "Toggl Projects")
                                  (org-agenda-todo-keyword-format "")
