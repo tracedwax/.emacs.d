@@ -1086,7 +1086,9 @@ Set by `tdw-unordered-view'.")
         (goto-char (point-min))
         ;; Detect if we are in Ordered/Decision View
         (when (or (re-search-forward "Ordered View" nil t)
+                  (re-search-forward "GTD Engage View" nil t)
                   (re-search-forward "Unordered View" nil t)
+                  (re-search-forward "Someday View" nil t)
                   (re-search-forward "Decision View" nil t)
                   (re-search-forward "🔥🔥 On Fire" nil t)
                   (re-search-forward "🔔🔔 Bells Ringing" nil t)
@@ -1099,14 +1101,14 @@ Set by `tdw-unordered-view'.")
                   (re-search-forward "Priority C" nil t)
                   (re-search-forward "Priority D" nil t))
           (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
-            ;; Update Ordered View total
+            ;; Update Ordered View total (also matches initial "GTD Engage View" name)
             (goto-char (point-min))
-            (while (re-search-forward "\\(Ordered View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
-              (replace-match (format "Ordered View (Total Effort: %s)" total) t t nil 1))
+            (while (re-search-forward "\\(\\(?:📋 \\)?\\(?:Ordered\\|GTD Engage\\) View\\( — Total Effort: [^)]*\\)?\\)" nil t)
+              (replace-match (format "📋 Ordered View — Total Effort: %s" total) t t nil 1))
             ;; Update Unordered View total
             (goto-char (point-min))
-            (while (re-search-forward "\\(Unordered View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
-              (replace-match (format "Unordered View (Total Effort: %s)" total) t t nil 1))
+            (while (re-search-forward "\\(📋 Unordered View\\( — Total Effort: [^)]*\\)?\\)" nil t)
+              (replace-match (format "📋 Unordered View — Total Effort: %s" total) t t nil 1))
             ;; Decision View total (kept for backward compat)
             (goto-char (point-min))
             (while (re-search-forward "\\(Decision View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
@@ -1675,7 +1677,7 @@ Press 'n' or 's' to promote to Next Actions, 'c' to cancel."
     (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
       (org-gtd-view-show
-       `((name . ,(format "Someday/Maybe — Total Effort: %s" total))
+       `((name . ,(format "📋 Someday View — Total Effort: %s" total))
          (prefix-width . 25)
          (prefix . (effort " " urg-imp " — "))
          (blocks . (
@@ -2176,7 +2178,7 @@ on entries without TODO keywords (e.g., gcal.org)."
       (let ((org-agenda-todo-keyword-format "")
             (org-agenda-hide-tags-regexp "."))
        (org-gtd-view-show
-       `((name . ,(format "Unordered View (Total Effort: %s)" total))
+       `((name . ,(format "📋 Unordered View — Total Effort: %s" total))
          (prefix-width . 25)
          (prefix . (effort " " urg-imp " — "))
          (blocks . (
