@@ -1727,6 +1727,27 @@ Used to populate the Unestimated header in the Someday view (distinct from
                 nil nil))))))
       n))
 
+  (defun tdw/get-inbox-unestimated-count ()
+    "Count Inbox items (ORG_GTD=\"Inbox\") across all agenda files with no effort estimate.
+Used to populate the Unestimated header in the Inbox view, mirroring
+`tdw/get-someday-unestimated-count'."
+    (let ((n 0))
+      (dolist (file (org-agenda-files))
+        (let ((expanded-file (expand-file-name file)))
+          (when (file-exists-p expanded-file)
+            (with-current-buffer (find-file-noselect expanded-file)
+              (org-with-wide-buffer
+               (goto-char (point-min))
+               (org-map-entries
+                (lambda ()
+                  (when (string= (org-entry-get (point) "ORG_GTD") "Inbox")
+                    (let* ((effort-str (org-entry-get (point) "EFFORT"))
+                           (mins (when effort-str (tdw/get-effort-minutes effort-str))))
+                      (when (or (not effort-str) (not mins) (<= mins 0))
+                        (cl-incf n)))))
+                nil nil))))))
+      n))
+
   (defun tdw/get-actions-unestimated-count ()
     "Count Next Actions (ORG_GTD=Actions) items with score < 10 and no effort.
 This mirrors exactly what `tdw/skip-unless-unestimated' shows in the ordered/

@@ -68,7 +68,7 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
   In `config.org`, append the org-gtd inbox path to the `org-agenda-files` seq-filter list so the inbox view (and grooming) can see inbox items.
 
   - [x] Add the inbox path to the list (kept safe by the existing `file-exists-p` filter)
-  - [x] Commit — sha `1b2e8af`
+  - [x] Commit — sha `59c9ef9`
 
   **✅ Result:** Added `"/Users/thecleverone/my-venndoor-life/orgnotes/gtd/inbox.org"` as the first entry of the `org-agenda-files` quoted list (`config.org:715`).
 
@@ -78,12 +78,18 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
 ---
 
-- [ ] **Step 3 — [COMPUTER] Add `tdw/get-inbox-unestimated-count`**
+- [x] **Step 3 — [COMPUTER] Add `tdw/get-inbox-unestimated-count`**
 
   Clone `tdw/get-someday-unestimated-count`, swapping `ORG_GTD=Someday` → `ORG_GTD=Inbox`. Used for the Inbox view's Unestimated header.
 
-  - [ ] Define the new function next to the someday counter
-  - [ ] Commit — sha `___`
+  - [x] Define the new function next to the someday counter
+  - [x] Commit — sha `c-step3`
+
+  **✅ Result:** Added `tdw/get-inbox-unestimated-count` immediately after `tdw/get-someday-unestimated-count` (`config.org` ~1729). Identical body, comparing `ORG_GTD` to the literal `"Inbox"` instead of `org-gtd-someday`. Commit also carries the Step 2 sha correction (`59c9ef9`).
+
+  **📎 Transcript:** Straight clone with the property-value swap; reused `tdw/get-effort-minutes` for the no-effort test.
+
+  **📝 Learned:** Counter compares to the literal `"Inbox"` (no `org-gtd-inbox` constant exists for the *category* — `org-gtd-inbox` in org-gtd is the inbox *filename* base, not an ORG_GTD value).
 
 ---
 
