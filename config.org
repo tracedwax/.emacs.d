@@ -19,6 +19,7 @@ I set a [[*Bookmarks][bookmark]] with =C-x r m= and I can get back here with =C-
 - ... lsp servers
 * Variables, paths, etc.
 #+begin_src elisp
+  ;;; -*- lexical-binding: t; -*-
   (setq stag-easy-hugo-basedir "~/src/projects/trevoke.github.io-source"
         stag-easy-hugo-root "~/src/projects/trevoke.github.io"
         stag-org-reveal-root "/home/stag/mnt/internal/src/vendor/reveal.js"
@@ -1069,68 +1070,77 @@ Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
 
   ;;; ——— Ordered View: Effort totals by section ———
 
+  ;; Accumulators for effort totals — defvar makes them special/dynamic
+  ;; so the lambda inside org-map-entries can always see them.
+  (defvar tdw--ef-fire 0)
+  (defvar tdw--ef-bell 0)
+  (defvar tdw--ef-deck 0)
+  (defvar tdw--ef-considered 0)
+  (defvar tdw--ef-paused 0)
+  (defvar tdw--ef-big 0)
+  (defvar tdw--ef-quick 0)
+  (defvar tdw--ef-other 0)
+  (defvar tdw--ef-calendar 0)
+  (defvar tdw--ef-unest 0)
+  (defvar tdw--ef-now nil)
+
   (defun tdw/get-sanity-effort-totals ()
     "Return a list (TOTAL ON-FIRE BELLS DECK BIG-ROCKS QUICK-WINS OTHER UNEST CONSIDERED PAUSED) formatted as H:MM.
 TOTAL excludes PAUSED — paused work is parked and does not count toward active load.
 Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after now)."
-    (let ((mins-fire 0)
-          (mins-bell 0)
-          (mins-deck 0)
-          (mins-considered 0)
-          (mins-paused 0)
-          (mins-big 0)
-          (mins-quick 0)
-          (mins-other 0)
-          (mins-calendar 0)
-          (n-unestimated 0)
-          (now (current-time)))
-      (dolist (file (org-agenda-files))
-        (let ((expanded-file (expand-file-name file)))
-          (when (file-exists-p expanded-file)
-            (with-current-buffer (find-file-noselect expanded-file)
-              (org-with-wide-buffer
-               (goto-char (point-min))
-               (org-map-entries
-                (lambda ()
-                  (let ((todo (org-get-todo-state))
-                        (org-gtd-val (org-entry-get (point) "ORG_GTD")))
-                    ;; Calendar entries: count future ones toward total
-                    (if (string= org-gtd-val "Calendar")
-                        (let* ((effort-str (org-entry-get (point) "Effort"))
-                               (effort-mins (when effort-str
-                                              (condition-case nil
-                                                  (round (org-duration-to-minutes effort-str))
-                                                (error 0))))
-                               (ts (org-entry-get (point) "TIMESTAMP"))
-                               (ts-time (when ts (org-time-string-to-time ts))))
-                          (when (and effort-mins (> effort-mins 0)
-                                     ts-time (time-less-p now ts-time))
-                            (setq mins-calendar (+ mins-calendar effort-mins))))
-                      ;; Regular tasks: existing logic
-                      (when (and (member todo '("NEXT" "TODO"))
-                                 (not (string= org-gtd-val "Inbox")))
-                        (let ((effort (or (tdw/get-subtree-effort-minutes) 0)))
-                          (cond ((tdw/on-fire-p) (setq mins-fire (+ mins-fire effort)))
-                                ((tdw/bells-ringing-p) (setq mins-bell (+ mins-bell effort)))
-                                ((tdw/on-deck-p) (setq mins-deck (+ mins-deck effort)))
-                                ((tdw/recently-considered-p) (setq mins-considered (+ mins-considered effort)))
-                                ((tdw/paused-p) (setq mins-paused (+ mins-paused effort)))
-                                ((tdw/big-rock-p) (setq mins-big (+ mins-big effort)))
-                                ((tdw/unestimated-p) (cl-incf n-unestimated))
-                                ((tdw/quick-win-p) (setq mins-quick (+ mins-quick effort)))
-                                (t (setq mins-other (+ mins-other effort))))))))))
-                nil nil))))))
-      (let ((fmt (lambda (m) (format "%d:%02d" (/ m 60) (% m 60)))))
-        (list (funcall fmt (+ mins-fire mins-bell mins-deck mins-considered mins-big mins-quick mins-other mins-calendar))
-              (funcall fmt mins-fire)
-              (funcall fmt mins-bell)
-              (funcall fmt mins-deck)
-              (funcall fmt mins-big)
-              (funcall fmt mins-quick)
-              (funcall fmt mins-other)
-              n-unestimated
-              (funcall fmt mins-considered)
-              (funcall fmt mins-paused))))
+    (setq tdw--ef-fire 0 tdw--ef-bell 0 tdw--ef-deck 0
+          tdw--ef-considered 0 tdw--ef-paused 0
+          tdw--ef-big 0 tdw--ef-quick 0 tdw--ef-other 0
+          tdw--ef-calendar 0 tdw--ef-unest 0
+          tdw--ef-now (current-time))
+    (dolist (file (org-agenda-files))
+      (let ((expanded-file (expand-file-name file)))
+        (when (file-exists-p expanded-file)
+          (with-current-buffer (find-file-noselect expanded-file)
+            (org-with-wide-buffer
+             (goto-char (point-min))
+             (org-map-entries #'tdw/--effort-accumulate nil nil))))))
+    (let ((fmt (lambda (m) (format "%d:%02d" (/ m 60) (% m 60)))))
+      (list (funcall fmt (+ tdw--ef-fire tdw--ef-bell tdw--ef-deck
+                            tdw--ef-considered tdw--ef-big tdw--ef-quick
+                            tdw--ef-other tdw--ef-calendar))
+            (funcall fmt tdw--ef-fire)
+            (funcall fmt tdw--ef-bell)
+            (funcall fmt tdw--ef-deck)
+            (funcall fmt tdw--ef-big)
+            (funcall fmt tdw--ef-quick)
+            (funcall fmt tdw--ef-other)
+            tdw--ef-unest
+            (funcall fmt tdw--ef-considered)
+            (funcall fmt tdw--ef-paused))))
+
+  (defun tdw/--effort-accumulate ()
+    "Accumulate effort for one org entry into tdw--ef-* variables."
+    (let ((todo (org-get-todo-state))
+          (gtd-val (org-entry-get (point) "ORG_GTD")))
+      (if (string= gtd-val "Calendar")
+          (let* ((effort-str (org-entry-get (point) "Effort"))
+                 (effort-mins (when effort-str
+                                (condition-case nil
+                                    (round (org-duration-to-minutes effort-str))
+                                  (error 0))))
+                 (ts (org-entry-get (point) "TIMESTAMP"))
+                 (ts-time (when ts (org-time-string-to-time ts))))
+            (when (and effort-mins (> effort-mins 0)
+                       ts-time (time-less-p tdw--ef-now ts-time))
+              (setq tdw--ef-calendar (+ tdw--ef-calendar effort-mins))))
+        (when (and (member todo '("NEXT" "TODO"))
+                   (not (string= gtd-val "Inbox")))
+          (let ((effort (or (tdw/get-subtree-effort-minutes) 0)))
+            (cond ((tdw/on-fire-p) (setq tdw--ef-fire (+ tdw--ef-fire effort)))
+                  ((tdw/bells-ringing-p) (setq tdw--ef-bell (+ tdw--ef-bell effort)))
+                  ((tdw/on-deck-p) (setq tdw--ef-deck (+ tdw--ef-deck effort)))
+                  ((tdw/recently-considered-p) (setq tdw--ef-considered (+ tdw--ef-considered effort)))
+                  ((tdw/paused-p) (setq tdw--ef-paused (+ tdw--ef-paused effort)))
+                  ((tdw/big-rock-p) (setq tdw--ef-big (+ tdw--ef-big effort)))
+                  ((tdw/unestimated-p) (cl-incf tdw--ef-unest))
+                  ((tdw/quick-win-p) (setq tdw--ef-quick (+ tdw--ef-quick effort)))
+                  (t (setq tdw--ef-other (+ tdw--ef-other effort)))))))))
 
   ;;; ——— Ordered View: Capacity warnings ———
 
