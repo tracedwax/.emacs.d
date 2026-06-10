@@ -1730,7 +1730,7 @@ ELEMENT can be:
 - \\='area-of-focus - CATEGORY property
 - \\='file-name - buffer file base name
 - \\='effort - EFFORT property
-- \\='score - urgency/impact tag abbreviation
+- \\='tier - priority tier emoji
 - \\='fire - fire emoji if tagged :on_fire:
 - a string - returned as-is (literal)"
       (pcase element
@@ -1738,8 +1738,9 @@ ELEMENT can be:
         ('area-of-focus (org-gtd-agenda--resolve-area-of-focus))
         ('file-name (org-gtd-agenda--resolve-file-name))
         ('effort (org-gtd-agenda--resolve-effort))
-        ('score (org-gtd-agenda--resolve-score))
-        ('urg-imp (org-gtd-agenda--resolve-urg-imp))
+        ('score (org-gtd-agenda--resolve-tier))
+        ('urg-imp (org-gtd-agenda--resolve-tier))
+        ('tier (org-gtd-agenda--resolve-tier))
         ('fire (if (member "on_fire" (org-get-tags nil t)) "🔥" ""))
         ((pred stringp) element)
         (_ nil)))
@@ -1754,62 +1755,17 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
                      "")))
         (truncate-string-to-width (or result "") width nil ?\s org-gtd-agenda-truncate-ellipsis))))
 
-  (defun org-gtd-agenda--resolve-score ()
-    "Return compact urgency/impact string with score like '🔥 🥎 U:vh I:h [13]'.
-Always shows brackets — empty [] if no score tag found."
+  (defun org-gtd-agenda--resolve-tier ()
+    "Return priority tier emoji string for the item at point.
+Shows only the tier emoji — no urgency/impact/score."
     (let* ((tags (org-get-tags nil t))
-           (google-cloud (if (member "google" tags) "☁️ " ""))
-           (flyby (if (member "flyby" tags) "🛸 " ""))
-           (fire (if (member "on_fire" tags) "🔥 " ""))
-           (bell (if (member "bells_ringing" tags) "🔔 " ""))
-           (deck (if (member "on_deck" tags) "🥎 " ""))
-           (considered (if (member "recently_considered" tags) "💭 " ""))
-           (paused (if (member "paused" tags) "🕐 " ""))
-           (urg (cond ((member "wh_urgency" tags) "wh")
-                      ((member "vh_urgency" tags) "vh")
-                      ((member "h_urgency" tags)  "hi")
-                      ((member "sh_urgency" tags) "sh")
-                      ((member "m_urgency" tags)  "md")
-                      ((member "l_urgency" tags)  "lo")
-                      (t "--")))
-           (imp (cond ((member "wh_impact" tags)  "wh")
-                      ((member "vh_impact" tags)  "vh")
-                      ((member "h_impact" tags)   "hi")
-                      ((member "sh_impact" tags)  "sh")
-                      ((member "m_impact" tags)   "md")
-                      ((member "l_impact" tags)   "lo")
-                      (t "--")))
-           (score-tag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags))
-           (score-str (if score-tag
-                          (substring score-tag 6)
-                        "")))
-      (format "%s%s%s%s%s%s%sU:%s I:%s [%s]" google-cloud flyby fire bell deck considered paused urg imp score-str)))
-
-  (defun org-gtd-agenda--resolve-urg-imp ()
-    "Return compact urgency/impact string without the numeric score, like '🔥 🥎 U:vh I:h'."
-    (let* ((tags (org-get-tags nil t))
-           (google-cloud (if (member "google" tags) "☁️ " ""))
-           (flyby (if (member "flyby" tags) "🛸 " ""))
-           (fire (if (member "on_fire" tags) "🔥 " ""))
-           (bell (if (member "bells_ringing" tags) "🔔 " ""))
-           (deck (if (member "on_deck" tags) "🥎 " ""))
-           (considered (if (member "recently_considered" tags) "💭 " ""))
-           (paused (if (member "paused" tags) "🕐 " ""))
-           (urg (cond ((member "wh_urgency" tags) "wh")
-                      ((member "vh_urgency" tags) "vh")
-                      ((member "h_urgency" tags)  "hi")
-                      ((member "sh_urgency" tags) "sh")
-                      ((member "m_urgency" tags)  "md")
-                      ((member "l_urgency" tags)  "lo")
-                      (t "--")))
-           (imp (cond ((member "wh_impact" tags)  "wh")
-                      ((member "vh_impact" tags)  "vh")
-                      ((member "h_impact" tags)   "hi")
-                      ((member "sh_impact" tags)  "sh")
-                      ((member "m_impact" tags)   "md")
-                      ((member "l_impact" tags)   "lo")
-                      (t "--"))))
-      (format "%s%s%s%s%s%s%sU:%s I:%s" google-cloud flyby fire bell deck considered paused urg imp)))
+           (fire (if (member "on_fire" tags) "🔥" ""))
+           (bell (if (member "bells_ringing" tags) "🔔" ""))
+           (deck (if (member "on_deck" tags) "🥎" ""))
+           (considered (if (member "recently_considered" tags) "💭" ""))
+           (paused (if (member "paused" tags) "🕐" "")))
+      (let ((result (concat fire bell deck considered paused)))
+        (if (string-empty-p result) "" result))))
 
   (defun tdw/get-someday-unestimated-count ()
     "Count Someday/Maybe items across all agenda files that have no effort estimate.
