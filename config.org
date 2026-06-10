@@ -1083,6 +1083,7 @@ Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
   (defvar tdw--ef-calendar 0)
   (defvar tdw--ef-unest 0)
   (defvar tdw--ef-now nil)
+  (defvar tdw--ef-today-end nil)
 
   (defun tdw/get-sanity-effort-totals ()
     "Return a list (TOTAL ON-FIRE BELLS DECK BIG-ROCKS QUICK-WINS OTHER UNEST CONSIDERED PAUSED) formatted as H:MM.
@@ -1092,7 +1093,11 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
           tdw--ef-considered 0 tdw--ef-paused 0
           tdw--ef-big 0 tdw--ef-quick 0 tdw--ef-other 0
           tdw--ef-calendar 0 tdw--ef-unest 0
-          tdw--ef-now (current-time))
+          tdw--ef-now (current-time)
+          tdw--ef-today-end (encode-time 0 0 0
+                                         (1+ (decoded-time-day (decode-time)))
+                                         (decoded-time-month (decode-time))
+                                         (decoded-time-year (decode-time))))
     (dolist (file (org-agenda-files))
       (let ((expanded-file (expand-file-name file)))
         (when (file-exists-p expanded-file)
@@ -1117,8 +1122,11 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
   (defun tdw/--effort-accumulate ()
     "Accumulate effort for one org entry into tdw--ef-* variables."
     (let ((todo (org-get-todo-state))
-          (gtd-val (org-entry-get (point) "ORG_GTD")))
+          (gtd-val (org-entry-get (point) "ORG_GTD"))
+          (heading (org-get-heading t t t t)))
       (if (string= gtd-val "Calendar")
+          ;; Skip DNS (Do Not Schedule) blocks — they're not real meetings
+          (unless (and heading (string-match-p "\\bDNS\\b" heading))
           (let* ((effort-str (org-entry-get (point) "Effort"))
                  (effort-mins (when effort-str
                                 (condition-case nil
@@ -1127,8 +1135,10 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
                  (ts (org-entry-get (point) "TIMESTAMP"))
                  (ts-time (when ts (org-time-string-to-time ts))))
             (when (and effort-mins (> effort-mins 0)
-                       ts-time (time-less-p tdw--ef-now ts-time))
-              (setq tdw--ef-calendar (+ tdw--ef-calendar effort-mins))))
+                       ts-time
+                       (time-less-p tdw--ef-now ts-time)
+                       (time-less-p ts-time tdw--ef-today-end))
+              (setq tdw--ef-calendar (+ tdw--ef-calendar effort-mins)))))
         (when (and (member todo '("NEXT" "TODO"))
                    (not (string= gtd-val "Inbox")))
           (let ((effort (or (tdw/get-subtree-effort-minutes) 0)))
