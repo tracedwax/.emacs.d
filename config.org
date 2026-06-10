@@ -714,6 +714,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     (org-agenda-files (seq-filter #'file-exists-p
                                   '("/Users/thecleverone/my-venndoor-life/orgnotes/gtd/inbox.org"
                                     "/Users/thecleverone/my-venndoor-life/orgnotes/gtd/org-gtd-tasks.org"
+                                    "/Users/thecleverone/my-venndoor-life/orgnotes/gtd/gcal.org"
                                     "/Users/thecleverone/my-google-life/orgnotes/gtd/org-gtd-tasks.org"
                                     "/Users/thecleverone/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org"
                                     "/Users/thecleverone/my-bfc-partner-life/orgnotes/gtd/org-gtd-tasks.org"
@@ -1070,7 +1071,8 @@ Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
 
   (defun tdw/get-sanity-effort-totals ()
     "Return a list (TOTAL ON-FIRE BELLS DECK BIG-ROCKS QUICK-WINS OTHER UNEST CONSIDERED PAUSED) formatted as H:MM.
-TOTAL excludes PAUSED — paused work is parked and does not count toward active load."
+TOTAL excludes PAUSED — paused work is parked and does not count toward active load.
+Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after now)."
     (let ((mins-fire 0)
           (mins-bell 0)
           (mins-deck 0)
@@ -1079,7 +1081,9 @@ TOTAL excludes PAUSED — paused work is parked and does not count toward active
           (mins-big 0)
           (mins-quick 0)
           (mins-other 0)
-          (n-unestimated 0))
+          (mins-calendar 0)
+          (n-unestimated 0)
+          (now (current-time)))
       (dolist (file (org-agenda-files))
         (let ((expanded-file (expand-file-name file)))
           (when (file-exists-p expanded-file)
@@ -1088,24 +1092,36 @@ TOTAL excludes PAUSED — paused work is parked and does not count toward active
                (goto-char (point-min))
                (org-map-entries
                 (lambda ()
-                  (let ((todo (org-get-todo-state)))
-                    ;; Skip ORG_GTD="Inbox" items: ungroomed captures must not
-                    ;; inflate the Ordered/Unordered/Someday effort totals.
-                    (when (and (member todo '("NEXT" "TODO"))
-                               (not (string= (org-entry-get (point) "ORG_GTD") "Inbox")))
-                      (let ((effort (or (tdw/get-subtree-effort-minutes) 0)))
-                        (cond ((tdw/on-fire-p) (setq mins-fire (+ mins-fire effort)))
-                              ((tdw/bells-ringing-p) (setq mins-bell (+ mins-bell effort)))
-                              ((tdw/on-deck-p) (setq mins-deck (+ mins-deck effort)))
-                              ((tdw/recently-considered-p) (setq mins-considered (+ mins-considered effort)))
-                              ((tdw/paused-p) (setq mins-paused (+ mins-paused effort)))
-                              ((tdw/big-rock-p) (setq mins-big (+ mins-big effort)))
-                              ((tdw/unestimated-p) (cl-incf n-unestimated))
-                              ((tdw/quick-win-p) (setq mins-quick (+ mins-quick effort)))
-                              (t (setq mins-other (+ mins-other effort))))))))
+                  (let ((todo (org-get-todo-state))
+                        (org-gtd-val (org-entry-get (point) "ORG_GTD")))
+                    ;; Calendar entries: count future ones toward total
+                    (if (string= org-gtd-val "Calendar")
+                        (let* ((effort-str (org-entry-get (point) "Effort"))
+                               (effort-mins (when effort-str
+                                              (condition-case nil
+                                                  (round (org-duration-to-minutes effort-str))
+                                                (error 0))))
+                               (ts (org-entry-get (point) "TIMESTAMP"))
+                               (ts-time (when ts (org-time-string-to-time ts))))
+                          (when (and effort-mins (> effort-mins 0)
+                                     ts-time (time-less-p now ts-time))
+                            (setq mins-calendar (+ mins-calendar effort-mins))))
+                      ;; Regular tasks: existing logic
+                      (when (and (member todo '("NEXT" "TODO"))
+                                 (not (string= org-gtd-val "Inbox")))
+                        (let ((effort (or (tdw/get-subtree-effort-minutes) 0)))
+                          (cond ((tdw/on-fire-p) (setq mins-fire (+ mins-fire effort)))
+                                ((tdw/bells-ringing-p) (setq mins-bell (+ mins-bell effort)))
+                                ((tdw/on-deck-p) (setq mins-deck (+ mins-deck effort)))
+                                ((tdw/recently-considered-p) (setq mins-considered (+ mins-considered effort)))
+                                ((tdw/paused-p) (setq mins-paused (+ mins-paused effort)))
+                                ((tdw/big-rock-p) (setq mins-big (+ mins-big effort)))
+                                ((tdw/unestimated-p) (cl-incf n-unestimated))
+                                ((tdw/quick-win-p) (setq mins-quick (+ mins-quick effort)))
+                                (t (setq mins-other (+ mins-other effort))))))))))
                 nil nil))))))
       (let ((fmt (lambda (m) (format "%d:%02d" (/ m 60) (% m 60)))))
-        (list (funcall fmt (+ mins-fire mins-bell mins-deck mins-considered mins-big mins-quick mins-other))
+        (list (funcall fmt (+ mins-fire mins-bell mins-deck mins-considered mins-big mins-quick mins-other mins-calendar))
               (funcall fmt mins-fire)
               (funcall fmt mins-bell)
               (funcall fmt mins-deck)
@@ -1114,7 +1130,7 @@ TOTAL excludes PAUSED — paused work is parked and does not count toward active
               (funcall fmt mins-other)
               n-unestimated
               (funcall fmt mins-considered)
-              (funcall fmt mins-paused)))))
+              (funcall fmt mins-paused))))
 
   ;;; ——— Ordered View: Capacity warnings ———
 
