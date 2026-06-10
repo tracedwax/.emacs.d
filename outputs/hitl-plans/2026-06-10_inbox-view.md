@@ -184,7 +184,7 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
   - [x] Define `tdw/agenda-move-to-inbox`
   - [x] Extend `move-to-someday`/`move-to-next`/`cancel` strip regexes to include `INBOX`
   - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
-  - [x] Commit — sha `step9tbd`
+  - [x] Commit — sha `e5dda96`
 
   **✅ Result:** Added `tdw/agenda-move-to-inbox` after `tdw/agenda-cancel`. It sets `ORG_GTD="Inbox"` + `org-todo "TODO"` in place (no refile), clears stale `CLOSED:`, saves, and injects an `INBOX ` visual marker (`font-lock-keyword-face`) — mirroring the someday/next commands' visual logic. Also extended the `SOMEDAY|NEXT|CNCL` strip regexes in `move-to-someday` (819), `move-to-next` (886), and `cancel` (909) to include `INBOX`, so re-grooming a re-inboxed item clears the marker cleanly. Paren check passed.
 
@@ -198,9 +198,15 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
   In the `org-agenda-mode-hook` `local-set-key` block, bind `i` → `tdw/agenda-move-to-inbox`, and update the `n/s/x/c` key-semantics comment to include `i=Inbox`.
 
-  - [ ] Add `(local-set-key (kbd "i") #'tdw/agenda-move-to-inbox)` + update comment
-  - [ ] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
-  - [ ] Commit — sha `___`
+  - [x] Add `(local-set-key (kbd "i") #'tdw/agenda-move-to-inbox)` + update comment
+  - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
+  - [x] Commit — sha `step10tbd`
+
+  **✅ Result:** Bound `i` → `tdw/agenda-move-to-inbox` in the `org-agenda-mode-hook` `local-set-key` block (between `s` and `n`). Updated the key-semantics comment to `n=Next Action  s=Someday  i=Inbox  x=Cancel  c=Recently Considered (mnemonic: n/s/i/x/c)`. Paren check passed.
+
+  **📎 Transcript:** Lowercase `i` was unbound in the custom hook; capital `I` remains `org-agenda-clock-in`. No conflict with `C-c d i` (prefixed view-opener).
+
+  **📝 Learned:** —
 
 ---
 
