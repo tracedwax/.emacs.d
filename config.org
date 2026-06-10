@@ -720,6 +720,21 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                                     "/Users/thecleverone/my-personal-life/docs/orgnotes/org-gtd-tasks.org")))
     (org-edna-use-inheritance t)
     (org-gtd-refile-to-any-target t)
+    ;; Inbox captures are stamped ORG_GTD=Inbox + TODO so they show in the
+    ;; Inbox View (tdw-inbox-view) immediately and groom via n/s/x — bypassing
+    ;; org-gtd's hardcoded clarify flow. Primary population is the LLM workflow;
+    ;; C-c d c i is the rare manual fallback. Matches the item-format contract.
+    (org-gtd-capture-templates
+     `(("i" "Inbox"
+        entry (file ,#'org-gtd-inbox-path)
+        "* TODO %?\n:PROPERTIES:\n:ORG_GTD: Inbox\n:END:\n\n  %i"
+        :kill-buffer t
+        :before-finalize org-gtd-capture--add-captured-at-timestamp)
+       ("l" "Inbox with link"
+        entry (file ,#'org-gtd-inbox-path)
+        "* TODO %?\n:PROPERTIES:\n:ORG_GTD: Inbox\n:END:\n\n  %i\n  %a"
+        :kill-buffer t
+        :before-finalize org-gtd-capture--add-captured-at-timestamp)))
     (org-gtd-organize-hooks '(my/org-gtd-inherit-parent-metadata))
     (org-gtd-clarify-show-horizons 'right)
     (org-gtd-areas-of-focus '("AI AppMod"

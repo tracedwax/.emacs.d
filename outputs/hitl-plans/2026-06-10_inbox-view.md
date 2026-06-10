@@ -200,7 +200,7 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
   - [x] Add `(local-set-key (kbd "i") #'tdw/agenda-move-to-inbox)` + update comment
   - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
-  - [x] Commit — sha `step10tbd`
+  - [x] Commit — sha `a5c0a28`
 
   **✅ Result:** Bound `i` → `tdw/agenda-move-to-inbox` in the `org-agenda-mode-hook` `local-set-key` block (between `s` and `n`). Updated the key-semantics comment to `n=Next Action  s=Someday  i=Inbox  x=Cancel  c=Recently Considered (mnemonic: n/s/i/x/c)`. Paren check passed.
 
@@ -214,9 +214,15 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
   Override `org-gtd-capture-templates` (the `"i"` Inbox and `"l"` link templates) so manually-captured items get `* TODO …` + `:ORG_GTD: Inbox:` property. Keeps the `C-c d c i` fallback consistent with the LLM contract.
 
-  - [ ] Set `org-gtd-capture-templates` with the stamped templates
-  - [ ] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
-  - [ ] Commit — sha `___`
+  - [x] Set `org-gtd-capture-templates` with the stamped templates
+  - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
+  - [x] Commit — sha `step11tbd`
+
+  **✅ Result:** Added `org-gtd-capture-templates` to the `org-gtd` `use-package` `:custom` block (before `org-gtd-organize-hooks`). Both `"i"` (Inbox) and `"l"` (Inbox with link) templates now use `* TODO %?` + a `:PROPERTIES:` drawer with `:ORG_GTD: Inbox:`, preserving the original `:before-finalize` CREATED-timestamp hook and `,#'org-gtd-inbox-path` target. Paren check passed.
+
+  **📎 Transcript:** Replicated org-gtd's backquote/`,#'` form so `org-gtd-inbox-path` resolves at load. The `:before-finalize` timestamp hook merges into the existing drawer via `org-entry-put`.
+
+  **📝 Learned:** This is the manual-capture path; the primary populator remains the future LLM workflow emitting the same item shape directly into `inbox.org`.
 
 ---
 
