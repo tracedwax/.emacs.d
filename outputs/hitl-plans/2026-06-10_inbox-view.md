@@ -141,12 +141,22 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
 ---
 
-- [ ] **Step 7 — [COMPUTER] Add `tdw/format-view-banner` helper**
+- [x] **Step 7 — [COMPUTER] Add `tdw/format-view-banner` helper**
 
   New helper returning the 2-line **banner A** as a propertized string: a full-width rule line with centered `<icon>  <NAME> VIEW`, plus a second line `Total Estimated Effort: H:MM`. Distinct face for prominence.
 
-  - [ ] Define `tdw/format-view-banner` (args: view-name, icon, effort)
-  - [ ] Commit — sha `___`
+  - [x] Define `tdw/format-view-banner` (args: view-name, icon, effort)
+  - [x] _(bonus)_ Define `tdw/render-view-banner` (idempotent in-buffer title→banner swap)
+  - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
+  - [x] Commit — sha `step7tbd`
+
+  **✅ Result:** Added two helpers before `tdw/update-sanity-view-headers`:
+  - `tdw/format-view-banner (label icon effort)` → 2-line propertized string: line 1 = `<12×═>  <icon>  <LABEL> VIEW  <12×═>` (bold, `#5fafff`); line 2 = `Total Estimated Effort: <effort>` (bold).
+  - `tdw/render-view-banner (total)` → scans the buffer top for any of the 4 banner-able views (incl. `GTD Engage` → relabeled `Ordered`), deletes the title region (constructed 1-line title **or** an already-rendered 2-line banner — idempotent via case-insensitive `… View` match + consuming a following `Total Estimated Effort:` line), and inserts the fresh banner.
+
+  **📎 Transcript:** Idempotency was the key design point — the finalize hook runs on every agenda refresh, so the swap must recognize its own prior output. Solved by case-folding `Inbox View` ≡ `INBOX VIEW` and optionally consuming the second banner line before re-inserting.
+
+  **📝 Learned:** Fixed 12-char rules each side (not true centering) — robust against emoji `string-width` quirks while still looking like a banner.
 
 ---
 

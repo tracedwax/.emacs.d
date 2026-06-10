@@ -1119,6 +1119,50 @@ Set by `tdw-unordered-view'.")
 
   ;;; ——— Ordered View: Header updater ———
 
+  (defun tdw/format-view-banner (label icon effort)
+    "Return a 2-line banner string for an agenda view.
+LABEL is the view name (e.g. \"Inbox\"), ICON an emoji (e.g. \"📥\"),
+EFFORT the total estimated effort string (e.g. \"2:15\").
+Line 1 is a ruled, centered title; line 2 the estimated-effort total."
+    (let* ((title (format "%s  %s VIEW" icon (upcase label)))
+           (side (make-string 12 ?═)))
+      (concat
+       (propertize (format "%s  %s  %s" side title side)
+                   'face '(:weight bold :foreground "#5fafff"))
+       "\n"
+       (propertize (format "Total Estimated Effort: %s" effort)
+                   'face '(:weight bold)))))
+
+  (defun tdw/render-view-banner (total)
+    "Replace the agenda title line with a banner for the current view.
+Scans the top of the buffer for one of the four banner-able views and
+swaps its title region for a 2-line banner (see `tdw/format-view-banner').
+Idempotent: matches both the constructed title (\"📋 Inbox View — …\") and
+an already-rendered banner (\"… INBOX VIEW …\"), and re-renders with TOTAL."
+    (let ((views '(("Inbox" . "📥") ("Someday" . "💤")
+                   ("Unordered" . "📋") ("Ordered" . "🎯")
+                   ("GTD Engage" . "🎯")))
+          (inhibit-read-only t))
+      (catch 'done
+        (dolist (v views)
+          (goto-char (point-min))
+          ;; Match constructed title OR rendered banner (case-insensitive
+          ;; folds "Inbox View" and "INBOX VIEW" together).
+          (let ((case-fold-search t))
+            (when (re-search-forward (format "%s View" (regexp-quote (car v))) nil t)
+              (let* ((label (if (string= (car v) "GTD Engage") "Ordered" (car v)))
+                     (banner (tdw/format-view-banner label (cdr v) total)))
+                (beginning-of-line)
+                (let ((start (point)))
+                  (forward-line 1)
+                  ;; If a previously-rendered effort line follows, consume it too.
+                  (when (looking-at "Total Estimated Effort:")
+                    (forward-line 1))
+                  (delete-region start (point))
+                  (goto-char start)
+                  (insert banner "\n")))
+              (throw 'done t)))))))
+
   (defun tdw/update-sanity-view-headers ()
     "Update headers in the current agenda buffer with fresh effort totals and warnings."
     (let ((inhibit-read-only t))
