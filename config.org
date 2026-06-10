@@ -1173,6 +1173,7 @@ an already-rendered banner (\"… INBOX VIEW …\"), and re-renders with TOTAL."
                   (re-search-forward "GTD Engage View" nil t)
                   (re-search-forward "Unordered View" nil t)
                   (re-search-forward "Someday View" nil t)
+                  (re-search-forward "Inbox View" nil t)
                   (re-search-forward "Decision View" nil t)
                   (re-search-forward "🔥🔥 On Fire" nil t)
                   (re-search-forward "🔔🔔 Bells Ringing" nil t)
@@ -1185,14 +1186,11 @@ an already-rendered banner (\"… INBOX VIEW …\"), and re-renders with TOTAL."
                   (re-search-forward "Priority C" nil t)
                   (re-search-forward "Priority D" nil t))
           (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
-            ;; Update Ordered View total (also matches initial "GTD Engage View" name)
-            (goto-char (point-min))
-            (while (re-search-forward "\\(\\(?:📋 \\)?\\(?:Ordered\\|GTD Engage\\) View\\( — Total Effort: [^)]*\\)?\\)" nil t)
-              (replace-match (format "📋 Ordered View — Total Effort: %s" total) t t nil 1))
-            ;; Update Unordered View total
-            (goto-char (point-min))
-            (while (re-search-forward "\\(📋 Unordered View\\( — Total Effort: [^)]*\\)?\\)" nil t)
-              (replace-match (format "📋 Unordered View — Total Effort: %s" total) t t nil 1))
+            ;; Render the prominent 2-line banner for the 4 banner-able views
+            ;; (Inbox / Someday / Unordered / Ordered, incl. the initial
+            ;; "GTD Engage View" name). Replaces the old per-view title rewrites
+            ;; and relabels the effort line to "Total Estimated Effort:".
+            (tdw/render-view-banner total)
             ;; Decision View total (kept for backward compat)
             (goto-char (point-min))
             (while (re-search-forward "\\(Decision View\\( (Total Effort: [^)]*)\\)?\\)" nil t)

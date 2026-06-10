@@ -148,7 +148,7 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
   - [x] Define `tdw/format-view-banner` (args: view-name, icon, effort)
   - [x] _(bonus)_ Define `tdw/render-view-banner` (idempotent in-buffer title→banner swap)
   - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
-  - [x] Commit — sha `step7tbd`
+  - [x] Commit — sha `2afa42e`
 
   **✅ Result:** Added two helpers before `tdw/update-sanity-view-headers`:
   - `tdw/format-view-banner (label icon effort)` → 2-line propertized string: line 1 = `<12×═>  <icon>  <LABEL> VIEW  <12×═>` (bold, `#5fafff`); line 2 = `Total Estimated Effort: <effort>` (bold).
@@ -160,13 +160,20 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
 ---
 
-- [ ] **Step 8 — [COMPUTER] Render banner in `tdw/update-sanity-view-headers` for all 4 views**
+- [x] **Step 8 — [COMPUTER] Render banner in `tdw/update-sanity-view-headers` for all 4 views**
 
   Replace the per-view one-line title rewrites (Ordered/Unordered/Someday, and add Inbox) with banner-A rendering via `tdw/format-view-banner`, keyed off each view's detected name. Relabel effort line to `Total Estimated Effort:`. Add `Inbox View` to the view-detection branch at the top of the function. Icons: 📥/💤/📋/🎯.
 
-  - [ ] Add `Inbox View` to the detection `or` clause
-  - [ ] Replace title rewrites with banner rendering + `Total Estimated Effort`
-  - [ ] Commit — sha `___`
+  - [x] Add `Inbox View` to the detection `or` clause
+  - [x] Replace title rewrites with `(tdw/render-view-banner total)` (one call covers all 4 views; Decision rewrite kept as-is)
+  - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
+  - [x] Commit — sha `step8tbd`
+
+  **✅ Result:** Added `(re-search-forward "Inbox View" nil t)` to the detection `or`. Replaced the two `while` title-rewrite loops (Ordered + Unordered) with a single `(tdw/render-view-banner total)` call; the Decision-view total rewrite is preserved below it (Decision is intentionally *not* one of the 4 bannered views). Paren check passed.
+
+  **📎 Transcript:** The Unordered-vs-Ordered substring overlap (`"Unordered View"` contains `"ordered View"`) is handled by ordering `Unordered` before `Ordered` in the renderer's `views` list and `throw 'done` on first match.
+
+  **📝 Learned:** Someday previously had *no* title rewrite in the hook (its title was construction-only); the banner renderer now covers it uniformly, so all four views get consistent treatment from one code path.
 
 ---
 
