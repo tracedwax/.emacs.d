@@ -261,6 +261,27 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
 ---
 
+## Follow-up A — Someday/Inbox keyword-less visibility
+
+**Trigger:** On `thecleverone`, the user found 307 / 332 Someday items were *invisible* in the Someday view. Root cause (pre-existing, not introduced by this work): the view blocks use `tags-todo`, which only matches headings that carry a TODO keyword. org-gtd's someday flow (`org-todo ""`, mirrored by `tdw/agenda-move-to-someday`) clears the keyword, so 92% of Someday items had no keyword and were filtered out. Data was never lost (all 332 on disk; org files in git).
+
+- [x] **Step 16 — [COMPUTER] Switch Someday + Inbox view blocks from `tags-todo` to `tags`**
+
+  Plain `tags` (todo-only nil) matches headings regardless of keyword, surfacing the keyword-less items. Scoped strictly to the two view functions; the Actions-based views (Unordered/Ordered/Decision) keep `tags-todo` (their items always carry NEXT/TODO).
+
+  - [x] `sed` scoped to lines 1881–1986 (Someday) and 1989–2095 (Inbox): `(tags-todo` → `(tags` (22 occurrences, 11+11)
+  - [x] Verified 46 `tags-todo` remain (Actions views untouched); diff is `tags-todo`→`tags` only
+  - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
+  - [x] Commit — sha `step16tbd`
+
+  **✅ Result:** 22 block types changed across the Someday and Inbox views. All `ORG_GTD="Someday"`/`"Inbox"` items now display regardless of TODO keyword.
+
+  **📎 Transcript:** Went with **plain `tags`** (no `/` TODO filter) for guaranteed correctness — it definitely surfaces keyword-less items. Trade-off: DONE/CNCL Someday items now also appear. Deferred the DONE/CNCL exclusion (`/-DONE-CNCL` or `TODO<>"DONE"`) to a live-verified follow-up, since its exact semantics for keyword-less items must be confirmed on real data before committing.
+
+  **📝 Learned:** This resolves the long-standing "how do keyword-less someday items show in a `tags-todo` block?" puzzle from Step 1 — they *didn't*; the view had been silently hiding them.
+
+---
+
 ## Resumption / Context
 
 **Status at capture:** All COMPUTER steps (1–12, 14, 15) complete and pushed. Step 13 (HUMAN live-Emacs verification) is pending — the user will test on their "latest account" (the live `.org` data lives on a different machine, `thecleverone`/`my-venndoor-life`, not on this build machine).
