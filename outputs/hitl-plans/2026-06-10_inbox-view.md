@@ -115,7 +115,7 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
   - [x] Add `("C-c d i" . tdw-inbox-view)`
   - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
-  - [x] Commit — sha `step5tbd`
+  - [x] Commit — sha `96f83fb`
 
   **✅ Result:** Added `("C-c d i" . tdw-inbox-view)` to the `org-gtd` `use-package` `:bind` block, right after `C-c d u`. Paren check passed.
 
@@ -125,12 +125,19 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
 ---
 
-- [ ] **Step 6 — [COMPUTER] Guard `tdw/get-sanity-effort-totals` against `ORG_GTD="Inbox"`**
+- [x] **Step 6 — [COMPUTER] Guard `tdw/get-sanity-effort-totals` against `ORG_GTD="Inbox"`**
 
   In the `org-map-entries` lambda, skip entries whose `ORG_GTD` is `"Inbox"` so inbox items never inflate the Ordered/Unordered/Someday effort totals.
 
-  - [ ] Add the `ORG_GTD="Inbox"` skip guard
-  - [ ] Commit — sha `___`
+  - [x] Add the `ORG_GTD="Inbox"` skip guard
+  - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
+  - [x] Commit — sha `step6tbd`
+
+  **✅ Result:** Wrapped the NEXT/TODO test in `(and … (not (string= (org-entry-get (point) "ORG_GTD") "Inbox")))` in the `tdw/get-sanity-effort-totals` `org-map-entries` lambda, with an explaining comment. Inbox TODO items are now excluded from all effort buckets. Paren check passed.
+
+  **📎 Transcript:** Confirmed the unestimated counters (`tdw/get-actions-unestimated-count`, `tdw/get-someday-unestimated-count`) already filter by `ORG_GTD=Actions`/`=Someday`, so no guard needed there — only this scanner counted by TODO state alone.
+
+  **📝 Learned:** This is the single place where inbox items (which carry a `TODO` keyword for `tags-todo` matching) could have leaked into other views' numbers.
 
 ---
 

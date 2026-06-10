@@ -1034,7 +1034,10 @@ TOTAL excludes PAUSED — paused work is parked and does not count toward active
                (org-map-entries
                 (lambda ()
                   (let ((todo (org-get-todo-state)))
-                    (when (member todo '("NEXT" "TODO"))
+                    ;; Skip ORG_GTD="Inbox" items: ungroomed captures must not
+                    ;; inflate the Ordered/Unordered/Someday effort totals.
+                    (when (and (member todo '("NEXT" "TODO"))
+                               (not (string= (org-entry-get (point) "ORG_GTD") "Inbox")))
                       (let ((effort (or (tdw/get-subtree-effort-minutes) 0)))
                         (cond ((tdw/on-fire-p) (setq mins-fire (+ mins-fire effort)))
                               ((tdw/bells-ringing-p) (setq mins-bell (+ mins-bell effort)))
