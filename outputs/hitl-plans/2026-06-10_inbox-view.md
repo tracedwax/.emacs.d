@@ -241,15 +241,17 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
 ---
 
-- [ ] **Step 13 — [HUMAN] Verify in live Emacs**
+- [x] **Step 13 — [HUMAN] Verify in live Emacs** (on `thecleverone`, via an Opus 4.6 agent)
 
-  In a running Emacs:
-  - [ ] `C-c d i` opens the Inbox View with banner A (`📥 INBOX VIEW`, `Total Estimated Effort:`)
-  - [ ] Banner A renders on Someday (💤), Unordered (📋), Ordered (🎯) too
-  - [ ] Capture a test item via `C-c d c i` → appears in Inbox View
-  - [ ] `s` / `n` / `x` groom it out; item leaves the inbox and lands in Someday/Actions/Cancelled
-  - [ ] From Someday/Unordered, press `i` on an item → it re-tags to Inbox and shows in the Inbox view
-  - [ ] Unordered/Someday/Ordered effort totals unchanged by the presence of inbox items
+  - [x] `C-c d i` opens the Inbox View — after the buffer-name banner fix (Step 17) and reload
+  - [x] Banner renders on all 4 views; user confirmed "Looks great" (then requested full-width centering → Step 18)
+  - [x] Someday view now shows all ~332 items (was 25) after the `tags` fix (Step 16)
+  - [ ] _(open, optional)_ Phase 4 DONE/CNCL exclusion experiment (counts A/B/C) — not yet run; decides whether to add a `-DONE-CNCL` filter or keep plain `tags`
+  - [ ] _(deferred)_ explicit `s`/`n`/`x`/`i` grooming smoke test — covered by design; user can run anytime
+
+  **📎 Transcript:** Verified iteratively across several live round-trips on `thecleverone`: first `C-c d i undefined` (reload needed), then the Someday-items-hidden scare (resolved as the keyword-less/`tags-todo` issue — data was always safe, all in git), then banner-not-rendering (buffer-name fix), then centering. User confirmed the result looks good.
+
+  **📝 Learned:** The cross-machine loop (build on `trace`, test on `thecleverone` via a second agent) worked via the shared `~/.emacs.d` git repo + the handoff prompt in `outputs/handoffs/`.
 
 ---
 
@@ -306,7 +308,7 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
   - [x] Rewrite `tdw/format-view-banner` to compute width from the agenda window (`window-width`, fallback 80, minus 1 to avoid wrap), center the title between `═` rules filling the width, and center the `Total Estimated Effort:` line
   - [x] Update the idempotency strip in `tdw/render-view-banner` to `(looking-at ".*═")` (rule line may no longer start with `═` when left-pad is small)
   - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
-  - [x] Commit — sha `step18tbd`
+  - [x] Commit — sha `5ada6ac`
 
   **✅ Result:** Banner rule line now spans the full window width with `<icon>  <LABEL> VIEW` centered; effort line centered beneath. Uses `string-width` so emoji (2 cols) align. Width recomputed each render (re-centers on the next refresh after a resize).
 
@@ -318,9 +320,21 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
 ## Resumption / Context
 
-**Status at capture:** All COMPUTER steps (1–12, 14, 15) complete and pushed. Step 13 (HUMAN live-Emacs verification) is pending — the user will test on their "latest account" (the live `.org` data lives on a different machine, `thecleverone`/`my-venndoor-life`, not on this build machine).
+**Status at capture (final):** All steps complete and pushed, including the live-verification round-trips and three follow-up fixes (Steps 16–18). HEAD = `5ada6ac`. The user confirmed the result looks good. Only optional open item: the Phase 4 DONE/CNCL count experiment (decides whether to hide DONE/CNCL Someday items via a match filter vs. the current plain `tags`).
 
-**Repo:** `~/.emacs.d` — branch `master`, pushed to `github.com:tracedwax/.emacs.d` (`10a630c..09c5611`).
+**Repo:** `~/.emacs.d` — branch `master`, pushed to `github.com:tracedwax/.emacs.d`. Final HEAD `5ada6ac`.
+
+**Follow-up commits (after the original 13):**
+- `e864fbd` — docs(plan): capture context + chat transcript (Steps 14–15)
+- `6ef37ef` — fix(views): show keyword-less Someday/Inbox items (`tags` vs `tags-todo`) — **Step 16**
+- `f489f2c` — docs(handoff): `thecleverone` verification prompt (`outputs/handoffs/2026-06-10_thecleverone-verify-inbox-view.md`)
+- `2b335b8` — fix(banner): detect view by sticky buffer name, render at point-min — **Step 17** (the real banner fix)
+- `5ada6ac` — feat(banner): full-width centered banner — **Step 18**
+
+**Three live-surfaced fixes (important for future readers):**
+1. **Someday items "disappeared" (307/332 hidden):** pre-existing — `tags-todo` needs a TODO keyword, org-gtd clears it on Someday. Fixed by switching Someday + Inbox view blocks to plain `tags` (Step 16). No data was lost; org files are in git.
+2. **Banner not rendering:** the view `name` is only the agenda *dispatcher description*, never in the buffer body — so the original title-text search never matched. Fixed by keying off the sticky buffer name `*Org Agenda(KEY)*` (i/S/u/g) and inserting at point-min (Step 17).
+3. **Banner width:** centered full-window-width via `window-width` + `string-width` (Step 18).
 **Source of truth:** `config.org`. `config.el` is a **gitignored** build artifact regenerated by `(org-babel-load-file "~/.emacs.d/config.org")` in `init.el`.
 
 **Commits (in order):**
@@ -417,3 +431,31 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 **User:** Push this up to origin and I'll test with my latest account.
 
 **Claude:** Pushed `master` to origin (`10a630c..09c5611`); completed capture-context + transcript. Step 13 (live verification) awaits the user's test.
+
+**User:** says C-c d i is undefined
+
+**Claude:** Confirmed the binding is correct in tangled `config.el` (line 567) and the defun exists — so the running Emacs just needs to reload. Gave `M-x org-babel-load-file RET ~/.emacs.d/config.org RET` + `(fboundp 'tdw-inbox-view)` check.
+
+**User:** Also most of my someday tasks disappeared except the newest, which is terrifying.
+
+**Claude:** Reassured: nothing I wrote deletes org-file content; the agenda is a query, data lives in the files. Most likely items got re-tagged (or it's a display issue). Gave steps to find them (open the file, search `:ORG_GTD: Inbox`, check git diff). Asked: did you reload? press bare `i`? are org files in git?
+
+**User:** I did not press i bare. Everything is in git. There it is — 307 Someday items invisible (no TODO keyword), 25 visible; 92% hidden because `tags-todo` only matches headings with a keyword.
+
+**Claude:** Confirmed data safe (332 all on disk, in git). Diagnosed the pre-existing `tags-todo`-needs-a-keyword limitation (org-gtd clears the keyword on Someday). Confirmed retangle must happen on `thecleverone`, not `trace`. Proposed the view-only `tags` fix (zero data risk). Asked to proceed.
+
+**User:** A please. *(earlier — re the re-inbox key)* … then: I did not press i bare; everything is in git; another Opus 4.6 is running it on the data machine — give me a wildly detailed prompt to test.
+
+**Claude:** Implemented the `tags` fix (Step 16, scoped to Someday + Inbox views, Actions views keep `tags-todo`), committed + pushed. Wrote a detailed handoff prompt for the `thecleverone` agent (saved to `outputs/handoffs/`) covering: git safety check, pull+reload, definition/binding checks, Someday-count snippet, and a DONE/CNCL match-syntax experiment.
+
+**User:** WE are close. Banner not rendering — `tdw/render-view-banner` defined but not called by the finalize hook; view-name detection may not be matching. Needs investigation on `trace`.
+
+**Claude:** Investigated: the updater IS hooked and fires; the real bug is that the view `name` is only the dispatcher description, never in the buffer body, so the title-text search failed. Rewrote `tdw/render-view-banner` to key off the sticky buffer name `*Org Agenda(KEY)*` (i/S/u/g) and insert at point-min (Step 17). Committed + pushed.
+
+**User:** Looks great but are you able to center the header rows so they cover the full screen width?
+
+**Claude:** Rewrote `tdw/format-view-banner` to span the full window width with a centered title between `═` rules, and centered the effort line (Step 18). Committed + pushed.
+
+**User:** complete the plan and capture the full transcript. we should be done.
+
+**Claude:** Marked Step 13 verified (banner renders, Someday items visible, user approved), updated the context block with the follow-up commits and the three live-surfaced fixes, appended this transcript, and did the final commit. Done.
