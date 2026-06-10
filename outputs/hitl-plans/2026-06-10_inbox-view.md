@@ -83,7 +83,7 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
   Clone `tdw/get-someday-unestimated-count`, swapping `ORG_GTD=Someday` → `ORG_GTD=Inbox`. Used for the Inbox view's Unestimated header.
 
   - [x] Define the new function next to the someday counter
-  - [x] Commit — sha `c-step3`
+  - [x] Commit — sha `6b8adca`
 
   **✅ Result:** Added `tdw/get-inbox-unestimated-count` immediately after `tdw/get-someday-unestimated-count` (`config.org` ~1729). Identical body, comparing `ORG_GTD` to the literal `"Inbox"` instead of `org-gtd-someday`. Commit also carries the Step 2 sha correction (`59c9ef9`).
 
@@ -93,12 +93,19 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
 ---
 
-- [ ] **Step 4 — [COMPUTER] Add `tdw-inbox-view` function**
+- [x] **Step 4 — [COMPUTER] Add `tdw-inbox-view` function**
 
   Clone `tdw-someday-priority-view`. Changes: buffer `*Org Agenda(S)*`→`*Org Agenda(i)*`; all block filters `ORG_GTD="Someday"`→`ORG_GTD="Inbox"`; name `Someday View`→`Inbox View`; unestimated count call → `tdw/get-inbox-unestimated-count`; dispatch key `"S"`→`"i"`.
 
-  - [ ] Define `tdw-inbox-view`
-  - [ ] Commit — sha `___`
+  - [x] Define `tdw-inbox-view`
+  - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
+  - [x] Commit — sha `7f3step4`
+
+  **✅ Result:** Added `tdw-inbox-view` directly after `tdw-someday-priority-view`. Byte-for-byte clone of the Someday view with: name `📋 Inbox View`, buffer `*Org Agenda(i)*`, all 11 block filters on `ORG_GTD="Inbox"`, Unestimated header fed by `tdw/get-inbox-unestimated-count`, dispatch key `"i"`. Paren checker passed (tangle + byte-compile clean; only runtime "not known to be defined" warnings, expected in batch).
+
+  **📎 Transcript:** Section effort numbers in the headers (On Fire `(%s)` etc.) and the title `total` come from `tdw/get-sanity-effort-totals`, which counts Actions NEXT/TODO — *identical to how the Someday view already behaves* (those headers reflect the active Actions load, not the section's own items). Kept as-is for parity, per the locked "mirror Someday exactly" decision.
+
+  **📝 Learned:** Adopted the repo's mandatory `scripts/check-elisp-parens.sh` as the per-step verifier (per user request) — it does per-block paren analysis, tangles `config.org`→`config.el`, and byte-compiles in one shot. `config.el` is now committed alongside `config.org` each step to keep the artifact in sync.
 
 ---
 
