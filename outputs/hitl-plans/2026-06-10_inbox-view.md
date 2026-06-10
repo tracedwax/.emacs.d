@@ -63,12 +63,18 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
 ---
 
-- [ ] **Step 2 — [COMPUTER] Add `inbox.org` to `org-agenda-files`**
+- [x] **Step 2 — [COMPUTER] Add `inbox.org` to `org-agenda-files`**
 
   In `config.org`, append the org-gtd inbox path to the `org-agenda-files` seq-filter list so the inbox view (and grooming) can see inbox items.
 
-  - [ ] Add `(expand-file-name "inbox.org" stag-org-gtd-directory)` to the list (kept safe by the existing `file-exists-p` filter)
-  - [ ] Commit — sha `___`
+  - [x] Add the inbox path to the list (kept safe by the existing `file-exists-p` filter)
+  - [x] Commit — sha `1b2e8af`
+
+  **✅ Result:** Added `"/Users/thecleverone/my-venndoor-life/orgnotes/gtd/inbox.org"` as the first entry of the `org-agenda-files` quoted list (`config.org:715`).
+
+  **📎 Transcript:** **Deviation from plan:** the list is a *quoted* literal (`'(...)`), so `(expand-file-name "inbox.org" stag-org-gtd-directory)` would not be evaluated. Used a literal absolute path matching the existing entries' style instead. Path = `org-gtd-directory` (`~/my-venndoor-life/orgnotes/gtd`) + `inbox.org`, i.e. `org-gtd-inbox-path`. Guarded by the existing `file-exists-p` seq-filter.
+
+  **📝 Learned:** All agenda paths are hardcoded under `/Users/thecleverone`; the inbox sits in the same venndoor gtd dir as the primary tasks file.
 
 ---
 

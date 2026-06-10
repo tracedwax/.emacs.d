@@ -712,7 +712,8 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     (org-gtd-agenda-property-position 'where-it-fits)
     (org-gtd-directory stag-org-gtd-directory)
     (org-agenda-files (seq-filter #'file-exists-p
-                                  '("/Users/thecleverone/my-venndoor-life/orgnotes/gtd/org-gtd-tasks.org"
+                                  '("/Users/thecleverone/my-venndoor-life/orgnotes/gtd/inbox.org"
+                                    "/Users/thecleverone/my-venndoor-life/orgnotes/gtd/org-gtd-tasks.org"
                                     "/Users/thecleverone/my-google-life/orgnotes/gtd/org-gtd-tasks.org"
                                     "/Users/thecleverone/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org"
                                     "/Users/thecleverone/my-bfc-partner-life/orgnotes/gtd/org-gtd-tasks.org"
