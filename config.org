@@ -1175,18 +1175,25 @@ Set by `tdw-unordered-view'.")
   ;;; ——— Ordered View: Header updater ———
 
   (defun tdw/format-view-banner (label icon effort)
-    "Return a 2-line banner string for an agenda view.
+    "Return a full-width, centered 2-line banner string for an agenda view.
 LABEL is the view name (e.g. \"Inbox\"), ICON an emoji (e.g. \"📥\"),
 EFFORT the total estimated effort string (e.g. \"2:15\").
-Line 1 is a ruled, centered title; line 2 the estimated-effort total."
-    (let* ((title (format "%s  %s VIEW" icon (upcase label)))
-           (side (make-string 12 ?═)))
+Line 1 is a centered title flanked by `═' rules spanning the window width;
+line 2 is the centered estimated-effort total."
+    (let* ((width (1- (let ((w (get-buffer-window (current-buffer) t)))
+                        (if w (window-width w) 80))))
+           (title (format "%s  %s VIEW" icon (upcase label)))
+           (tw (string-width title))
+           (lpad (max 1 (/ (- width tw 2) 2)))
+           (rpad (max 1 (- width tw 2 lpad)))
+           (line1 (concat (make-string lpad ?═) " " title " " (make-string rpad ?═)))
+           (effline (format "Total Estimated Effort: %s" effort))
+           (epad (max 0 (/ (- width (string-width effline)) 2)))
+           (line2 (concat (make-string epad ?\s) effline)))
       (concat
-       (propertize (format "%s  %s  %s" side title side)
-                   'face '(:weight bold :foreground "#5fafff"))
+       (propertize line1 'face '(:weight bold :foreground "#5fafff"))
        "\n"
-       (propertize (format "Total Estimated Effort: %s" effort)
-                   'face '(:weight bold)))))
+       (propertize line2 'face '(:weight bold)))))
 
   (defun tdw/render-view-banner (total)
     "Insert (or refresh) the 2-line view banner at the top of the agenda buffer.
@@ -1206,7 +1213,8 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
       (when spec
         (goto-char (point-min))
         ;; Strip a previously-inserted banner (rule line + effort line) if present.
-        (when (looking-at "═")
+        ;; The rule line always contains `═' even if it doesn't start with it.
+        (when (looking-at ".*═")
           (forward-line 1)
           (when (looking-at "Total Estimated Effort:")
             (forward-line 1))

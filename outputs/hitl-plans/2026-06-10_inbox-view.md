@@ -289,13 +289,30 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
   - [x] Rewrite `tdw/render-view-banner` to identify the view by sticky buffer name `*Org Agenda(KEY)*` (i=Inbox, S=Someday, u=Unordered, g=Ordered) and insert the banner at `point-min`; idempotent (strips a prior banner via the `═` rule-line marker)
   - [x] Confirmed `org-agenda-sticky t` (config.org:3015) and `org-gtd-engage` → key `"g"`
   - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
-  - [x] Commit — sha `step17tbd`
+  - [x] Commit — sha `2b335b8`
 
   **✅ Result:** Buffer-name detection replaces fragile title-text search. The finalize hook (`tdw/update-sanity-view-headers`) still fires for these views via the section-header matches in its `when (or …)` gate (e.g. "🔥🔥 On Fire"), so `tdw/render-view-banner` is reached; it now self-gates on buffer key and renders at the top. Survives `g`/redo because the buffer name is stable.
 
   **📎 Transcript:** Engage (Ordered) uses `org-gtd-view-show` with no key → default `"g"` → `*Org Agenda(g)*`. Inbox/Someday/Unordered keys (i/S/u) match the buffers the view functions already kill-and-recreate.
 
   **📝 Learned:** For sticky agendas, the buffer name `*Org Agenda(KEY)*` is the most reliable per-view discriminator — the `(name . …)` DSL field never reaches the buffer text.
+
+---
+
+- [x] **Step 18 — [COMPUTER] Full-width, centered banner**
+
+  **Trigger:** User asked for the banner rows to span the full screen width with the title centered (was fixed 12-char rules).
+
+  - [x] Rewrite `tdw/format-view-banner` to compute width from the agenda window (`window-width`, fallback 80, minus 1 to avoid wrap), center the title between `═` rules filling the width, and center the `Total Estimated Effort:` line
+  - [x] Update the idempotency strip in `tdw/render-view-banner` to `(looking-at ".*═")` (rule line may no longer start with `═` when left-pad is small)
+  - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
+  - [x] Commit — sha `step18tbd`
+
+  **✅ Result:** Banner rule line now spans the full window width with `<icon>  <LABEL> VIEW` centered; effort line centered beneath. Uses `string-width` so emoji (2 cols) align. Width recomputed each render (re-centers on the next refresh after a resize).
+
+  **📎 Transcript:** Subtract 1 from `window-width` to avoid edge wrap; `max 1` guards on both pads so a very narrow window or long title can't produce negative fills.
+
+  **📝 Learned:** —
 
 ---
 
