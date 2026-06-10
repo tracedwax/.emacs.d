@@ -749,6 +749,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
      ("C-c d s" . org-gtd-show-stuck-projects)
      ("C-c d S" . tdw-someday-priority-view)
      ("C-c d u" . tdw-unordered-view)
+     ("C-c d i" . tdw-inbox-view)
      ("C-c d ?" . org-gtd-command-center)
      ("C-c d g" . org-gtd-show-project-graph)
      :map org-gtd-clarify-map
