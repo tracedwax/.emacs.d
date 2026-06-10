@@ -1139,8 +1139,19 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
                        (time-less-p tdw--ef-now ts-time)
                        (time-less-p ts-time tdw--ef-today-end))
               (setq tdw--ef-calendar (+ tdw--ef-calendar effort-mins)))))
+        (progn
+        ;; Habits: count only if not yet completed today
+        (when (string= gtd-val "Habit")
+          (let* ((effort (or (tdw/get-subtree-effort-minutes) 0))
+                 (last-repeat (org-entry-get (point) "LAST_REPEAT"))
+                 (completed-today (and last-repeat
+                                       (string-match-p (format-time-string "%Y-%m-%d" tdw--ef-now)
+                                                       last-repeat))))
+            (unless completed-today
+              (setq tdw--ef-other (+ tdw--ef-other effort)))))
+        ;; Regular tasks: exclude Inbox, Someday, Habit (handled above)
         (when (and (member todo '("NEXT" "TODO"))
-                   (not (string= gtd-val "Inbox")))
+                   (not (member gtd-val '("Inbox" "Someday" "Habit"))))
           (let ((effort (or (tdw/get-subtree-effort-minutes) 0)))
             (cond ((tdw/on-fire-p) (setq tdw--ef-fire (+ tdw--ef-fire effort)))
                   ((tdw/bells-ringing-p) (setq tdw--ef-bell (+ tdw--ef-bell effort)))
@@ -1150,7 +1161,7 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
                   ((tdw/big-rock-p) (setq tdw--ef-big (+ tdw--ef-big effort)))
                   ((tdw/unestimated-p) (cl-incf tdw--ef-unest))
                   ((tdw/quick-win-p) (setq tdw--ef-quick (+ tdw--ef-quick effort)))
-                  (t (setq tdw--ef-other (+ tdw--ef-other effort)))))))))
+                  (t (setq tdw--ef-other (+ tdw--ef-other effort))))))))))
 
   ;;; ——— Ordered View: Capacity warnings ———
 
