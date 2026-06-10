@@ -167,7 +167,7 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
   - [x] Add `Inbox View` to the detection `or` clause
   - [x] Replace title rewrites with `(tdw/render-view-banner total)` (one call covers all 4 views; Decision rewrite kept as-is)
   - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
-  - [x] Commit — sha `step8tbd`
+  - [x] Commit — sha `7165235`
 
   **✅ Result:** Added `(re-search-forward "Inbox View" nil t)` to the detection `or`. Replaced the two `while` title-rewrite loops (Ordered + Unordered) with a single `(tdw/render-view-banner total)` call; the Decision-view total rewrite is preserved below it (Decision is intentionally *not* one of the 4 bannered views). Paren check passed.
 
@@ -181,9 +181,16 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
   New agenda command mirroring `tdw/agenda-move-to-someday`/`-to-next`, but **option A (re-tag in place — no refile)**: set `ORG_GTD="Inbox"` + `org-todo "TODO"` on the item where it sits, clear stale `CLOSED:`, and update the agenda line's visual marker. Item reappears in the Inbox view immediately (property-based, file-agnostic). If already `ORG_GTD="Inbox"`, just reset the TODO state.
 
-  - [ ] Define `tdw/agenda-move-to-inbox`
-  - [ ] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
-  - [ ] Commit — sha `___`
+  - [x] Define `tdw/agenda-move-to-inbox`
+  - [x] Extend `move-to-someday`/`move-to-next`/`cancel` strip regexes to include `INBOX`
+  - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
+  - [x] Commit — sha `step9tbd`
+
+  **✅ Result:** Added `tdw/agenda-move-to-inbox` after `tdw/agenda-cancel`. It sets `ORG_GTD="Inbox"` + `org-todo "TODO"` in place (no refile), clears stale `CLOSED:`, saves, and injects an `INBOX ` visual marker (`font-lock-keyword-face`) — mirroring the someday/next commands' visual logic. Also extended the `SOMEDAY|NEXT|CNCL` strip regexes in `move-to-someday` (819), `move-to-next` (886), and `cancel` (909) to include `INBOX`, so re-grooming a re-inboxed item clears the marker cleanly. Paren check passed.
+
+  **📎 Transcript:** No marker remap needed (unlike the refiling commands) since the item doesn't move — its `org-marker` stays valid.
+
+  **📝 Learned:** Used `TODO` (not `NEXT`) as the keyword for re-inboxed items, matching the LLM item-format contract so they sort into the Inbox view's `tags-todo` blocks identically to captured items.
 
 ---
 

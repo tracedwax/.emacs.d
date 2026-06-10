@@ -816,7 +816,7 @@ Updates the agenda-line marker after refile so change-your-mind works."
       (let ((inhibit-read-only t))
         (save-excursion
           (beginning-of-line)
-          (when (re-search-forward "\\(SOMEDAY\\|NEXT\\|CNCL\\) " (line-end-position) t)
+          (when (re-search-forward "\\(SOMEDAY\\|NEXT\\|CNCL\\|INBOX\\) " (line-end-position) t)
             (replace-match "")))
         (save-excursion
           (beginning-of-line)
@@ -883,7 +883,7 @@ Updates the agenda-line marker after refile so change-your-mind works."
       (let ((inhibit-read-only t))
         (save-excursion
           (beginning-of-line)
-          (when (re-search-forward "\\(SOMEDAY\\|NEXT\\|CNCL\\) " (line-end-position) t)
+          (when (re-search-forward "\\(SOMEDAY\\|NEXT\\|CNCL\\|INBOX\\) " (line-end-position) t)
             (replace-match "")))
         (save-excursion
           (beginning-of-line)
@@ -905,8 +905,47 @@ keeping the display clean when the user changes their mind."
     (let ((inhibit-read-only t))
       (save-excursion
         (beginning-of-line)
-        (when (re-search-forward "\\(SOMEDAY\\|NEXT\\) " (line-end-position) t)
+        (when (re-search-forward "\\(SOMEDAY\\|NEXT\\|INBOX\\) " (line-end-position) t)
           (replace-match "")))))
+
+  (defun tdw/agenda-move-to-inbox ()
+    "Re-tag the task at point back to the GTD Inbox (ORG_GTD=\"Inbox\").
+Option A — re-tags IN PLACE (no refile): sets ORG_GTD=\"Inbox\" and a TODO
+keyword so the item reappears in the Inbox view wherever it currently lives
+(the Inbox view filters by property across all agenda files, so physical
+location does not matter).  Strips any stale CLOSED timestamp and resets
+SOMEDAY/NEXT/CNCL visual markers."
+    (interactive)
+    (let ((marker (or (org-get-at-bol 'org-marker)
+                      (org-agenda-error)))
+          (heading nil))
+      (org-with-point-at marker
+        (setq heading (org-get-heading t t t t))
+        (org-entry-put (point) "ORG_GTD" "Inbox")
+        (org-todo "TODO")
+        ;; Clear stale CLOSED timestamp (left behind by DONE/CNCL)
+        (save-excursion
+          (org-back-to-heading t)
+          (forward-line 1)
+          (when (looking-at "CLOSED: ")
+            (delete-region (point) (1+ (line-end-position)))))
+        (save-buffer))
+      ;; Visual: strip all state markers then insert INBOX
+      (let ((inhibit-read-only t))
+        (save-excursion
+          (beginning-of-line)
+          (when (re-search-forward "\\(SOMEDAY\\|NEXT\\|CNCL\\|INBOX\\) " (line-end-position) t)
+            (replace-match "")))
+        (save-excursion
+          (beginning-of-line)
+          (when (re-search-forward "— +" (line-end-position) t)
+            (insert (propertize "INBOX " 'face 'font-lock-keyword-face)))
+          ;; Fallback: truncated prefix ends with '… '
+          (unless (save-excursion (beginning-of-line) (re-search-forward "INBOX " (line-end-position) t))
+            (beginning-of-line)
+            (when (re-search-forward "… " (line-end-position) t)
+              (insert (propertize "INBOX " 'face 'font-lock-keyword-face))))))
+      (message "→ Inbox: %s" heading)))
 
   ;; Override I/O/m/y/n/s/j/k/x in org-agenda-mode-map via hook so it always wins,
   ;; even after org-agenda (re)sets its keymap.
