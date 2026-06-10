@@ -1838,8 +1838,9 @@ Used to populate the Unestimated header in the Someday view (distinct from
 
   (defun tdw/get-inbox-unestimated-count ()
     "Count Inbox items (ORG_GTD=\"Inbox\") across all agenda files with no effort estimate.
-Used to populate the Unestimated header in the Inbox view, mirroring
-`tdw/get-someday-unestimated-count'."
+Excludes DONE and CNCL entries so the count matches what the skip function
+actually shows in the Unestimated block. Used to populate the Unestimated
+header in the Inbox view, mirroring `tdw/get-someday-unestimated-count'."
     (let ((n 0))
       (dolist (file (org-agenda-files))
         (let ((expanded-file (expand-file-name file)))
@@ -1850,9 +1851,11 @@ Used to populate the Unestimated header in the Inbox view, mirroring
                (org-map-entries
                 (lambda ()
                   (when (string= (org-entry-get (point) "ORG_GTD") "Inbox")
-                    (let* ((effort-str (org-entry-get (point) "EFFORT"))
+                    (let* ((todo (org-get-todo-state))
+                           (effort-str (org-entry-get (point) "EFFORT"))
                            (mins (when effort-str (tdw/get-effort-minutes effort-str))))
-                      (when (or (not effort-str) (not mins) (<= mins 0))
+                      (when (and (not (member todo '("DONE" "CNCL")))
+                                 (or (not effort-str) (not mins) (<= mins 0)))
                         (cl-incf n)))))
                 nil nil))))))
       n))
