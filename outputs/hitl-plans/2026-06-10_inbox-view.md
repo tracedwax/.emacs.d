@@ -458,4 +458,16 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
 
 **User:** complete the plan and capture the full transcript. we should be done.
 
-**Claude:** Marked Step 13 verified (banner renders, Someday items visible, user approved), updated the context block with the follow-up commits and the three live-surfaced fixes, appended this transcript, and did the final commit. Done.
+**Claude:** Marked Step 13 verified (banner renders, Someday items visible, user approved), updated the context block with the follow-up commits and the three live-surfaced fixes, appended this transcript, and did the final commit (`6e37d92`). Summarized what shipped + the one optional loose end (Phase 4 DONE/CNCL count experiment).
+
+**User:** capture this last into the plan and I'll close the window.
+
+**Claude:** Appended this closing exchange to the transcript and committed (final). Session complete.
+
+---
+
+## Open / Future (carried forward)
+
+- **Phase 4 — DONE/CNCL exclusion (optional):** Someday view now uses plain `tags`, so DONE/CNCL Someday items also appear. To hide them without re-hiding keyword-less items, run the A/B/C count experiment in `outputs/handoffs/2026-06-10_thecleverone-verify-inbox-view.md` on real data, then adopt `/-DONE-CNCL` or `TODO<>"DONE"` in the Someday/Inbox match strings if it preserves the keyword-less items.
+- **Optional "give every Someday item a real keyword" migration:** the deeper cleanup (so `tags-todo` would work everywhere). Do with a git checkpoint + dry-run if ever desired.
+- **LLM workflow command:** the future populator that emits the item-format contract directly into `inbox.org` (the primary intended capture path).
