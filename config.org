@@ -2427,6 +2427,17 @@ on entries without TODO keywords (e.g., gcal.org)."
                (or (not effort-mins) (<= effort-mins 0)))
           nil
         end)))
+
+  (defun tdw/skip-cncl-globally ()
+    "Skip CNCL (canceled) entries in ALL agenda views.
+The custom views are built from `tags' searches on the ORG_GTD property,
+which match entries regardless of TODO state — so canceled items kept
+showing.  Installed via `org-agenda-skip-function-global', which org
+consults in addition to any per-block `org-agenda-skip-function'."
+    (when (string= (org-get-todo-state) "CNCL")
+      (org-entry-end-position)))
+  (setq org-agenda-skip-function-global #'tdw/skip-cncl-globally)
+
   (defun tdw-unordered-view (&optional keys)
     "Like Ordered View but without score annotations, priority cookies, or custom sorting."
     (interactive)
