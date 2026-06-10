@@ -272,13 +272,30 @@ Build a new **Inbox View** that mirrors the existing **Someday View** (`tdw-some
   - [x] `sed` scoped to lines 1881–1986 (Someday) and 1989–2095 (Inbox): `(tags-todo` → `(tags` (22 occurrences, 11+11)
   - [x] Verified 46 `tags-todo` remain (Actions views untouched); diff is `tags-todo`→`tags` only
   - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
-  - [x] Commit — sha `step16tbd`
+  - [x] Commit — sha `6ef37ef`
 
   **✅ Result:** 22 block types changed across the Someday and Inbox views. All `ORG_GTD="Someday"`/`"Inbox"` items now display regardless of TODO keyword.
 
   **📎 Transcript:** Went with **plain `tags`** (no `/` TODO filter) for guaranteed correctness — it definitely surfaces keyword-less items. Trade-off: DONE/CNCL Someday items now also appear. Deferred the DONE/CNCL exclusion (`/-DONE-CNCL` or `TODO<>"DONE"`) to a live-verified follow-up, since its exact semantics for keyword-less items must be confirmed on real data before committing.
 
   **📝 Learned:** This resolves the long-standing "how do keyword-less someday items show in a `tags-todo` block?" puzzle from Step 1 — they *didn't*; the view had been silently hiding them.
+
+---
+
+- [x] **Step 17 — [COMPUTER] Fix banner detection: key off buffer name, insert at point-min**
+
+  **Trigger:** Live test on `thecleverone` — banner not rendering. `tdw/render-view-banner` searched the buffer for the view `name` text ("Someday View" / "Inbox View"), but org renders the view `name` only as the agenda-*dispatcher* description; it is **not in the buffer body**. (Likely why the user wanted a visible banner in the first place — and why the old Ordered/Unordered title rewrites were probably no-ops.)
+
+  - [x] Rewrite `tdw/render-view-banner` to identify the view by sticky buffer name `*Org Agenda(KEY)*` (i=Inbox, S=Someday, u=Unordered, g=Ordered) and insert the banner at `point-min`; idempotent (strips a prior banner via the `═` rule-line marker)
+  - [x] Confirmed `org-agenda-sticky t` (config.org:3015) and `org-gtd-engage` → key `"g"`
+  - [x] `scripts/check-elisp-parens.sh` → `ALL CHECKS PASSED`
+  - [x] Commit — sha `step17tbd`
+
+  **✅ Result:** Buffer-name detection replaces fragile title-text search. The finalize hook (`tdw/update-sanity-view-headers`) still fires for these views via the section-header matches in its `when (or …)` gate (e.g. "🔥🔥 On Fire"), so `tdw/render-view-banner` is reached; it now self-gates on buffer key and renders at the top. Survives `g`/redo because the buffer name is stable.
+
+  **📎 Transcript:** Engage (Ordered) uses `org-gtd-view-show` with no key → default `"g"` → `*Org Agenda(g)*`. Inbox/Someday/Unordered keys (i/S/u) match the buffers the view functions already kill-and-recreate.
+
+  **📝 Learned:** For sticky agendas, the buffer name `*Org Agenda(KEY)*` is the most reliable per-view discriminator — the `(name . …)` DSL field never reaches the buffer text.
 
 ---
 
