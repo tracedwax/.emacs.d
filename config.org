@@ -1128,6 +1128,26 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
             (funcall fmt tdw--ef-considered)
             (funcall fmt tdw--ef-paused))))
 
+  (defun tdw/--effort-counted-p (todo gtd-val)
+    "Non-nil if an entry with TODO state and GTD-VAL ORG_GTD would be counted."
+    (if tdw--ef-target-gtd
+        (and todo (not (member todo '("DONE" "CNCL")))
+             (string= gtd-val tdw--ef-target-gtd))
+      (and (member todo '("NEXT" "TODO"))
+           (not (member gtd-val '("Inbox" "Someday" "Habit"))))))
+
+  (defun tdw/--effort-ancestor-counted-p ()
+    "Non-nil if an ancestor of the entry at point is itself counted.
+Counted ancestors already include this entry's effort via
+`tdw/get-subtree-effort-minutes', so counting it again would double it."
+    (save-excursion
+      (let (found)
+        (while (and (not found) (org-up-heading-safe))
+          (when (tdw/--effort-counted-p (org-get-todo-state)
+                                        (org-entry-get (point) "ORG_GTD"))
+            (setq found t)))
+        found)))
+
   (defun tdw/--effort-accumulate ()
     "Accumulate effort for one org entry into tdw--ef-* variables."
     (let ((todo (org-get-todo-state))
@@ -1158,14 +1178,10 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
                                                        last-repeat))))
             (unless completed-today
               (setq tdw--ef-other (+ tdw--ef-other effort)))))
-        ;; Regular tasks
-        (when (if tdw--ef-target-gtd
-                  ;; Targeted mode: count items with this ORG_GTD value
-                  (and todo (not (member todo '("DONE" "CNCL")))
-                       (string= gtd-val tdw--ef-target-gtd))
-                ;; Default mode: Actions items (exclude Inbox, Someday, Habit)
-                (and (member todo '("NEXT" "TODO"))
-                     (not (member gtd-val '("Inbox" "Someday" "Habit")))))
+        ;; Regular tasks. Skip entries whose ancestor is already counted —
+        ;; the ancestor's subtree sum includes this entry's effort.
+        (when (and (tdw/--effort-counted-p todo gtd-val)
+                   (not (tdw/--effort-ancestor-counted-p)))
           (let ((effort (or (tdw/get-subtree-effort-minutes) 0)))
             (cond ((tdw/p0-p) (setq tdw--ef-p0 (+ tdw--ef-p0 effort)))
                   ((tdw/bells-ringing-p) (setq tdw--ef-bell (+ tdw--ef-bell effort)))
