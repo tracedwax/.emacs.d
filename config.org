@@ -1798,7 +1798,8 @@ horizontal scrolling (e.g. fat-fingered `l' key near d/s/x)."
     (define-key org-agenda-mode-map (kbd "b") (lambda () (interactive) (tdw/agenda-set-tier "bells_ringing")))
     (define-key org-agenda-mode-map (kbd "l") #'tdw/agenda-toggle-flyby)
     (define-key org-agenda-mode-map (kbd "p") (lambda () (interactive) (tdw/agenda-set-tier "paused")))
-    (define-key org-agenda-mode-map (kbd "r") #'tdw/sanity-refresh))
+    (define-key org-agenda-mode-map (kbd "r") #'tdw/sanity-refresh)
+    (define-key org-agenda-mode-map (kbd "SPC") #'tdw/agenda-clear-tier))
 
   (defun tdw/sanity-refresh ()
     "Rebuild agenda and scroll to top so P0 is visible."
@@ -2226,6 +2227,21 @@ TAG is one of `tdw--tier-tags'. If the task already carries TAG, remove it inste
            (org-toggle-tag tag 'on))))
       (tdw/agenda--refresh-prefix hdmarker buffer)
       (message "%s %s" (if had-tag "Cleared" "Set") tag)))
+
+  (defun tdw/agenda-clear-tier ()
+    "Clear every priority tier tag from the agenda task at point."
+    (interactive)
+    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
+                         (org-agenda-error)))
+           (buffer (marker-buffer hdmarker)))
+      (with-current-buffer buffer
+        (org-with-wide-buffer
+         (goto-char hdmarker)
+         (dolist (tier tdw--tier-tags)
+           (when (member tier (org-get-tags nil t))
+             (org-toggle-tag tier 'off)))))
+      (tdw/agenda--refresh-prefix hdmarker buffer)
+      (message "Cleared all tiers")))
 
   (defun tdw/agenda-toggle-google ()
     "Toggle :google: tag on the task at point and update prefix in-place."
