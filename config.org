@@ -2486,7 +2486,7 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-skip-additional-timestamps-same-entry t)
                                  (org-agenda-skip-function 'tdw/skip-ritual-habits-or-non-calendar)
                                  (org-agenda-hide-tags-regexp ".")
-                                 (org-agenda-prefix-format '((agenda . "  %i %?-12t% s")))
+                                 (org-agenda-prefix-format '((agenda . "  %i %?-12t%-6e% s")))
                                  (org-agenda-sorting-strategy '(time-up category-keep))))))
 
                     ;; 1c. On Deck
