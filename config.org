@@ -1848,6 +1848,17 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
                      "")))
         (truncate-string-to-width (or result "") width nil ?\s org-gtd-agenda-truncate-ellipsis))))
 
+  (with-eval-after-load 'org-gtd-view-language
+    (defun org-gtd-view-lang--create-calendar-day-block (_gtd-view-spec)
+      "Native day view for Calendar/Habit items, with effort in the prefix.
+Overrides upstream to add `%e' so scheduled items show their time estimate."
+      (let ((settings '((org-agenda-span 1)
+                        (org-agenda-start-day nil)
+                        (org-agenda-skip-additional-timestamps-same-entry t)
+                        (org-agenda-prefix-format '((agenda . "  %i %?-12t%-6e% s")))
+                        (org-agenda-skip-function 'org-gtd-view-lang--skip-unless-calendar-or-habit))))
+        `(agenda "" ,settings))))
+
   (defun org-gtd-agenda--resolve-tier ()
     "Return priority tier emoji string for the item at point.
 Shows only the tier emoji — no urgency/impact/score."
