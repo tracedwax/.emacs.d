@@ -1025,9 +1025,9 @@ SOMEDAY/NEXT/CNCL visual markers."
     "Return non-nil if current entry has TAG."
     (member tag (org-get-tags nil t)))
 
-  (defun tdw/on-fire-p ()
-    "Return non-nil if current entry is tagged :on_fire:."
-    (tdw/has-tag-p "on_fire"))
+  (defun tdw/p0-p ()
+    "Return non-nil if current entry is tagged :p0:."
+    (tdw/has-tag-p "p0"))
 
   (defun tdw/bells-ringing-p ()
     "Return non-nil if current entry is tagged :bells_ringing:."
@@ -1046,7 +1046,7 @@ SOMEDAY/NEXT/CNCL visual markers."
     (tdw/has-tag-p "paused"))
 
   (defvar tdw--tier-tags
-    '("on_fire" "bells_ringing" "on_deck" "recently_considered" "paused")
+    '("p0" "bells_ringing" "on_deck" "recently_considered" "paused")
     "Priority tiers, highest to lowest. Mutually exclusive: a task carries at most one.
 Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
 
@@ -1075,7 +1075,7 @@ Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
 
   ;; Accumulators for effort totals — defvar makes them special/dynamic
   ;; so the lambda inside org-map-entries can always see them.
-  (defvar tdw--ef-fire 0)
+  (defvar tdw--ef-p0 0)
   (defvar tdw--ef-bell 0)
   (defvar tdw--ef-deck 0)
   (defvar tdw--ef-considered 0)
@@ -1095,7 +1095,7 @@ When nil, uses default behavior (Actions items, excluding Inbox/Someday/Habit)."
     "Return a list (TOTAL ON-FIRE BELLS DECK BIG-ROCKS QUICK-WINS OTHER UNEST CONSIDERED PAUSED) formatted as H:MM.
 TOTAL excludes PAUSED — paused work is parked and does not count toward active load.
 Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after now)."
-    (setq tdw--ef-fire 0 tdw--ef-bell 0 tdw--ef-deck 0
+    (setq tdw--ef-p0 0 tdw--ef-bell 0 tdw--ef-deck 0
           tdw--ef-considered 0 tdw--ef-paused 0
           tdw--ef-big 0 tdw--ef-quick 0 tdw--ef-other 0
           tdw--ef-calendar 0 tdw--ef-unest 0
@@ -1112,10 +1112,10 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
              (goto-char (point-min))
              (org-map-entries #'tdw/--effort-accumulate nil nil))))))
     (let ((fmt (lambda (m) (format "%d:%02d" (/ m 60) (% m 60)))))
-      (list (funcall fmt (+ tdw--ef-fire tdw--ef-bell tdw--ef-deck
+      (list (funcall fmt (+ tdw--ef-p0 tdw--ef-bell tdw--ef-deck
                             tdw--ef-considered tdw--ef-big tdw--ef-quick
                             tdw--ef-other tdw--ef-calendar))
-            (funcall fmt tdw--ef-fire)
+            (funcall fmt tdw--ef-p0)
             (funcall fmt tdw--ef-bell)
             (funcall fmt tdw--ef-deck)
             (funcall fmt tdw--ef-big)
@@ -1164,7 +1164,7 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
                 (and (member todo '("NEXT" "TODO"))
                      (not (member gtd-val '("Inbox" "Someday" "Habit")))))
           (let ((effort (or (tdw/get-subtree-effort-minutes) 0)))
-            (cond ((tdw/on-fire-p) (setq tdw--ef-fire (+ tdw--ef-fire effort)))
+            (cond ((tdw/p0-p) (setq tdw--ef-p0 (+ tdw--ef-p0 effort)))
                   ((tdw/bells-ringing-p) (setq tdw--ef-bell (+ tdw--ef-bell effort)))
                   ((tdw/on-deck-p) (setq tdw--ef-deck (+ tdw--ef-deck effort)))
                   ((tdw/recently-considered-p) (setq tdw--ef-considered (+ tdw--ef-considered effort)))
@@ -1178,8 +1178,8 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
 
   (defun tdw/sanity-view-warnings ()
     "Return alist of (SECTION . WARNING-STRING) for capacity violations.
-Alerts on on-fire > 5, bells-ringing > 10, on-deck > 5."
-    (let ((n-fire 0)
+Alerts on on-p0 > 5, bells-ringing > 10, on-deck > 5."
+    (let ((n-p0 0)
           (n-bell 0)
           (n-deck 0)
           (warnings nil))
@@ -1194,16 +1194,16 @@ Alerts on on-fire > 5, bells-ringing > 10, on-deck > 5."
                   (let ((todo (org-get-todo-state))
                         (tags (org-get-tags nil t)))
                     (when (member todo '("NEXT" "TODO"))
-                      (when (member "on_fire" tags) (cl-incf n-fire))
+                      (when (member "p0" tags) (cl-incf n-p0))
                       (when (member "bells_ringing" tags) (cl-incf n-bell))
                       (when (member "on_deck" tags) (cl-incf n-deck)))))
                 nil nil))))))
-      (if (> n-fire 5)
-          (push (cons "⛷️⛷️ Over My Skis"
-                       (format " *** WARNING: %d over-my-skis items — remove %d *** ⛷️⛷️" n-fire (- n-fire 5)))
+      (if (> n-p0 5)
+          (push (cons "🚨🚨 P0"
+                       (format " *** WARNING: %d p0 items — remove %d *** 🚨🚨" n-p0 (- n-p0 5)))
                 warnings)
-        (push (cons "⛷️⛷️ Over My Skis"
-                     " [You're leaning too far forward — slow down before you wipe out.] ⛷️⛷️")
+        (push (cons "🚨🚨 P0"
+                     " [You're leaning too far forward — slow down before you wipe out.] 🚨🚨")
               warnings))
       (if (> n-bell 10)
           (push (cons "🔔🔔 Bells Ringing"
@@ -1292,7 +1292,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
                   (re-search-forward "Someday View" nil t)
                   (re-search-forward "Inbox View" nil t)
                   (re-search-forward "Decision View" nil t)
-                  (re-search-forward "⛷️⛷️ Over My Skis" nil t)
+                  (re-search-forward "🚨🚨 P0" nil t)
                   (re-search-forward "🔔🔔 Bells Ringing" nil t)
                   (re-search-forward "🥎 🥎 On Deck" nil t)
                   (re-search-forward "💭 💭 Recently Considered" nil t)
@@ -1302,7 +1302,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
                   (re-search-forward "For Today" nil t)
                   (re-search-forward "Priority C" nil t)
                   (re-search-forward "Priority D" nil t))
-          (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
+          (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
             ;; Render the prominent 2-line banner for the 4 banner-able views
             ;; (Inbox / Someday / Unordered / Ordered, incl. the initial
             ;; "GTD Engage View" name). Replaces the old per-view title rewrites
@@ -1312,10 +1312,10 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
             (goto-char (point-min))
             (while (re-search-forward "\\(Decision View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
               (replace-match (format "Decision View (Total Effort: %s)" total) t t nil 1))
-            ;; Over My Skis effort
+            ;; P0 effort
             (goto-char (point-min))
-            (while (re-search-forward "\\(⛷️⛷️ Over My Skis\\( ([^)]*)\\)?\\)" nil t)
-              (replace-match (format "⛷️⛷️ Over My Skis (%s)" effort-fire) t t nil 1))
+            (while (re-search-forward "\\(🚨🚨 P0\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "🚨🚨 P0 (%s)" effort-p0) t t nil 1))
             ;; Bells Ringing effort
             (goto-char (point-min))
             (while (re-search-forward "\\(🔔🔔 Bells Ringing\\( ([^)]*)\\)?\\)" nil t)
@@ -1347,7 +1347,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
             ;; Hot Tickets / For Today / Priority C / Priority D (Decision View compat)
             (goto-char (point-min))
             (while (re-search-forward "\\(Hot Tickets\\( (Priority A - [^)]*)\\)?\\)" nil t)
-              (replace-match (format "Hot Tickets (Priority A - %s)" effort-fire) t t nil 1))
+              (replace-match (format "Hot Tickets (Priority A - %s)" effort-p0) t t nil 1))
             ;; NOTE: Unestimated count is intentionally NOT updated here.
             ;; Each view (Someday, Ordered, Unordered) computes its own accurate count
             ;; at construction time using tdw/get-someday-unestimated-count or
@@ -1404,7 +1404,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
     "Tags that have dedicated sections in the Ordered/Unordered views.")
 
   (defvar tdw--excluded-tag-prefixes
-    '("on_fire" "bells_ringing" "on_deck" "recently_considered" "paused" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
+    '("p0" "bells_ringing" "on_deck" "recently_considered" "paused" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
       "for_" "ARCHIVE" "FLAGGED")
     "Tag prefixes excluded from the missing-tag check (urgency/impact/score/meta).")
 
@@ -1780,7 +1780,7 @@ horizontal scrolling (e.g. fat-fingered `l' key near d/s/x)."
     (define-key org-agenda-mode-map (kbd "c") (lambda () (interactive) (tdw/agenda-set-tier "recently_considered")))
     (define-key org-agenda-mode-map (kbd "d") (lambda () (interactive) (org-agenda-todo "DONE")))
     (define-key org-agenda-mode-map (kbd "o") (lambda () (interactive) (tdw/agenda-set-tier "on_deck")))
-    (define-key org-agenda-mode-map (kbd "f") (lambda () (interactive) (tdw/agenda-set-tier "on_fire")))
+    (define-key org-agenda-mode-map (kbd "0") (lambda () (interactive) (tdw/agenda-set-tier "p0")))
     (define-key org-agenda-mode-map (kbd "g") #'tdw/agenda-toggle-google)
     (define-key org-agenda-mode-map (kbd "b") (lambda () (interactive) (tdw/agenda-set-tier "bells_ringing")))
     (define-key org-agenda-mode-map (kbd "l") #'tdw/agenda-toggle-flyby)
@@ -1788,7 +1788,7 @@ horizontal scrolling (e.g. fat-fingered `l' key near d/s/x)."
     (define-key org-agenda-mode-map (kbd "r") #'tdw/sanity-refresh))
 
   (defun tdw/sanity-refresh ()
-    "Rebuild agenda and scroll to top so Over My Skis is visible."
+    "Rebuild agenda and scroll to top so P0 is visible."
     (interactive)
     (org-agenda-redo-all)
     (goto-char (point-min)))
@@ -1810,7 +1810,7 @@ ELEMENT can be:
 - \\='file-name - buffer file base name
 - \\='effort - EFFORT property
 - \\='tier - priority tier emoji
-- \\='fire - skier emoji if tagged :on_fire:
+- \\='p0 - P0 siren emoji if tagged :p0:
 - a string - returned as-is (literal)"
       (pcase element
         ('project (org-gtd-agenda--resolve-project))
@@ -1820,7 +1820,7 @@ ELEMENT can be:
         ('score (org-gtd-agenda--resolve-tier))
         ('urg-imp (org-gtd-agenda--resolve-tier))
         ('tier (org-gtd-agenda--resolve-tier))
-        ('fire (if (member "on_fire" (org-get-tags nil t)) "⛷️" ""))
+        ('p0 (if (member "p0" (org-get-tags nil t)) "🚨" ""))
         ((pred stringp) element)
         (_ nil)))
 
@@ -1838,12 +1838,12 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
     "Return priority tier emoji string for the item at point.
 Shows only the tier emoji — no urgency/impact/score."
     (let* ((tags (org-get-tags nil t))
-           (fire (if (member "on_fire" tags) "⛷️" ""))
+           (p0 (if (member "p0" tags) "🚨" ""))
            (bell (if (member "bells_ringing" tags) "🔔" ""))
            (deck (if (member "on_deck" tags) "🥎" ""))
            (considered (if (member "recently_considered" tags) "💭" ""))
            (paused (if (member "paused" tags) "🕐" "")))
-      (let ((result (concat fire bell deck considered paused)))
+      (let ((result (concat p0 bell deck considered paused)))
         (if (string-empty-p result) "" result))))
 
   (defun tdw/get-someday-unestimated-count ()
@@ -1900,7 +1900,7 @@ header in the Inbox view, mirroring `tdw/get-someday-unestimated-count'."
 This mirrors exactly what `tdw/skip-unless-unestimated' shows in the ordered/
 unordered views — items that are not done, not a big rock (score < 10), and
 have no effort estimate.  `tdw/get-sanity-effort-totals' under-counts because
-its cond chain excludes tier-tagged items (on_fire, bells_ringing, etc.) that
+its cond chain excludes tier-tagged items (p0, bells_ringing, etc.) that
 are unestimated, but those items still appear in the Unestimated view block."
     (let ((n 0))
       (dolist (file (org-agenda-files))
@@ -1930,7 +1930,7 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
     (interactive)
     (when-let ((buf (get-buffer "*Org Agenda(S)*"))) (kill-buffer buf))
     (let ((n-someday-unest (tdw/get-someday-unestimated-count)))
-    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (let ((tdw--ef-target-gtd "Someday")) (tdw/get-sanity-effort-totals))))
+    (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (let ((tdw--ef-target-gtd "Someday")) (tdw/get-sanity-effort-totals))))
     (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
       (org-gtd-view-show
@@ -1938,10 +1938,10 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
          (prefix-width . 25)
          (prefix . (effort " " urg-imp " — "))
          (blocks . (
-                    ;; Over My Skis
+                    ;; P0
                     ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Someday\"+on_fire"
-                                ((org-agenda-overriding-header ,(format "⛷️⛷️ Over My Skis (%s)" effort-fire))
+                                "LEVEL>0+ORG_GTD=\"Someday\"+p0"
+                                ((org-agenda-overriding-header ,(format "🚨🚨 P0 (%s)" effort-p0))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
@@ -2005,7 +2005,7 @@ Press 'n' to promote to Next Actions, 's' for Someday, 'x' to cancel."
     (interactive)
     (when-let ((buf (get-buffer "*Org Agenda(i)*"))) (kill-buffer buf))
     (let ((n-inbox-unest (tdw/get-inbox-unestimated-count)))
-    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (let ((tdw--ef-target-gtd "Inbox")) (tdw/get-sanity-effort-totals))))
+    (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (let ((tdw--ef-target-gtd "Inbox")) (tdw/get-sanity-effort-totals))))
     (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
       (org-gtd-view-show
@@ -2013,10 +2013,10 @@ Press 'n' to promote to Next Actions, 's' for Someday, 'x' to cancel."
          (prefix-width . 25)
          (prefix . (effort " " urg-imp " — "))
          (blocks . (
-                    ;; Over My Skis
+                    ;; P0
                     ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Inbox\"+on_fire"
-                                ((org-agenda-overriding-header ,(format "⛷️⛷️ Over My Skis (%s)" effort-fire))
+                                "LEVEL>0+ORG_GTD=\"Inbox\"+p0"
+                                ((org-agenda-overriding-header ,(format "🚨🚨 P0 (%s)" effort-p0))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
@@ -2148,7 +2148,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
 
   (defun tdw/agenda--refresh-prefix (hdmarker buffer)
     "Re-resolve the agenda prefix annotation for the line at point, in place.
-Refreshes the tier glyph (⛷️/🔔/🥎/💭/🕐) after a tier change without rebuilding
+Refreshes the tier glyph (🚨/🔔/🥎/💭/🕐) after a tier change without rebuilding
 the whole agenda. Handles the Ordered-View score form (`U:.. I:.. [n]') and the
 Unordered-View form (`U:.. I:..')."
     (let ((inhibit-read-only t))
@@ -2409,7 +2409,7 @@ on entries without TODO keywords (e.g., gcal.org)."
         (org-entry-end-position))))
 
   (defun tdw--score-effort-at-point ()
-    "Return (score effort-mins on-fire-p done-p gc-next-p flyby-p) at point for skip functions."
+    "Return (score effort-mins on-p0-p done-p gc-next-p flyby-p) at point for skip functions."
     (let* ((tags (org-get-tags nil t))
            (score-tag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags))
            (score (if score-tag (string-to-number (substring score-tag 6)) (tdw/compute-score-at-point)))
@@ -2418,7 +2418,7 @@ on entries without TODO keywords (e.g., gcal.org)."
                                    (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
                           (+ (* 60 (string-to-number (match-string 1 effort-str)))
                              (string-to-number (match-string 2 effort-str))))))
-      (list score effort-mins (member "on_fire" tags) (org-entry-is-done-p) (member "gc_next" tags) (member "flyby" tags))))
+      (list score effort-mins (member "p0" tags) (org-entry-is-done-p) (member "gc_next" tags) (member "flyby" tags))))
 
   (defun tdw/skip-unless-big-rock ()
     "Skip unless score >= 10."
@@ -2487,7 +2487,7 @@ per-block `org-agenda-skip-function'."
     ;; Signal to the finalize hook that this is an Unordered View.
     (setq tdw--is-unordered-view t)
     (let ((n-actions-unest (tdw/get-actions-unestimated-count)))
-    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
             (org-agenda-hide-tags-regexp "."))
        (org-gtd-view-show
@@ -2508,10 +2508,10 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-sorting-strategy '(category-keep))
                                  (org-agenda-skip-function 'tdw/skip-unless-daily-ritual)))))
 
-                    ;; 1. Over My Skis
+                    ;; 1. P0
                     ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+on_fire"
-                                ((org-agenda-overriding-header ,(format "⛷️⛷️ Over My Skis (%s)" effort-fire))
+                                "LEVEL>0+ORG_GTD=\"Actions\"+p0"
+                                ((org-agenda-overriding-header ,(format "🚨🚨 P0 (%s)" effort-p0))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
@@ -2602,7 +2602,7 @@ per-block `org-agenda-skip-function'."
   (defun tdw-decision-view ()
     "A broad GTD view for decision making: Priority A, B, C, and D."
     (interactive)
-    (pcase-let ((`(,total ,_fire ,_bell ,_deck ,effort-a ,effort-b ,effort-c ,effort-d) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,_p0 ,_bell ,_deck ,effort-a ,effort-b ,effort-c ,effort-d) (tdw/get-sanity-effort-totals)))
       (org-gtd-view-show
        `((name . ,(format "Decision View (Total Effort: %s)" total))
          (prefix . (effort "—"))
