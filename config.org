@@ -1318,6 +1318,13 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
             (goto-char (point-min))
             (while (re-search-forward "\\(Decision View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
               (replace-match (format "Decision View (Total Effort: %s)" total) t t nil 1))
+            ;; Section-header effort totals — skipped for Inbox ("i") and
+            ;; Someday ("S"), which are effort-free views.
+            (let* ((bn (buffer-name))
+                   (vkey (and (string-match "\\*Org Agenda(\\(.+\\))\\*" bn)
+                              (match-string 1 bn)))
+                   (show-effort (not (member vkey '("i" "S")))))
+              (when show-effort
             ;; P0 effort
             (goto-char (point-min))
             (while (re-search-forward "\\(🚨🚨 P0\\( ([^)]*)\\)?\\)" nil t)
@@ -1362,7 +1369,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
             ;; the Someday view's count.
             (goto-char (point-min))
             (while (re-search-forward "\\(For Today\\( (Priority B - [^)]*)\\)?\\)" nil t)
-              (replace-match (format "For Today (Priority B - %s)" effort-big) t t nil 1))
+              (replace-match (format "For Today (Priority B - %s)" effort-big) t t nil 1))))
             ;; Strip NEXT/TODO/WAIT keywords from all lines (case-sensitive
             ;; to avoid corrupting task titles containing "next", "Next", etc.)
             (let ((case-fold-search nil))
