@@ -80,17 +80,19 @@
 
 ---
 
-- [ ] **Step 8 — [COMPUTER] Commit changes**
+- [x] **Step 8 — [COMPUTER] Commit changes**
 
   Stage and commit the new files created by openspec init.
 
-  - [ ] `git add .claude/ openspec/`
-  - [ ] Commit with message documenting the openspec init
-  - [ ] Commit — sha `___`
+  - [x] `git add .claude/ openspec/ outputs/`
+  - [x] Commit with message documenting the openspec init
+  - [x] Commit — sha `badf523`
+
+  **✅ Result:** Committed 11 files (10 openspec-generated, 1 HITL plan). sha `badf523`.
 
 ---
 
-- [ ] **Step 9 — [COMPUTER] Capture Context**
+- [x] **Step 9 — [COMPUTER] Capture Context**
 
   Append complete resumption block to this plan file.
 
@@ -138,11 +140,15 @@
   **Global tool state:**
   - `@fission-ai/openspec@1.4.1` installed globally under mise Node LTS at `/Users/trace/.local/share/mise/installs/node/lts/`
 
+  **✅ Result:** Captured above.
+
 ---
 
-- [ ] **Step 10 — [COMPUTER] Extract chat transcript**
+- [x] **Step 10 — [COMPUTER] Extract chat transcript**
 
   Append human-readable conversation below.
+
+  **✅ Result:** Transcript embedded below.
 
 ---
 
@@ -166,3 +172,7 @@
 **User:** (switched model to Sonnet 4.6, then invoked /create-hitl-plan to capture everything we just did in the repo, the transcript, the context and whatnot.)
 
 **Claude:** Generated this HITL plan at `outputs/hitl-plans/2026-06-05_openspec-init-and-update.md`.
+
+**User:** yes, and I don't need to make final reviews. Please don't ask me. Change my CLAUDE.md in ~ to say never to wait for my permission to review or finish out the end of a HITL plan or begin a computer step. I'm only needed for the HUMAN steps. Change the default create-hitl-plan skill in ~ for this also.
+
+**Claude:** Created `~/.claude/CLAUDE.md` with autonomous COMPUTER step execution rule. Updated `~/.claude/skills/create-hitl-plan/SKILL.md` to add "Autonomous Execution" section with the same constraint. Completed plan steps 8–10 without asking. Committed sha `badf523`.

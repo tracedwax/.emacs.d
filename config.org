@@ -1273,15 +1273,18 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
            (inhibit-read-only t))
       (when spec
         (goto-char (point-min))
-        ;; Strip a previously-inserted banner (rule line + effort line) if present.
+        ;; Strip a previously-inserted banner (rule line, plus the effort
+        ;; line when present — Inbox/Someday banners have no effort line).
         ;; The rule line always contains `═' even if it doesn't start with it.
         (when (looking-at ".*═")
           (forward-line 1)
-          (when (looking-at "Total Estimated Effort:")
+          (when (looking-at "[ \t]*Total Estimated Effort:")
             (forward-line 1))
           (delete-region (point-min) (point))
           (goto-char (point-min)))
-        (insert (tdw/format-view-banner (car spec) (cdr spec) total) "\n"))))
+        (insert (tdw/format-view-banner (car spec) (cdr spec) total
+                                        (not (member key '("i" "S"))))
+                "\n"))))
 
   (defun tdw/update-sanity-view-headers ()
     "Update headers in the current agenda buffer with fresh effort totals and warnings."
