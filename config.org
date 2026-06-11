@@ -1203,7 +1203,7 @@ Alerts on on-p0 > 5, bells-ringing > 10, on-deck > 5."
                        (format " *** WARNING: %d p0 items — remove %d *** 🚨🚨" n-p0 (- n-p0 5)))
                 warnings)
         (push (cons "🚨🚨 P0"
-                     " [You're leaning too far forward — slow down before you wipe out.] 🚨🚨")
+                     " [Drop everything to do these] 🚨🚨")
               warnings))
       (if (> n-bell 10)
           (push (cons "🔔🔔 Bells Ringing"
