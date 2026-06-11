@@ -1943,52 +1943,51 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
     (interactive)
     (when-let ((buf (get-buffer "*Org Agenda(S)*"))) (kill-buffer buf))
     (let ((n-someday-unest (tdw/get-someday-unestimated-count)))
-    (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (let ((tdw--ef-target-gtd "Someday")) (tdw/get-sanity-effort-totals))))
     (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
       (org-gtd-view-show
-       `((name . ,(format "📋 Someday View — Total Effort: %s" total))
-         (prefix-width . 25)
-         (prefix . (effort " " urg-imp " — "))
+       `((name . ,(format "💤 Someday View — %d unestimated" n-someday-unest))
+         (prefix-width . 18)
+         (prefix . (urg-imp " — "))
          (blocks . (
                     ;; P0
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+p0"
-                                ((org-agenda-overriding-header ,(format "🚨🚨 P0 (%s)" effort-p0))
+                                ((org-agenda-overriding-header "🚨🚨 P0")
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-18:(org-gtd-agenda--resolve-prefix-chain '(urg-imp \" — \") 18) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; Bells Ringing
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+bells_ringing"
-                                ((org-agenda-overriding-header ,(format "🔔🔔 Bells Ringing (%s)" effort-bell))
+                                ((org-agenda-overriding-header "🔔🔔 Bells Ringing")
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-18:(org-gtd-agenda--resolve-prefix-chain '(urg-imp \" — \") 18) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; On Deck
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+on_deck"
-                                ((org-agenda-overriding-header ,(format "🥎 🥎 On Deck (%s)" effort-deck))
+                                ((org-agenda-overriding-header "🥎 🥎 On Deck")
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-18:(org-gtd-agenda--resolve-prefix-chain '(urg-imp \" — \") 18) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; Recently Considered
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+recently_considered"
-                                ((org-agenda-overriding-header ,(format "💭 💭 Recently Considered (%s)" effort-considered))
+                                ((org-agenda-overriding-header "💭 💭 Recently Considered")
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-18:(org-gtd-agenda--resolve-prefix-chain '(urg-imp \" — \") 18) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; Paused
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+paused"
-                                ((org-agenda-overriding-header ,(format "🕐 Paused (%s)" effort-paused))
+                                ((org-agenda-overriding-header "🕐 Paused")
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-18:(org-gtd-agenda--resolve-prefix-chain '(urg-imp \" — \") 18) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
 
@@ -1997,7 +1996,7 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
                                 "LEVEL>0+ORG_GTD=\"Someday\""
                                 ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-someday-unest))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-18:(org-gtd-agenda--resolve-prefix-chain '(urg-imp \" — \") 18) ")))
                                  (org-agenda-sorting-strategy '(category-keep))
                                  (org-agenda-skip-function 'tdw/skip-unless-unestimated)))))
 
@@ -2006,9 +2005,9 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
                                 "LEVEL>0+ORG_GTD=\"Someday\"+{tgl_.+}"
                                 ((org-agenda-overriding-header "Toggl Projects")
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-prefix-format '((tags . " %i %-18:(org-gtd-agenda--resolve-prefix-chain '(urg-imp \" — \") 18) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
-                    ))) (or keys "S"))))))
+                    ))) (or keys "S")))))
 
 
   (defun tdw-inbox-view (&optional keys)
