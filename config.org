@@ -2187,7 +2187,22 @@ Unordered-View form (`U:.. I:..')."
                         (org-gtd-agenda--resolve-urg-imp)))))
             (delete-region mbeg mend)
             (goto-char mbeg)
-            (insert new)))))))
+            (insert new)))
+         ;; Emoji-only prefix (current format): the tier glyph cluster sits
+         ;; immediately before the ' — ' separator, followed by alignment
+         ;; padding. Replace the cluster and re-pad to keep columns stable.
+         ((re-search-forward "\\([[:nonascii:]]*\\)\\( — *\\)" (line-end-position) t)
+          (let* ((mbeg (match-beginning 0))
+                 (mend (match-end 0))
+                 (oldw (string-width (buffer-substring mbeg mend)))
+                 (new (with-current-buffer buffer
+                        (org-with-wide-buffer
+                         (goto-char hdmarker)
+                         (org-gtd-agenda--resolve-tier))))
+                 (padw (max 0 (- oldw (string-width new) 3)))) ; 3 = " — "
+            (delete-region mbeg mend)
+            (goto-char mbeg)
+            (insert new " — " (make-string padw ?\s))))))))
 
   (defun tdw/agenda-set-tier (tag)
     "Set priority tier TAG on the agenda task at point, clearing every other tier.
