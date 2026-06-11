@@ -1004,7 +1004,9 @@ SOMEDAY/NEXT/CNCL visual markers."
      (t 0)))
 
   (defun tdw/get-subtree-effort-minutes ()
-    "Sum effort of current entry and all its children in minutes."
+    "Sum effort of current entry and all its children in minutes.
+Children in a DONE or CNCL state are excluded — finished work is not
+remaining load."
     (let ((total 0))
       (save-excursion
         (org-back-to-heading t)
@@ -1014,7 +1016,8 @@ SOMEDAY/NEXT/CNCL visual markers."
           (outline-next-heading)
           (while (and (< (point) end) (not (eobp)))
             (let ((effort (org-entry-get (point) "EFFORT")))
-              (when effort
+              (when (and effort
+                         (not (member (org-get-todo-state) '("DONE" "CNCL"))))
                 (setq total (+ total (or (tdw/get-effort-minutes effort) 0)))))
             (outline-next-heading))))
       total))
