@@ -1375,7 +1375,14 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
             (let ((case-fold-search nil))
               (goto-char (point-min))
               (while (re-search-forward "\\bNEXT \\|\\bTODO \\|\\bWAIT " nil t)
-                (replace-match "")))
+                (replace-match ""))
+              ;; Relocate visible keywords (SOMEDAY/DONE/CNCL) from the start
+              ;; of the headline text to just after the ' — ' separator, so
+              ;; they align like the in-place inserts from the todo advice.
+              ;; The padding moves after the keyword, keeping headlines put.
+              (goto-char (point-min))
+              (while (re-search-forward "\\( — \\)\\( +\\)\\(SOMEDAY\\|DONE\\|CNCL\\) " nil t)
+                (replace-match "\\1\\3 \\2")))
             ;; Strip trailing org tags (:tag1:tag2:) and empty :: from all lines
             (goto-char (point-min))
             (while (re-search-forward " +:[a-zA-Z0-9_:]+: *$" nil t)
