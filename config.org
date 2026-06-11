@@ -2120,32 +2120,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
           ;; Recalculate score tag
           (tdw/compute-and-set-score)))
       ;; Update prefix in-place instead of full refresh
-      (let ((inhibit-read-only t))
-        (save-excursion
-          (beginning-of-line)
-          (cond
-           ;; Ordered View: replace full score annotation (U:xx I:xx [nn])
-           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-score (with-current-buffer buffer
-                                (org-with-wide-buffer
-                                 (goto-char pos)
-                                 (org-gtd-agenda--resolve-score)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-score)))
-           ;; Unordered View: replace urg-imp annotation (U:xx I:xx)
-           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-urg-imp (with-current-buffer buffer
-                                  (org-with-wide-buffer
-                                   (goto-char pos)
-                                   (org-gtd-agenda--resolve-urg-imp)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-urg-imp))))))
+      (tdw/agenda--refresh-prefix hdmarker buffer)
       (message "Set %s → %s" prefix next-level)))
 
   (defun tdw/agenda-cycle-urgency ()
@@ -2161,37 +2136,13 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
   (defun tdw/agenda--refresh-prefix (hdmarker buffer)
     "Re-resolve the agenda prefix annotation for the line at point, in place.
 Refreshes the tier glyph (🚨/🔔/🥎/💭/🕐) after a tier change without rebuilding
-the whole agenda. Handles the Ordered-View score form (`U:.. I:.. [n]') and the
-Unordered-View form (`U:.. I:..')."
+the whole agenda. The tier glyph cluster sits immediately before the ' — '
+separator, followed by alignment padding; replace the cluster and re-pad to
+keep columns stable."
     (let ((inhibit-read-only t))
       (save-excursion
         (beginning-of-line)
         (cond
-         ;; Ordered View: replace full score annotation (… U:xx I:xx [nn])
-         ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
-          (let ((mbeg (match-beginning 0))
-                (mend (match-end 0))
-                (new (with-current-buffer buffer
-                       (org-with-wide-buffer
-                        (goto-char hdmarker)
-                        (org-gtd-agenda--resolve-score)))))
-            (delete-region mbeg mend)
-            (goto-char mbeg)
-            (insert new)))
-         ;; Unordered View: replace urg-imp annotation (… U:xx I:xx)
-         ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
-          (let ((mbeg (match-beginning 0))
-                (mend (match-end 0))
-                (new (with-current-buffer buffer
-                       (org-with-wide-buffer
-                        (goto-char hdmarker)
-                        (org-gtd-agenda--resolve-urg-imp)))))
-            (delete-region mbeg mend)
-            (goto-char mbeg)
-            (insert new)))
-         ;; Emoji-only prefix (current format): the tier glyph cluster sits
-         ;; immediately before the ' — ' separator, followed by alignment
-         ;; padding. Replace the cluster and re-pad to keep columns stable.
          ((re-search-forward "\\([[:nonascii:]]*\\)\\( — *\\)" (line-end-position) t)
           (let* ((mbeg (match-beginning 0))
                  (mend (match-end 0))
@@ -2258,32 +2209,7 @@ TAG is one of `tdw--tier-tags'. If the task already carries TAG, remove it inste
              (org-toggle-tag "google" 'off)
            (org-toggle-tag "google" 'on))))
       ;; In-place update of the prefix
-      (let ((inhibit-read-only t))
-        (save-excursion
-          (beginning-of-line)
-          (cond
-           ;; Ordered View: replace full score annotation
-           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-score (with-current-buffer buffer
-                                (org-with-wide-buffer
-                                 (goto-char hdmarker)
-                                 (org-gtd-agenda--resolve-score)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-score)))
-           ;; Unordered View: replace urg-imp annotation
-           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-urg-imp (with-current-buffer buffer
-                                  (org-with-wide-buffer
-                                   (goto-char hdmarker)
-                                   (org-gtd-agenda--resolve-urg-imp)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-urg-imp))))))
+      (tdw/agenda--refresh-prefix hdmarker buffer)
       (message "%s google" (if has-tag "Removed" "Added"))))
 
   (defun tdw/agenda-toggle-flyby ()
@@ -2301,32 +2227,7 @@ TAG is one of `tdw--tier-tags'. If the task already carries TAG, remove it inste
              (org-toggle-tag "flyby" 'off)
            (org-toggle-tag "flyby" 'on))))
       ;; In-place update of the prefix
-      (let ((inhibit-read-only t))
-        (save-excursion
-          (beginning-of-line)
-          (cond
-           ;; Ordered View: replace full score annotation
-           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]* \\[\\w*\\]" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-score (with-current-buffer buffer
-                                (org-with-wide-buffer
-                                 (goto-char hdmarker)
-                                 (org-gtd-agenda--resolve-score)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-score)))
-           ;; Unordered View: replace urg-imp annotation
-           ((re-search-forward "\\([[:nonascii:]]+ \\)*U:[^ ]* I:[^ ]*" (line-end-position) t)
-            (let* ((mbeg (match-beginning 0))
-                   (mend (match-end 0))
-                   (new-urg-imp (with-current-buffer buffer
-                                  (org-with-wide-buffer
-                                   (goto-char hdmarker)
-                                   (org-gtd-agenda--resolve-urg-imp)))))
-              (delete-region mbeg mend)
-              (goto-char mbeg)
-              (insert new-urg-imp))))))
+      (tdw/agenda--refresh-prefix hdmarker buffer)
       (message "%s flyby" (if has-tag "Removed" "Added"))))
 
   ;;; ——— Score Computation ———
