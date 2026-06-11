@@ -1232,12 +1232,13 @@ Set by `tdw-unordered-view'.")
 
   ;;; ——— Ordered View: Header updater ———
 
-  (defun tdw/format-view-banner (label icon effort)
-    "Return a full-width, centered 2-line banner string for an agenda view.
+  (defun tdw/format-view-banner (label icon effort &optional show-effort)
+    "Return a full-width, centered banner string for an agenda view.
 LABEL is the view name (e.g. \"Inbox\"), ICON an emoji (e.g. \"📥\"),
 EFFORT the total estimated effort string (e.g. \"2:15\").
 Line 1 is a centered title flanked by `═' rules spanning the window width;
-line 2 is the centered estimated-effort total."
+line 2 is the centered estimated-effort total, omitted when SHOW-EFFORT
+is nil."
     (let* ((width (1- (let ((w (get-buffer-window (current-buffer) t)))
                         (if w (window-width w) 80))))
            (title (format "%s  %s VIEW" icon (upcase label)))
@@ -1248,10 +1249,12 @@ line 2 is the centered estimated-effort total."
            (effline (format "Total Estimated Effort: %s" effort))
            (epad (max 0 (/ (- width (string-width effline)) 2)))
            (line2 (concat (make-string epad ?\s) effline)))
-      (concat
-       (propertize line1 'face '(:weight bold :foreground "#5fafff"))
-       "\n"
-       (propertize line2 'face '(:weight bold)))))
+      (if show-effort
+          (concat
+           (propertize line1 'face '(:weight bold :foreground "#5fafff"))
+           "\n"
+           (propertize line2 'face '(:weight bold)))
+        (propertize line1 'face '(:weight bold :foreground "#5fafff")))))
 
   (defun tdw/render-view-banner (total)
     "Insert (or refresh) the 2-line view banner at the top of the agenda buffer.
