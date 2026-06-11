@@ -978,7 +978,10 @@ SOMEDAY/NEXT/CNCL visual markers."
               (local-set-key (kbd "n") #'tdw/agenda-move-to-next)
               (local-set-key (kbd "j") #'org-agenda-next-line)
               (local-set-key (kbd "k") #'org-agenda-previous-line)
-              (local-set-key (kbd "x") #'tdw/agenda-cancel)))
+              (local-set-key (kbd "x") #'tdw/agenda-cancel)
+              (local-set-key (kbd "z") #'ignore)
+              ;; Prevent horizontal scroll from ever persisting
+              (add-hook 'post-command-hook #'tdw/reset-agenda-hscroll nil t)))
 
   (defun tdw/get-effort-minutes (effort-str)
     "Convert EFFORT-STR to minutes. Handles H:MM, NNmin, NNh, bare numbers."
@@ -1083,6 +1086,9 @@ Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
   (defvar tdw--ef-calendar 0)
   (defvar tdw--ef-unest 0)
   (defvar tdw--ef-now nil)
+  (defvar tdw--ef-target-gtd nil
+    "When non-nil, `tdw/--effort-accumulate' only counts items matching this ORG_GTD value.
+When nil, uses default behavior (Actions items, excluding Inbox/Someday/Habit).")
   (defvar tdw--ef-today-end nil)
 
   (defun tdw/get-sanity-effort-totals ()
@@ -1124,7 +1130,7 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
     (let ((todo (org-get-todo-state))
           (gtd-val (org-entry-get (point) "ORG_GTD"))
           (heading (org-get-heading t t t t)))
-      (if (string= gtd-val "Calendar")
+      (if (and (not tdw--ef-target-gtd) (string= gtd-val "Calendar"))
           ;; Skip DNS (Do Not Schedule) blocks — they're not real meetings
           (unless (and heading (string-match-p "\\bDNS\\b" heading))
           (let* ((effort-str (org-entry-get (point) "Effort"))
@@ -1141,7 +1147,7 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
               (setq tdw--ef-calendar (+ tdw--ef-calendar effort-mins)))))
         (progn
         ;; Habits: count only if not yet completed today
-        (when (string= gtd-val "Habit")
+        (when (and (not tdw--ef-target-gtd) (string= gtd-val "Habit"))
           (let* ((effort (or (tdw/get-subtree-effort-minutes) 0))
                  (last-repeat (org-entry-get (point) "LAST_REPEAT"))
                  (completed-today (and last-repeat
@@ -1149,9 +1155,14 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
                                                        last-repeat))))
             (unless completed-today
               (setq tdw--ef-other (+ tdw--ef-other effort)))))
-        ;; Regular tasks: exclude Inbox, Someday, Habit (handled above)
-        (when (and (member todo '("NEXT" "TODO"))
-                   (not (member gtd-val '("Inbox" "Someday" "Habit"))))
+        ;; Regular tasks
+        (when (if tdw--ef-target-gtd
+                  ;; Targeted mode: count items with this ORG_GTD value
+                  (and todo (not (member todo '("DONE" "CNCL")))
+                       (string= gtd-val tdw--ef-target-gtd))
+                ;; Default mode: Actions items (exclude Inbox, Someday, Habit)
+                (and (member todo '("NEXT" "TODO"))
+                     (not (member gtd-val '("Inbox" "Someday" "Habit")))))
           (let ((effort (or (tdw/get-subtree-effort-minutes) 0)))
             (cond ((tdw/on-fire-p) (setq tdw--ef-fire (+ tdw--ef-fire effort)))
                   ((tdw/bells-ringing-p) (setq tdw--ef-bell (+ tdw--ef-bell effort)))
@@ -1542,10 +1553,18 @@ between heading text and tags remains.  This strips it."
         (while (re-search-forward " ::" nil t)
           (replace-match "")))))
 
+  (defun tdw/reset-agenda-hscroll ()
+    "Reset horizontal scroll to 0 in the current agenda window.
+Prevents the '$' left-truncation display bug caused by accidental
+horizontal scrolling (e.g. fat-fingered `l' key near d/s/x)."
+    (when-let ((win (get-buffer-window (current-buffer))))
+      (set-window-hscroll win 0)))
+
   (add-hook 'org-agenda-finalize-hook #'tdw/strip-tag-separators)
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
   (add-hook 'org-agenda-finalize-hook #'tdw/insert-tgl-subheaders)
   (add-hook 'org-agenda-finalize-hook #'tdw/check-missing-tag-sections)
+  (add-hook 'org-agenda-finalize-hook #'tdw/reset-agenda-hscroll)
 
   (defun tdw/agenda-adjust-effort (&optional delta)
     "Adjust effort of agenda item at point by DELTA minutes (defaults to 15)."
@@ -1718,6 +1737,18 @@ between heading text and tags remains.  This strips it."
                             (beginning-of-line)
                             (when (re-search-forward "… " (line-end-position) t)
                               (setq found-sep t)))
+                          ;; Fallback 2: find heading text directly (for agenda blocks
+                          ;; using %t prefix without ' — ' separator, e.g. Today's Schedule)
+                          (unless found-sep
+                            (beginning-of-line)
+                            (let ((hdl (when hdm
+                                         (with-current-buffer (marker-buffer hdm)
+                                           (org-with-wide-buffer
+                                            (goto-char (marker-position hdm))
+                                            (org-get-heading t t t t))))))
+                              (when (and hdl (search-forward hdl (line-end-position) t))
+                                (goto-char (- (point) (length hdl)))
+                                (setq found-sep t))))
                             (when found-sep
                               (if (looking-at "\\(?:\\(?:TODO\\|NEXT\\|WAIT\\|DONE\\|CNCL\\|SOMEDAY\\)[ \t]*\\)+")
                                   (replace-match (if (string= display-state "") "" (concat display-state " ")))
@@ -1817,6 +1848,8 @@ Shows only the tier emoji — no urgency/impact/score."
 
   (defun tdw/get-someday-unestimated-count ()
     "Count Someday/Maybe items across all agenda files that have no effort estimate.
+Excludes DONE and CNCL entries so the count matches what the skip function
+actually shows in the Unestimated block.
 Used to populate the Unestimated header in the Someday view (distinct from
 `tdw/get-sanity-effort-totals' which counts NEXT/TODO items, not Someday items)."
     (let ((n 0))
@@ -1829,9 +1862,11 @@ Used to populate the Unestimated header in the Someday view (distinct from
                (org-map-entries
                 (lambda ()
                   (when (string= (org-entry-get (point) "ORG_GTD") org-gtd-someday)
-                    (let* ((effort-str (org-entry-get (point) "EFFORT"))
+                    (let* ((todo (org-get-todo-state))
+                           (effort-str (org-entry-get (point) "EFFORT"))
                            (mins (when effort-str (tdw/get-effort-minutes effort-str))))
-                      (when (or (not effort-str) (not mins) (<= mins 0))
+                      (when (and (not (member todo '("DONE" "CNCL")))
+                                 (or (not effort-str) (not mins) (<= mins 0)))
                         (cl-incf n)))))
                 nil nil))))))
       n))
@@ -1895,7 +1930,7 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
     (interactive)
     (when-let ((buf (get-buffer "*Org Agenda(S)*"))) (kill-buffer buf))
     (let ((n-someday-unest (tdw/get-someday-unestimated-count)))
-    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (let ((tdw--ef-target-gtd "Someday")) (tdw/get-sanity-effort-totals))))
     (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
       (org-gtd-view-show
@@ -1904,7 +1939,7 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
          (prefix . (effort " " urg-imp " — "))
          (blocks . (
                     ;; On Fire
-                    ((native . (tags
+                    ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+on_fire"
                                 ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
                                  (org-agenda-todo-keyword-format "")
@@ -1912,7 +1947,7 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; Bells Ringing
-                    ((native . (tags
+                    ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+bells_ringing"
                                 ((org-agenda-overriding-header ,(format "🔔🔔 Bells Ringing (%s)" effort-bell))
                                  (org-agenda-todo-keyword-format "")
@@ -1920,7 +1955,7 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; On Deck
-                    ((native . (tags
+                    ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+on_deck"
                                 ((org-agenda-overriding-header ,(format "🥎 🥎 On Deck (%s)" effort-deck))
                                  (org-agenda-todo-keyword-format "")
@@ -1928,7 +1963,7 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; Recently Considered
-                    ((native . (tags
+                    ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+recently_considered"
                                 ((org-agenda-overriding-header ,(format "💭 💭 Recently Considered (%s)" effort-considered))
                                  (org-agenda-todo-keyword-format "")
@@ -1936,7 +1971,7 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; Paused
-                    ((native . (tags
+                    ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+paused"
                                 ((org-agenda-overriding-header ,(format "🕐 Paused (%s)" effort-paused))
                                  (org-agenda-todo-keyword-format "")
@@ -1945,7 +1980,7 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
 
 
                     ;; Unestimated — no effort
-                    ((native . (tags
+                    ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\""
                                 ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-someday-unest))
                                  (org-agenda-todo-keyword-format "")
@@ -1954,7 +1989,7 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
                                  (org-agenda-skip-function 'tdw/skip-unless-unestimated)))))
 
                     ;; Toggl Projects (regex matches all tgl_* tags in one query)
-                    ((native . (tags
+                    ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+{tgl_.+}"
                                 ((org-agenda-overriding-header "Toggl Projects")
                                  (org-agenda-todo-keyword-format "")
@@ -1970,7 +2005,7 @@ Press 'n' to promote to Next Actions, 's' for Someday, 'x' to cancel."
     (interactive)
     (when-let ((buf (get-buffer "*Org Agenda(i)*"))) (kill-buffer buf))
     (let ((n-inbox-unest (tdw/get-inbox-unestimated-count)))
-    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-fire ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (let ((tdw--ef-target-gtd "Inbox")) (tdw/get-sanity-effort-totals))))
     (let ((org-agenda-todo-keyword-format "")
           (org-agenda-hide-tags-regexp "."))
       (org-gtd-view-show
@@ -1979,7 +2014,7 @@ Press 'n' to promote to Next Actions, 's' for Someday, 'x' to cancel."
          (prefix . (effort " " urg-imp " — "))
          (blocks . (
                     ;; On Fire
-                    ((native . (tags
+                    ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Inbox\"+on_fire"
                                 ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
                                  (org-agenda-todo-keyword-format "")
@@ -1987,7 +2022,7 @@ Press 'n' to promote to Next Actions, 's' for Someday, 'x' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; Bells Ringing
-                    ((native . (tags
+                    ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Inbox\"+bells_ringing"
                                 ((org-agenda-overriding-header ,(format "🔔🔔 Bells Ringing (%s)" effort-bell))
                                  (org-agenda-todo-keyword-format "")
@@ -1995,7 +2030,7 @@ Press 'n' to promote to Next Actions, 's' for Someday, 'x' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; On Deck
-                    ((native . (tags
+                    ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Inbox\"+on_deck"
                                 ((org-agenda-overriding-header ,(format "🥎 🥎 On Deck (%s)" effort-deck))
                                  (org-agenda-todo-keyword-format "")
@@ -2003,7 +2038,7 @@ Press 'n' to promote to Next Actions, 's' for Someday, 'x' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; Recently Considered
-                    ((native . (tags
+                    ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Inbox\"+recently_considered"
                                 ((org-agenda-overriding-header ,(format "💭 💭 Recently Considered (%s)" effort-considered))
                                  (org-agenda-todo-keyword-format "")
@@ -2011,7 +2046,7 @@ Press 'n' to promote to Next Actions, 's' for Someday, 'x' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; Paused
-                    ((native . (tags
+                    ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Inbox\"+paused"
                                 ((org-agenda-overriding-header ,(format "🕐 Paused (%s)" effort-paused))
                                  (org-agenda-todo-keyword-format "")
@@ -2020,7 +2055,7 @@ Press 'n' to promote to Next Actions, 's' for Someday, 'x' to cancel."
 
 
                     ;; Unestimated — no effort
-                    ((native . (tags
+                    ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Inbox\""
                                 ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-inbox-unest))
                                  (org-agenda-todo-keyword-format "")
@@ -2029,7 +2064,7 @@ Press 'n' to promote to Next Actions, 's' for Someday, 'x' to cancel."
                                  (org-agenda-skip-function 'tdw/skip-unless-unestimated)))))
 
                     ;; Toggl Projects (regex matches all tgl_* tags in one query)
-                    ((native . (tags
+                    ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Inbox\"+{tgl_.+}"
                                 ((org-agenda-overriding-header "Toggl Projects")
                                  (org-agenda-todo-keyword-format "")
