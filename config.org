@@ -1199,11 +1199,11 @@ Alerts on on-fire > 5, bells-ringing > 10, on-deck > 5."
                       (when (member "on_deck" tags) (cl-incf n-deck)))))
                 nil nil))))))
       (if (> n-fire 5)
-          (push (cons "🔥🔥 On Fire"
-                       (format " *** WARNING: %d on-fire items — remove %d *** 🔥🔥" n-fire (- n-fire 5)))
+          (push (cons "⛷️⛷️ Over My Skis"
+                       (format " *** WARNING: %d over-my-skis items — remove %d *** ⛷️⛷️" n-fire (- n-fire 5)))
                 warnings)
-        (push (cons "🔥🔥 On Fire"
-                     " [Something or someone is trapped inside a burning building. Drop absolutely everything to rescue.] 🔥🔥")
+        (push (cons "⛷️⛷️ Over My Skis"
+                     " [You're leaning too far forward — slow down before you wipe out.] ⛷️⛷️")
               warnings))
       (if (> n-bell 10)
           (push (cons "🔔🔔 Bells Ringing"
@@ -1292,7 +1292,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
                   (re-search-forward "Someday View" nil t)
                   (re-search-forward "Inbox View" nil t)
                   (re-search-forward "Decision View" nil t)
-                  (re-search-forward "🔥🔥 On Fire" nil t)
+                  (re-search-forward "⛷️⛷️ Over My Skis" nil t)
                   (re-search-forward "🔔🔔 Bells Ringing" nil t)
                   (re-search-forward "🥎 🥎 On Deck" nil t)
                   (re-search-forward "💭 💭 Recently Considered" nil t)
@@ -1312,10 +1312,10 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
             (goto-char (point-min))
             (while (re-search-forward "\\(Decision View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
               (replace-match (format "Decision View (Total Effort: %s)" total) t t nil 1))
-            ;; On Fire effort
+            ;; Over My Skis effort
             (goto-char (point-min))
-            (while (re-search-forward "\\(🔥🔥 On Fire\\( ([^)]*)\\)?\\)" nil t)
-              (replace-match (format "🔥🔥 On Fire (%s)" effort-fire) t t nil 1))
+            (while (re-search-forward "\\(⛷️⛷️ Over My Skis\\( ([^)]*)\\)?\\)" nil t)
+              (replace-match (format "⛷️⛷️ Over My Skis (%s)" effort-fire) t t nil 1))
             ;; Bells Ringing effort
             (goto-char (point-min))
             (while (re-search-forward "\\(🔔🔔 Bells Ringing\\( ([^)]*)\\)?\\)" nil t)
@@ -1788,7 +1788,7 @@ horizontal scrolling (e.g. fat-fingered `l' key near d/s/x)."
     (define-key org-agenda-mode-map (kbd "r") #'tdw/sanity-refresh))
 
   (defun tdw/sanity-refresh ()
-    "Rebuild agenda and scroll to top so On Fire is visible."
+    "Rebuild agenda and scroll to top so Over My Skis is visible."
     (interactive)
     (org-agenda-redo-all)
     (goto-char (point-min)))
@@ -1810,7 +1810,7 @@ ELEMENT can be:
 - \\='file-name - buffer file base name
 - \\='effort - EFFORT property
 - \\='tier - priority tier emoji
-- \\='fire - fire emoji if tagged :on_fire:
+- \\='fire - skier emoji if tagged :on_fire:
 - a string - returned as-is (literal)"
       (pcase element
         ('project (org-gtd-agenda--resolve-project))
@@ -1820,7 +1820,7 @@ ELEMENT can be:
         ('score (org-gtd-agenda--resolve-tier))
         ('urg-imp (org-gtd-agenda--resolve-tier))
         ('tier (org-gtd-agenda--resolve-tier))
-        ('fire (if (member "on_fire" (org-get-tags nil t)) "🔥" ""))
+        ('fire (if (member "on_fire" (org-get-tags nil t)) "⛷️" ""))
         ((pred stringp) element)
         (_ nil)))
 
@@ -1838,7 +1838,7 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
     "Return priority tier emoji string for the item at point.
 Shows only the tier emoji — no urgency/impact/score."
     (let* ((tags (org-get-tags nil t))
-           (fire (if (member "on_fire" tags) "🔥" ""))
+           (fire (if (member "on_fire" tags) "⛷️" ""))
            (bell (if (member "bells_ringing" tags) "🔔" ""))
            (deck (if (member "on_deck" tags) "🥎" ""))
            (considered (if (member "recently_considered" tags) "💭" ""))
@@ -1938,10 +1938,10 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
          (prefix-width . 25)
          (prefix . (effort " " urg-imp " — "))
          (blocks . (
-                    ;; On Fire
+                    ;; Over My Skis
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Someday\"+on_fire"
-                                ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
+                                ((org-agenda-overriding-header ,(format "⛷️⛷️ Over My Skis (%s)" effort-fire))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
@@ -2013,10 +2013,10 @@ Press 'n' to promote to Next Actions, 's' for Someday, 'x' to cancel."
          (prefix-width . 25)
          (prefix . (effort " " urg-imp " — "))
          (blocks . (
-                    ;; On Fire
+                    ;; Over My Skis
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Inbox\"+on_fire"
-                                ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
+                                ((org-agenda-overriding-header ,(format "⛷️⛷️ Over My Skis (%s)" effort-fire))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
@@ -2148,7 +2148,7 @@ LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
 
   (defun tdw/agenda--refresh-prefix (hdmarker buffer)
     "Re-resolve the agenda prefix annotation for the line at point, in place.
-Refreshes the tier glyph (🔥/🔔/🥎/💭/🕐) after a tier change without rebuilding
+Refreshes the tier glyph (⛷️/🔔/🥎/💭/🕐) after a tier change without rebuilding
 the whole agenda. Handles the Ordered-View score form (`U:.. I:.. [n]') and the
 Unordered-View form (`U:.. I:..')."
     (let ((inhibit-read-only t))
@@ -2508,10 +2508,10 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-sorting-strategy '(category-keep))
                                  (org-agenda-skip-function 'tdw/skip-unless-daily-ritual)))))
 
-                    ;; 1. On Fire
+                    ;; 1. Over My Skis
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Actions\"+on_fire"
-                                ((org-agenda-overriding-header ,(format "🔥🔥 On Fire (%s)" effort-fire))
+                                ((org-agenda-overriding-header ,(format "⛷️⛷️ Over My Skis (%s)" effort-fire))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
