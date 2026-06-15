@@ -1378,7 +1378,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
               (replace-match (format "🪨 Other Rocks (%s)" effort-other) t t nil 1))
             ;; Hot Tickets / For Today / Priority C / Priority D (Decision View compat)
             (goto-char (point-min))
-            (while (re-search-forward "\\(Hot Tickets\\( (Priority A - [^)]*)\\)?\\)" nil t)
+            (while (re-search-forward "^\\(Hot Tickets\\( (Priority A - [^)]*)\\)?\\)" nil t)
               (replace-match (format "Hot Tickets (Priority A - %s)" effort-p0) t t nil 1))
             ;; NOTE: Unestimated count is intentionally NOT updated here.
             ;; Each view (Someday, Ordered, Unordered) computes its own accurate count
@@ -1387,7 +1387,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
             ;; (which only counts NEXT/TODO items, not Someday items) would corrupt
             ;; the Someday view's count.
             (goto-char (point-min))
-            (while (re-search-forward "\\(For Today\\( (Priority B - [^)]*)\\)?\\)" nil t)
+            (while (re-search-forward "^\\(For Today\\( (Priority B - [^)]*)\\)?\\)" nil t)
               (replace-match (format "For Today (Priority B - %s)" effort-big) t t nil 1))))
             ;; Strip NEXT/TODO/WAIT keywords from all lines (case-sensitive
             ;; to avoid corrupting task titles containing "next", "Next", etc.)
