@@ -1169,14 +1169,22 @@ Counted ancestors already include this entry's effort via
                        (time-less-p ts-time tdw--ef-today-end))
               (setq tdw--ef-calendar (+ tdw--ef-calendar effort-mins)))))
         (progn
-        ;; Habits: count only if not yet completed today
+        ;; Habits: count only if not yet completed today and not scheduled
+        ;; for the future (next occurrence hasn't arrived yet).
         (when (and (not tdw--ef-target-gtd) (string= gtd-val "Habit"))
           (let* ((effort (or (tdw/get-subtree-effort-minutes) 0))
                  (last-repeat (org-entry-get (point) "LAST_REPEAT"))
                  (completed-today (and last-repeat
                                        (string-match-p (format-time-string "%Y-%m-%d" tdw--ef-now)
-                                                       last-repeat))))
-            (unless completed-today
+                                                       last-repeat)))
+                 (sched-str (org-entry-get (point) "SCHEDULED"))
+                 (sched-time (when sched-str
+                               (condition-case nil
+                                   (org-time-string-to-time sched-str)
+                                 (error nil))))
+                 (scheduled-future (and sched-time
+                                        (not (time-less-p sched-time tdw--ef-today-end)))))
+            (unless (or completed-today scheduled-future)
               (setq tdw--ef-other (+ tdw--ef-other effort)))))
         ;; Regular tasks. Skip entries whose ancestor is already counted —
         ;; the ancestor's subtree sum includes this entry's effort.
@@ -1244,6 +1252,8 @@ and DNS calendar blocks are excluded."
                                    (time-less-p ts-time today-end))
                           (setq calendar (+ calendar (tdw/round-up-15 mins))))))
                      ;; Habits — split ritual habits from the rest.
+                     ;; Only count habits scheduled today or earlier (overdue).
+                     ;; Skip habits whose next occurrence is in the future.
                      ((string= (or (org-entry-get (point) "STYLE") "") "habit")
                       (unless done
                         (let* ((is-ritual (and heading
@@ -1253,8 +1263,15 @@ and DNS calendar blocks are excluded."
                                (completed-today (and last-repeat
                                                      (string-match-p (format-time-string "%Y-%m-%d" now)
                                                                      last-repeat)))
+                               (sched-str (org-entry-get (point) "SCHEDULED"))
+                               (sched-time (when sched-str
+                                             (condition-case nil
+                                                 (org-time-string-to-time sched-str)
+                                               (error nil))))
+                               (scheduled-future (and sched-time
+                                                      (not (time-less-p sched-time today-end))))
                                (effort (or (tdw/get-subtree-effort-minutes) 0)))
-                          (unless completed-today
+                          (unless (or completed-today scheduled-future)
                             (if is-ritual
                                 (setq ritual (+ ritual effort))
                               (setq habit (+ habit effort))))))))))
