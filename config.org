@@ -1203,18 +1203,15 @@ A 20- or 25-minute meeting is really a 30-minute meeting."
   (defun tdw/get-schedule-effort-totals ()
     "Return (RITUAL-TOTAL SCHEDULE-TOTAL) as H:MM strings.
 RITUAL-TOTAL sums the effort of the Daily Rituals habits (see
-`tdw--ritual-habits').  SCHEDULE-TOTAL sums today's calendar meetings —
-each rounded up to the next 15 minutes — plus the non-ritual habits,
-matching what the Today's Schedule block actually displays.  Habits
-already completed today and DNS calendar blocks are excluded."
+`tdw--ritual-habits').  SCHEDULE-TOTAL sums today's still-upcoming
+calendar meetings (TIMESTAMP after now) — each rounded up to the next 15
+minutes — plus the non-ritual habits, matching what the Today's Schedule
+block actually displays.  Habits already completed today, past meetings,
+and DNS calendar blocks are excluded."
     (let ((ritual 0)
           (calendar 0)
           (habit 0)
           (now (current-time))
-          (today-start (encode-time 0 0 0
-                                    (decoded-time-day (decode-time))
-                                    (decoded-time-month (decode-time))
-                                    (decoded-time-year (decode-time))))
           (today-end (encode-time 0 0 0
                                   (1+ (decoded-time-day (decode-time)))
                                   (decoded-time-month (decode-time))
@@ -1231,8 +1228,8 @@ already completed today and DNS calendar blocks are excluded."
                         (heading (org-get-heading t t t t))
                         (done (org-entry-is-done-p)))
                     (cond
-                     ;; Calendar meetings scheduled for today — round each up
-                     ;; to the next 15 minutes.
+                     ;; Future calendar meetings still ahead today — round
+                     ;; each up to the next 15 minutes.
                      ((and (string= gtd-val "Calendar") (not done)
                            heading (not (string-match-p "\\bDNS\\b" heading)))
                       (let* ((ts (org-entry-get (point) "TIMESTAMP"))
@@ -1243,7 +1240,7 @@ already completed today and DNS calendar blocks are excluded."
                                          (round (org-duration-to-minutes effort-str))
                                        (error 0)))))
                         (when (and mins (> mins 0) ts-time
-                                   (not (time-less-p ts-time today-start))
+                                   (time-less-p now ts-time)
                                    (time-less-p ts-time today-end))
                           (setq calendar (+ calendar (tdw/round-up-15 mins))))))
                      ;; Habits — split ritual habits from the rest.
@@ -1959,7 +1956,7 @@ to the next 15 minutes, plus habits)."
                          (org-agenda-start-day nil)
                          (org-agenda-skip-additional-timestamps-same-entry t)
                          (org-agenda-prefix-format '((agenda . "  %i %?-12t%-6e% s")))
-                         (org-agenda-skip-function 'org-gtd-view-lang--skip-unless-calendar-or-habit))))
+                         (org-agenda-skip-function 'tdw/skip-unless-future-calendar-or-habit))))
         `(agenda "" ,settings))))
 
   (defun org-gtd-agenda--resolve-tier ()
@@ -2436,22 +2433,45 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
           nil
         (outline-next-heading))))
 
+  (defun tdw/calendar-meeting-future-p ()
+    "Non-nil if the Calendar entry at point has a TIMESTAMP at or after now.
+Past meetings are filtered out of the Today's Schedule views so only
+what is still ahead is shown."
+    (let* ((ts (org-entry-get (point) "TIMESTAMP"))
+           (ts-time (when ts (org-time-string-to-time ts))))
+      (and ts-time (not (time-less-p ts-time (current-time))))))
+
   (defun tdw/skip-ritual-habits-or-non-calendar ()
-    "Skip ritual habits (shown in Daily Rituals) and non-calendar items.
+    "Skip ritual habits (shown in Daily Rituals), past meetings, and non-calendar items.
 Inlines the Calendar/habit check to avoid org-gtd internal that hangs
-on entries without TODO keywords (e.g., gcal.org)."
+on entries without TODO keywords (e.g., gcal.org).  Past Calendar
+meetings are skipped so only upcoming meetings appear."
     (let ((hdl (org-get-heading t t t t)))
       (if (and (stringp hdl)
                (cl-some (lambda (name) (string-match-p name hdl))
                          tdw--ritual-habits))
           (outline-next-heading)
-        ;; Inline version of org-gtd-view-lang--skip-unless-calendar-or-habit
+        ;; Inline version of org-gtd-view-lang--skip-unless-calendar-or-habit,
+        ;; plus a future-only filter on Calendar meetings.
         (let ((org-gtd-value (org-entry-get (point) "ORG_GTD")))
-          (if (and (or (equal org-gtd-value "Calendar")
-                       (equal org-gtd-value (org-gtd-type-org-gtd-value 'habit)))
-                   (not (org-entry-is-done-p)))
+          (if (and (not (org-entry-is-done-p))
+                   (or (and (equal org-gtd-value "Calendar")
+                            (tdw/calendar-meeting-future-p))
+                       (equal org-gtd-value (org-gtd-type-org-gtd-value 'habit))))
               nil
             (org-entry-end-position))))))
+
+  (defun tdw/skip-unless-future-calendar-or-habit ()
+    "Like `org-gtd-view-lang--skip-unless-calendar-or-habit' but future-only.
+Keeps habits and upcoming Calendar meetings; skips past meetings so the
+Ordered view's Today's Schedule shows only what is still ahead today."
+    (let ((org-gtd-value (org-entry-get (point) "ORG_GTD")))
+      (if (and (not (org-entry-is-done-p))
+               (or (and (equal org-gtd-value "Calendar")
+                        (tdw/calendar-meeting-future-p))
+                   (equal org-gtd-value (org-gtd-type-org-gtd-value 'habit))))
+          nil
+        (org-entry-end-position))))
 
   (defun tdw/skip-unless-tickler-due ()
     "Skip unless this is an incubated item scheduled for today or earlier."
