@@ -1193,6 +1193,79 @@ Counted ancestors already include this entry's effort via
                   ((tdw/quick-win-p) (setq tdw--ef-quick (+ tdw--ef-quick effort)))
                   (t (setq tdw--ef-other (+ tdw--ef-other effort))))))))))
 
+  (defun tdw/round-up-15 (mins)
+    "Round MINS up to the next multiple of 15.
+A 20- or 25-minute meeting is really a 30-minute meeting."
+    (if (and mins (> mins 0))
+        (* 15 (ceiling mins 15))
+      (or mins 0)))
+
+  (defun tdw/get-schedule-effort-totals ()
+    "Return (RITUAL-TOTAL SCHEDULE-TOTAL) as H:MM strings.
+RITUAL-TOTAL sums the effort of the Daily Rituals habits (see
+`tdw--ritual-habits').  SCHEDULE-TOTAL sums today's calendar meetings —
+each rounded up to the next 15 minutes — plus the non-ritual habits,
+matching what the Today's Schedule block actually displays.  Habits
+already completed today and DNS calendar blocks are excluded."
+    (let ((ritual 0)
+          (calendar 0)
+          (habit 0)
+          (now (current-time))
+          (today-start (encode-time 0 0 0
+                                    (decoded-time-day (decode-time))
+                                    (decoded-time-month (decode-time))
+                                    (decoded-time-year (decode-time))))
+          (today-end (encode-time 0 0 0
+                                  (1+ (decoded-time-day (decode-time)))
+                                  (decoded-time-month (decode-time))
+                                  (decoded-time-year (decode-time)))))
+      (dolist (file (org-agenda-files))
+        (let ((expanded-file (expand-file-name file)))
+          (when (file-exists-p expanded-file)
+            (with-current-buffer (find-file-noselect expanded-file)
+              (org-with-wide-buffer
+               (goto-char (point-min))
+               (org-map-entries
+                (lambda ()
+                  (let ((gtd-val (org-entry-get (point) "ORG_GTD"))
+                        (heading (org-get-heading t t t t))
+                        (done (org-entry-is-done-p)))
+                    (cond
+                     ;; Calendar meetings scheduled for today — round each up
+                     ;; to the next 15 minutes.
+                     ((and (string= gtd-val "Calendar") (not done)
+                           heading (not (string-match-p "\\bDNS\\b" heading)))
+                      (let* ((ts (org-entry-get (point) "TIMESTAMP"))
+                             (ts-time (when ts (org-time-string-to-time ts)))
+                             (effort-str (org-entry-get (point) "Effort"))
+                             (mins (when effort-str
+                                     (condition-case nil
+                                         (round (org-duration-to-minutes effort-str))
+                                       (error 0)))))
+                        (when (and mins (> mins 0) ts-time
+                                   (not (time-less-p ts-time today-start))
+                                   (time-less-p ts-time today-end))
+                          (setq calendar (+ calendar (tdw/round-up-15 mins))))))
+                     ;; Habits — split ritual habits from the rest.
+                     ((string= (or (org-entry-get (point) "STYLE") "") "habit")
+                      (unless done
+                        (let* ((is-ritual (and heading
+                                               (cl-some (lambda (n) (string-match-p n heading))
+                                                        tdw--ritual-habits)))
+                               (last-repeat (org-entry-get (point) "LAST_REPEAT"))
+                               (completed-today (and last-repeat
+                                                     (string-match-p (format-time-string "%Y-%m-%d" now)
+                                                                     last-repeat)))
+                               (effort (or (tdw/get-subtree-effort-minutes) 0)))
+                          (unless completed-today
+                            (if is-ritual
+                                (setq ritual (+ ritual effort))
+                              (setq habit (+ habit effort))))))))))
+                nil nil))))))
+      (let ((fmt (lambda (m) (format "%d:%02d" (/ m 60) (% m 60)))))
+        (list (funcall fmt ritual)
+              (funcall fmt (+ calendar habit))))))
+
   ;;; ——— Ordered View: Capacity warnings ———
 
   (defun tdw/sanity-view-warnings ()
@@ -1877,12 +1950,16 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
   (with-eval-after-load 'org-gtd-view-language
     (defun org-gtd-view-lang--create-calendar-day-block (_gtd-view-spec)
       "Native day view for Calendar/Habit items, with effort in the prefix.
-Overrides upstream to add `%e' so scheduled items show their time estimate."
-      (let ((settings '((org-agenda-span 1)
-                        (org-agenda-start-day nil)
-                        (org-agenda-skip-additional-timestamps-same-entry t)
-                        (org-agenda-prefix-format '((agenda . "  %i %?-12t%-6e% s")))
-                        (org-agenda-skip-function 'org-gtd-view-lang--skip-unless-calendar-or-habit))))
+Overrides upstream to add `%e' so scheduled items show their time estimate,
+and a header carrying the total time estimate (calendar meetings rounded up
+to the next 15 minutes, plus habits)."
+      (let* ((schedule (cadr (tdw/get-schedule-effort-totals)))
+             (settings `((org-agenda-overriding-header ,(format "📅 Today's Schedule (%s)" schedule))
+                         (org-agenda-span 1)
+                         (org-agenda-start-day nil)
+                         (org-agenda-skip-additional-timestamps-same-entry t)
+                         (org-agenda-prefix-format '((agenda . "  %i %?-12t%-6e% s")))
+                         (org-agenda-skip-function 'org-gtd-view-lang--skip-unless-calendar-or-habit))))
         `(agenda "" ,settings))))
 
   (defun org-gtd-agenda--resolve-tier ()
@@ -2467,7 +2544,8 @@ per-block `org-agenda-skip-function'."
     ;; Signal to the finalize hook that this is an Unordered View.
     (setq tdw--is-unordered-view t)
     (let ((n-actions-unest (tdw/get-actions-unestimated-count)))
-    (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
+    (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals))
+                (`(,effort-ritual ,effort-schedule) (tdw/get-schedule-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
             (org-agenda-hide-tags-regexp "."))
        (org-gtd-view-show
@@ -2477,7 +2555,7 @@ per-block `org-agenda-skip-function'."
          (blocks . (
                     ;; 0. Daily Rituals
                     ((native . (agenda ""
-                                ((org-agenda-overriding-header "⏰ Daily Rituals")
+                                ((org-agenda-overriding-header ,(format "⏰ Daily Rituals (%s)" effort-ritual))
                                  (org-agenda-span 1)
                                  (org-agenda-start-day nil)
                                  (org-agenda-include-diary nil)
@@ -2506,7 +2584,8 @@ per-block `org-agenda-skip-function'."
 
                     ;; 1b. Today's Schedule
                     ((native . (agenda ""
-                                ((org-agenda-span 1)
+                                ((org-agenda-overriding-header ,(format "📅 Today's Schedule (%s)" effort-schedule))
+                                 (org-agenda-span 1)
                                  (org-agenda-start-day nil)
                                  (org-agenda-include-diary nil)
                                  (org-agenda-skip-additional-timestamps-same-entry t)
