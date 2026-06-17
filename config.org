@@ -20,18 +20,21 @@ I set a [[*Bookmarks][bookmark]] with =C-x r m= and I can get back here with =C-
 * Variables, paths, etc.
 #+begin_src elisp
   ;;; -*- lexical-binding: t; -*-
-  (setq stag-easy-hugo-basedir "~/src/projects/trevoke.github.io-source"
-        stag-easy-hugo-root "~/src/projects/trevoke.github.io"
-        stag-org-reveal-root "/home/stag/mnt/internal/src/vendor/reveal.js"
-        stag-org-directory "~/my-venndoor-life/orgnotes/"
-        stag-org-gtd-directory "~/my-venndoor-life/orgnotes/gtd"
-        stag-org-roam-directory "~/my-venndoor-life/orgnotes/roam"
-        stag-org-roam-db-location "~/.emacs.d/local-files/org-roam.db"
-        stag-bbdb-file "~/my-venndoor-life/orgnotes/bbdb/big-brother-database"
-        stag-bibliography-file "~/my-venndoor-life/orgnotes/references/library.bib"
-        stag-cite-export-processors '((t . (csl "/home/trevoke/my-venndoor-life/orgnotes/references/modern-language-association.csl")))
-        stag-ledger-journal "~/my-venndoor-life/accounting-personal/2025.ledger"
-        )
+  (let ((life-repo (if (string= (user-login-name) "trace")
+                       "my-personal-life"
+                     "my-venndoor-life")))
+    (setq stag-easy-hugo-basedir "~/src/projects/trevoke.github.io-source"
+          stag-easy-hugo-root "~/src/projects/trevoke.github.io"
+          stag-org-reveal-root "/home/stag/mnt/internal/src/vendor/reveal.js"
+          stag-org-directory (expand-file-name "orgnotes/" (concat "~/" life-repo))
+          stag-org-gtd-directory (expand-file-name "orgnotes/gtd" (concat "~/" life-repo))
+          stag-org-roam-directory (expand-file-name "orgnotes/roam" (concat "~/" life-repo))
+          stag-org-roam-db-location "~/.emacs.d/local-files/org-roam.db"
+          stag-bbdb-file (expand-file-name "orgnotes/bbdb/big-brother-database" (concat "~/" life-repo))
+          stag-bibliography-file (expand-file-name "orgnotes/references/library.bib" (concat "~/" life-repo))
+          stag-cite-export-processors `((t . (csl ,(expand-file-name "orgnotes/references/modern-language-association.csl" (concat "~/" life-repo)))))
+          stag-ledger-journal (expand-file-name "accounting-personal/2025.ledger" (concat "~/" life-repo))
+          ))
   ;; CRITICAL: Set org-gtd-directory here so it is defined BEFORE custom-file loads org-gtd-mode
   (setq org-gtd-directory stag-org-gtd-directory)
 #+end_src
@@ -713,13 +716,13 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     (org-gtd-agenda-property-position 'where-it-fits)
     (org-gtd-directory stag-org-gtd-directory)
     (org-agenda-files (seq-filter #'file-exists-p
-                                  '("/Users/thecleverone/my-venndoor-life/orgnotes/gtd/inbox.org"
-                                    "/Users/thecleverone/my-venndoor-life/orgnotes/gtd/org-gtd-tasks.org"
-                                    "/Users/thecleverone/my-venndoor-life/orgnotes/gtd/gcal.org"
-                                    "/Users/thecleverone/my-google-life/orgnotes/gtd/org-gtd-tasks.org"
-                                    "/Users/thecleverone/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org"
-                                    "/Users/thecleverone/my-bfc-partner-life/orgnotes/gtd/org-gtd-tasks.org"
-                                    "/Users/thecleverone/my-personal-life/docs/orgnotes/org-gtd-tasks.org")))
+                                  (list (expand-file-name "orgnotes/gtd/inbox.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
+                                        (expand-file-name "orgnotes/gtd/org-gtd-tasks.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
+                                        (expand-file-name "orgnotes/gtd/gcal.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
+                                        (expand-file-name "~/my-google-life/orgnotes/gtd/org-gtd-tasks.org")
+                                        (expand-file-name "~/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org")
+                                        (expand-file-name "~/my-bfc-partner-life/orgnotes/gtd/org-gtd-tasks.org")
+                                        (expand-file-name "~/my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))))
     (org-edna-use-inheritance t)
     (org-gtd-refile-to-any-target t)
     ;; Inbox captures are stamped ORG_GTD=Inbox + TODO so they show in the
