@@ -1,7 +1,7 @@
 *#
 .#*
 *~
-#.elc
+*.elc
 local-files/
 .cask
 \#*
