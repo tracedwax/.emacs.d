@@ -1134,7 +1134,7 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
         (and todo (not (member todo '("DONE" "CNCL")))
              (string= gtd-val tdw--ef-target-gtd))
       (and (member todo '("NEXT" "TODO"))
-           (not (member gtd-val '("Inbox" "Someday" "Habit"))))))
+           (not (member gtd-val '("Inbox" "Someday" "Habit" "Delegated" "Projects"))))))
 
   (defun tdw/--effort-ancestor-counted-p ()
     "Non-nil if an ancestor of the entry at point is itself counted.
