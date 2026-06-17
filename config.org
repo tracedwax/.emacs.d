@@ -760,7 +760,6 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     :bind
     (("C-c d c" . org-gtd-capture)
      ("C-c d e" . org-gtd-engage)
-     ("C-c d b" . tdw-decision-view)
      ("C-c d p" . org-gtd-process-inbox)
      ("C-c d n" . org-gtd-show-all-next)
      ("C-c d s" . org-gtd-show-stuck-projects)
@@ -1387,32 +1386,23 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
     (let ((inhibit-read-only t))
       (save-excursion
         (goto-char (point-min))
-        ;; Detect if we are in Ordered/Decision View
+        ;; Detect if we are in Ordered View
         (when (or (re-search-forward "Ordered View" nil t)
                   (re-search-forward "GTD Engage View" nil t)
                   (re-search-forward "Someday View" nil t)
                   (re-search-forward "Inbox View" nil t)
-                  (re-search-forward "Decision View" nil t)
                   (re-search-forward "🚨🚨 P0" nil t)
                   (re-search-forward "🔔🔔 Bells Ringing" nil t)
                   (re-search-forward "🥎 🥎 On Deck" nil t)
                   (re-search-forward "💭 💭 Recently Considered" nil t)
                   (re-search-forward "🕐 Paused" nil t)
-                  (re-search-forward "🪨🪨 Big Rocks" nil t)
-                  (re-search-forward "Hot Tickets" nil t)
-                  (re-search-forward "For Today" nil t)
-                  (re-search-forward "Priority C" nil t)
-                  (re-search-forward "Priority D" nil t))
+                  (re-search-forward "🪨🪨 Big Rocks" nil t))
           (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
             ;; Render the prominent 2-line banner for the 4 banner-able views
             ;; (Inbox / Someday / Unordered / Ordered, incl. the initial
             ;; "GTD Engage View" name). Replaces the old per-view title rewrites
             ;; and relabels the effort line to "Total Estimated Effort:".
             (tdw/render-view-banner total)
-            ;; Decision View total (kept for backward compat)
-            (goto-char (point-min))
-            (while (re-search-forward "\\(Decision View\\( (Total Effort: [^)]*)\\)?\\)" nil t)
-              (replace-match (format "Decision View (Total Effort: %s)" total) t t nil 1))
             ;; Section-header effort totals — skipped for Inbox ("i") and
             ;; Someday ("S"), which are effort-free views.
             (let* ((bn (buffer-name))
@@ -1448,19 +1438,13 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
             (goto-char (point-min))
             (while (re-search-forward "\\(🪨 Other Rocks\\( ([^)]*)\\)? ?🪨?\\)" nil t)
               (replace-match (format "🪨 Other Rocks (%s)" effort-other) t t nil 1))
-            ;; Hot Tickets / For Today / Priority C / Priority D (Decision View compat)
-            (goto-char (point-min))
-            (while (re-search-forward "^\\(Hot Tickets\\( (Priority A - [^)]*)\\)?\\)" nil t)
-              (replace-match (format "Hot Tickets (Priority A - %s)" effort-p0) t t nil 1))
             ;; NOTE: Unestimated count is intentionally NOT updated here.
-            ;; Each view (Someday, Ordered, Unordered) computes its own accurate count
+            ;; Each view (Someday, Ordered) computes its own accurate count
             ;; at construction time using tdw/get-someday-unestimated-count or
             ;; tdw/get-actions-unestimated-count. Patching it here with n-unest
             ;; (which only counts NEXT/TODO items, not Someday items) would corrupt
             ;; the Someday view's count.
-            (goto-char (point-min))
-            (while (re-search-forward "^\\(For Today\\( (Priority B - [^)]*)\\)?\\)" nil t)
-              (replace-match (format "For Today (Priority B - %s)" effort-big) t t nil 1))))
+            ))
             ;; Strip NEXT/TODO/WAIT keywords from all lines (case-sensitive
             ;; to avoid corrupting task titles containing "next", "Next", etc.)
             (let ((case-fold-search nil))
@@ -2551,39 +2535,6 @@ per-block `org-agenda-skip-function'."
                 (string= state "DONE"))
         (org-entry-end-position))))
   (setq org-agenda-skip-function-global #'tdw/skip-cncl-globally)
-
-  (defun tdw-decision-view ()
-    "A broad GTD view for decision making: Priority A, B, C, and D."
-    (interactive)
-    (pcase-let ((`(,total ,_p0 ,_bell ,_deck ,effort-a ,effort-b ,effort-c ,effort-d) (tdw/get-sanity-effort-totals)))
-      (org-gtd-view-show
-       `((name . ,(format "Decision View (Total Effort: %s)" total))
-         (prefix . (effort "—"))
-         (blocks . (
-                    ;; 1. "A" Items
-                    ((name . ,(format "Hot Tickets (Priority A - %s)" effort-a))
-                     (type . next-action)
-                     (todo . ("NEXT" "TODO"))
-                     (priority . A))
-
-                    ;; 2. "B" Items
-                    ((name . ,(format "For Today (Priority B - %s)" effort-b))
-                     (type . next-action)
-                     (todo . ("NEXT" "TODO"))
-                     (priority . B))
-
-                    ;; 3. "C" Items
-                    ((name . ,(format "Priority C (%s)" effort-c))
-                     (type . next-action)
-                     (todo . ("NEXT" "TODO"))
-                     (priority . C))
-
-                    ;; 4. "D" Items
-                    ((name . ,(format "Priority D (%s)" effort-d))
-                     (type . next-action)
-                     (todo . ("NEXT" "TODO"))
-                     (priority . D))
-                    ))))))
 #+END_SRC
 ** Diary
 #+BEGIN_SRC emacs-lisp
