@@ -1084,7 +1084,6 @@ Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
   (defvar tdw--ef-considered 0)
   (defvar tdw--ef-paused 0)
   (defvar tdw--ef-big 0)
-  (defvar tdw--ef-quick 0)
   (defvar tdw--ef-other 0)
   (defvar tdw--ef-calendar 0)
   (defvar tdw--ef-unest 0)
@@ -1095,12 +1094,12 @@ When nil, uses default behavior (Actions items, excluding Inbox/Someday/Habit)."
   (defvar tdw--ef-today-end nil)
 
   (defun tdw/get-sanity-effort-totals ()
-    "Return a list (TOTAL ON-FIRE BELLS DECK BIG-ROCKS QUICK-WINS OTHER UNEST CONSIDERED PAUSED) formatted as H:MM.
+    "Return a list (TOTAL ON-FIRE BELLS DECK BIG-ROCKS OTHER UNEST CONSIDERED PAUSED) formatted as H:MM.
 TOTAL excludes PAUSED — paused work is parked and does not count toward active load.
 Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after now)."
     (setq tdw--ef-p0 0 tdw--ef-bell 0 tdw--ef-deck 0
           tdw--ef-considered 0 tdw--ef-paused 0
-          tdw--ef-big 0 tdw--ef-quick 0 tdw--ef-other 0
+          tdw--ef-big 0 tdw--ef-other 0
           tdw--ef-calendar 0 tdw--ef-unest 0
           tdw--ef-now (current-time)
           tdw--ef-today-end (encode-time 0 0 0
@@ -1116,13 +1115,12 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
              (org-map-entries #'tdw/--effort-accumulate nil nil))))))
     (let ((fmt (lambda (m) (format "%d:%02d" (/ m 60) (% m 60)))))
       (list (funcall fmt (+ tdw--ef-p0 tdw--ef-bell tdw--ef-deck
-                            tdw--ef-considered tdw--ef-big tdw--ef-quick
+                            tdw--ef-considered tdw--ef-big
                             tdw--ef-other tdw--ef-calendar))
             (funcall fmt tdw--ef-p0)
             (funcall fmt tdw--ef-bell)
             (funcall fmt tdw--ef-deck)
             (funcall fmt tdw--ef-big)
-            (funcall fmt tdw--ef-quick)
             (funcall fmt tdw--ef-other)
             tdw--ef-unest
             (funcall fmt tdw--ef-considered)
@@ -1198,7 +1196,6 @@ Counted ancestors already include this entry's effort via
                   ((tdw/paused-p) (setq tdw--ef-paused (+ tdw--ef-paused effort)))
                   ((tdw/big-rock-p) (setq tdw--ef-big (+ tdw--ef-big effort)))
                   ((tdw/unestimated-p) (cl-incf tdw--ef-unest))
-                  ((tdw/quick-win-p) (setq tdw--ef-quick (+ tdw--ef-quick effort)))
                   (t (setq tdw--ef-other (+ tdw--ef-other effort))))))))))
 
   (defun tdw/round-up-15 (mins)
@@ -1326,7 +1323,6 @@ Alerts on on-p0 > 5, bells-ringing > 10, on-deck > 5."
                      " [next up after the bells are quiet] 🥎🥎")
               warnings))
       (push (cons "🪨🪨 Big Rocks" " 🪨🪨") warnings)
-      (push (cons "💨💨 Quick Wins" " 💨💨") warnings)
       (push (cons "🪨 Other Rocks" " 🪨") warnings)
       warnings))
 
@@ -1414,7 +1410,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
                   (re-search-forward "For Today" nil t)
                   (re-search-forward "Priority C" nil t)
                   (re-search-forward "Priority D" nil t))
-          (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-quick ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
+          (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
             ;; Render the prominent 2-line banner for the 4 banner-able views
             ;; (Inbox / Someday / Unordered / Ordered, incl. the initial
             ;; "GTD Engage View" name). Replaces the old per-view title rewrites
@@ -1455,10 +1451,6 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
             (goto-char (point-min))
             (while (re-search-forward "\\(🪨🪨 Big Rocks\\( ([^)]*)\\)? ?🪨?🪨?\\)" nil t)
               (replace-match (format "🪨🪨 Big Rocks (%s)" effort-big) t t nil 1))
-            ;; Quick Wins effort
-            (goto-char (point-min))
-            (while (re-search-forward "\\(💨💨 Quick Wins\\( ([^)]*)\\)? ?💨?💨?\\)" nil t)
-              (replace-match (format "💨💨 Quick Wins (%s)" effort-quick) t t nil 1))
             ;; Other Rocks effort
             (goto-char (point-min))
             (while (re-search-forward "\\(🪨 Other Rocks\\( ([^)]*)\\)? ?🪨?\\)" nil t)
