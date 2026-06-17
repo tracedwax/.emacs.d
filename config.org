@@ -764,6 +764,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
      ("C-c d n" . org-gtd-show-all-next)
      ("C-c d s" . org-gtd-show-stuck-projects)
      ("C-c d S" . tdw-someday-priority-view)
+     ("C-c d u" . tdw-unordered-view)
      ("C-c d i" . tdw-inbox-view)
      ("C-c d ?" . org-gtd-command-center)
      ("C-c d g" . org-gtd-show-project-graph)
@@ -773,8 +774,8 @@ Inheritance respects `my/org-gtd-inherit-priority' and
      ("C-c ?" . org-gtd-agenda-transient)
      ("C-c c" . org-gtd-clarify-agenda-item)))
 
-  ;; Automatically load the Ordered View (org-gtd-engage) agenda when an emacsclient frame is created
-  (add-hook 'server-after-make-frame-hook #'org-gtd-engage)
+  ;; Automatically load the primary Unordered View agenda when an emacsclient frame is created
+  (add-hook 'server-after-make-frame-hook #'tdw-unordered-view)
 
   ;; ——— Agenda single-task move commands ———
 
@@ -1326,6 +1327,10 @@ Alerts on on-p0 > 5, bells-ringing > 10, on-deck > 5."
 
   ;;; ——— Ordered View: Buffer-local state ———
 
+  (defvar tdw--is-unordered-view nil
+    "Non-nil when the current agenda is an Unordered View.
+Set by `tdw-unordered-view'.")
+
   ;;; ——— Ordered View: Header updater ———
 
   (defun tdw/format-view-banner (label icon effort &optional show-effort)
@@ -1364,6 +1369,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
                      (match-string 1 bn)))
            (spec (cond ((equal key "i") '("Inbox" . "📥"))
                        ((equal key "S") '("Someday" . "💤"))
+                       ((equal key "u") '("Unordered" . "📋"))
                        ((equal key "g") '("Ordered" . "🎯"))))
            (inhibit-read-only t))
       (when spec
@@ -1389,6 +1395,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
         ;; Detect if we are in Ordered View
         (when (or (re-search-forward "Ordered View" nil t)
                   (re-search-forward "GTD Engage View" nil t)
+                  (re-search-forward "Unordered View" nil t)
                   (re-search-forward "Someday View" nil t)
                   (re-search-forward "Inbox View" nil t)
                   (re-search-forward "🚨🚨 P0" nil t)
@@ -1468,7 +1475,13 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
                 (goto-char (point-min))
                 (when (re-search-forward (regexp-quote (car w)) nil t)
                   (end-of-line)
-                  (insert (cdr w))))))))))
+                  (insert (cdr w)))))
+            ;; Strip priority cookies [#X] in Unordered View only
+            (when tdw--is-unordered-view
+              (goto-char (point-min))
+              (let ((cookie-re (concat " ?" (regexp-quote "[") "#[A-Z]" (regexp-quote "]") " ?")))
+                (while (re-search-forward cookie-re nil t)
+                  (replace-match " ")))))))))
 
   ;; Guard variable: skip org-agenda-change-all-lines during agenda commands
   ;; that will rebuild the view themselves afterward. change-all-lines reformats
@@ -2535,6 +2548,128 @@ per-block `org-agenda-skip-function'."
                 (string= state "DONE"))
         (org-entry-end-position))))
   (setq org-agenda-skip-function-global #'tdw/skip-cncl-globally)
+
+  (defun tdw-unordered-view (&optional keys)
+    "Like Ordered View but without score annotations, priority cookies, or custom sorting."
+    (interactive)
+    ;; Kill existing sticky buffer so we always regenerate fresh
+    (when-let ((buf (get-buffer "*Org Agenda(u)*"))) (kill-buffer buf))
+    ;; Signal to the finalize hook that this is an Unordered View.
+    (setq tdw--is-unordered-view t)
+    (let ((n-actions-unest (tdw/get-actions-unestimated-count)))
+    (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals))
+                (`(,effort-ritual ,effort-schedule) (tdw/get-schedule-effort-totals)))
+      (let ((org-agenda-todo-keyword-format "")
+            (org-agenda-hide-tags-regexp "."))
+       (org-gtd-view-show
+       `((name . ,(format "📋 Unordered View — Total Effort: %s" total))
+         (prefix-width . 25)
+         (prefix . (effort " " urg-imp " — "))
+         (blocks . (
+                    ;; 0. Daily Rituals
+                    ((native . (agenda ""
+                                ((org-agenda-overriding-header ,(format "⏰ Daily Rituals (%s)" effort-ritual))
+                                 (org-agenda-span 1)
+                                 (org-agenda-start-day nil)
+                                 (org-agenda-include-diary nil)
+                                 (org-agenda-entry-types '(:scheduled))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-hide-tags-regexp ".")
+                                 (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))
+                                 (org-agenda-skip-function 'tdw/skip-unless-daily-ritual)))))
+
+                    ;; 1. P0
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+p0"
+                                ((org-agenda-overriding-header ,(format "🚨🚨 P0 (%s)" effort-p0))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))))))
+
+                    ;; 1a. Bells Ringing
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+bells_ringing"
+                                ((org-agenda-overriding-header ,(format "🔔🔔 Bells Ringing (%s)" effort-bell))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))))))
+
+                    ;; 1b. Today's Schedule
+                    ((native . (agenda ""
+                                ((org-agenda-overriding-header ,(format "📅 Today's Schedule (%s)" effort-schedule))
+                                 (org-agenda-span 1)
+                                 (org-agenda-start-day nil)
+                                 (org-agenda-include-diary nil)
+                                 (org-agenda-skip-additional-timestamps-same-entry t)
+                                 (org-agenda-skip-function 'tdw/skip-ritual-habits-or-non-calendar)
+                                 (org-agenda-hide-tags-regexp ".")
+                                 (org-agenda-prefix-format '((agenda . "  %i %?-12t%-6e% s")))
+                                 (org-agenda-sorting-strategy '(time-up category-keep))))))
+
+                    ;; 1c. On Deck
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+on_deck"
+                                ((org-agenda-overriding-header ,(format "🥎 🥎 On Deck (%s)" effort-deck))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))))))
+
+                    ;; 1d. Recently Considered
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+recently_considered"
+                                ((org-agenda-overriding-header ,(format "💭 💭 Recently Considered (%s)" effort-considered))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))))))
+
+                    ;; 1e. Paused
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+paused"
+                                ((org-agenda-overriding-header ,(format "🕐 Paused (%s)" effort-paused))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))))))
+
+                    ;; 3. Delegated: overdue
+                    ((name . "Delegated (Overdue)")
+                     (type . delegated)
+                     (,(intern "when") . past))
+
+                    ;; 3. Delegated: due today
+                    ((name . "Delegated (Due Today)")
+                     (type . delegated)
+                     (,(intern "when") . today))
+
+                    ;; 3b. Ticklers Due
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Incubated\""
+                                ((org-agenda-overriding-header "🔔 Ticklers Due")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(scheduled-up category-keep))
+                                 (org-agenda-skip-function 'tdw/skip-unless-tickler-due)))))
+
+
+                    ;; Unestimated
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\""
+                                ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-actions-unest))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))
+                                 (org-agenda-skip-function 'tdw/skip-unless-unestimated)))))
+
+
+
+                    ;; Toggl Projects (regex matches all tgl_* tags in one query)
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+{tgl_.+}"
+                                ((org-agenda-overriding-header "Toggl Projects")
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))))))
+                    ))) (or keys "u"))))))
 #+END_SRC
 ** Diary
 #+BEGIN_SRC emacs-lisp
@@ -2717,12 +2852,12 @@ With this configuration, using C-f in a status buffer will trigger the gitflow s
 * Dual-Frame Startup
 #+BEGIN_SRC emacs-lisp
 (defun tdw/startup-single-frame ()
-  "Automatically open the Ordered View (org-gtd-engage) on startup."
+  "Automatically open Unordered View on startup."
   ;; Only render views when we have a real GUI frame (non-daemon).
   ;; In daemon mode, no GUI frame exists at startup — user triggers
-  ;; views manually with C-c d a / C-c d e after connecting.
+  ;; views manually with C-c d a / C-c d u after connecting.
   (unless (daemonp)
-    (org-gtd-engage)
+    (tdw-unordered-view "u")
     (delete-other-windows)))
 
 (add-hook 'emacs-startup-hook #'tdw/startup-single-frame)
