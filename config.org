@@ -721,7 +721,6 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                                         (expand-file-name "orgnotes/gtd/gcal.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
                                         (expand-file-name "~/my-google-life/orgnotes/gtd/org-gtd-tasks.org")
                                         (expand-file-name "~/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org")
-                                        (expand-file-name "~/my-bfc-partner-life/orgnotes/gtd/org-gtd-tasks.org")
                                         (expand-file-name "~/my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))))
     (org-edna-use-inheritance t)
     (org-gtd-refile-to-any-target t)
