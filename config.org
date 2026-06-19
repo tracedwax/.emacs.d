@@ -1646,6 +1646,21 @@ section with grouped lines, and inserts readable dividers."
                   (insert text)))))))))
 
 
+  ;;; ——— Show only the tgl_ tag on the right ———
+  ;; We want every agenda view (engage, unordered, someday, ...) to show the
+  ;; single :tgl_*: project tag on the right and hide all others (p0, on_deck,
+  ;; bells_ringing, contexts, etc.).  `org-agenda-hide-tags-regexp' removes any
+  ;; tag whose name matches, so we feed it a regexp that matches every tag that
+  ;; does NOT start with "tgl_" (Emacs regexp has no lookahead, hence the
+  ;; explicit prefix-deviation alternation).
+  (defvar tdw/hide-non-tgl-tags-regexp
+    "\\`\\(?:[^t].*\\|t\\'\\|t[^g].*\\|tg\\'\\|tg[^l].*\\|tgl\\'\\|tgl[^_].*\\)\\'"
+    "Regexp matching any tag that does not begin with \"tgl_\".
+Used as `org-agenda-hide-tags-regexp' so only the project tag shows.")
+  ;; Global default so even views without an explicit binding (e.g. the built-in
+  ;; `org-gtd-engage') show only the tgl_ tag.
+  (setq org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
+
   (defun tdw/strip-tag-separators ()
     "Remove lingering ' ::' tag separators from agenda lines.
 When `org-agenda-hide-tags-regexp' hides all tags, the '::' separator
@@ -2162,7 +2177,7 @@ Press 'n' or 's' to promote to Next Actions, 'x' to cancel."
     (when-let ((buf (get-buffer "*Org Agenda(S)*"))) (kill-buffer buf))
     (let ((n-someday-unest (tdw/get-someday-unestimated-count)))
     (let ((org-agenda-todo-keyword-format "")
-          (org-agenda-hide-tags-regexp "."))
+          (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp))
       (org-gtd-view-show
        `((name . ,(format "💤 Someday View — %d unestimated" n-someday-unest))
          (prefix-width . 18)
@@ -2236,7 +2251,7 @@ Press 'n' to promote to Next Actions, 's' for Someday, 'x' to cancel."
     (when-let ((buf (get-buffer "*Org Agenda(i)*"))) (kill-buffer buf))
     (let ((n-inbox-unest (tdw/get-inbox-unestimated-count)))
     (let ((org-agenda-todo-keyword-format "")
-          (org-agenda-hide-tags-regexp "."))
+          (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp))
       (org-gtd-view-show
        `((name . ,(format "📥 Inbox View — %d unestimated" n-inbox-unest))
          (prefix-width . 18)
@@ -2669,7 +2684,7 @@ per-block `org-agenda-skip-function'."
     (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals))
                 (`(,effort-ritual ,effort-schedule) (tdw/get-schedule-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
-            (org-agenda-hide-tags-regexp "."))
+            (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp))
        (org-gtd-view-show
        `((name . ,(format "📋 Unordered View — Total Effort: %s" total))
          (prefix-width . 25)
@@ -2683,7 +2698,7 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-include-diary nil)
                                  (org-agenda-entry-types '(:scheduled))
                                  (org-agenda-todo-keyword-format "")
-                                 (org-agenda-hide-tags-regexp ".")
+                                 (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
                                  (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))
                                  (org-agenda-skip-function 'tdw/skip-unless-daily-ritual)))))
@@ -2712,7 +2727,7 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-include-diary nil)
                                  (org-agenda-skip-additional-timestamps-same-entry t)
                                  (org-agenda-skip-function 'tdw/skip-ritual-habits-or-non-calendar)
-                                 (org-agenda-hide-tags-regexp ".")
+                                 (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
                                  (org-agenda-prefix-format '((agenda . "  %i %?-12t%-6e% s")))
                                  (org-agenda-sorting-strategy '(time-up category-keep))))))
 
