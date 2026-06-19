@@ -1798,26 +1798,57 @@ entries. Returns the total unaccounted gap in minutes."
               (replace-match (format "\\1 | Gap: %s" gap-str) t nil)))))))
 
   ;;; --- Currently-running clock under the schedule header ---
-  ;; Emacs keeps ONE global clock regardless of which file the task lives in
-  ;; (org-gtd-tasks.org, timesheet.org, gcal.org, ...). So reading the live
-  ;; `org-clock-*' state captures whatever is clocked in, including timesheet.org
-  ;; entries, without re-scraping any file. Inserted right under the Today's
-  ;; Schedule header so it reads as "now" between the past and future entries.
-  ;; Static at render time; press `r' (tdw/sanity-refresh) to update the elapsed.
+  ;; The in-memory `org-clock-*' state is per-Emacs-process and goes stale: if
+  ;; the clock is running in a different Emacs than the agenda daemon, or after a
+  ;; clock-out, `org-clock-get-clocked-time' returns a frozen/garbage value. So
+  ;; we read GROUND TRUTH instead: scan the GTD org files for an OPEN `CLOCK:'
+  ;; line (one with no closing `--end') and compute elapsed from its timestamp at
+  ;; render time. This recomputes fresh on every `r', works regardless of which
+  ;; process started the clock, and shows nothing when no clock is open.
+
+  (defun tdw/clean-heading (h)
+    "Strip TODO keyword, priority cookie, and trailing tags from heading H."
+    (let ((s h))
+      (setq s (replace-regexp-in-string
+               "^\\(TODO\\|NEXT\\|WAIT\\|DONE\\|CNCL\\|SOMEDAY\\)[ \t]+" "" s))
+      (setq s (replace-regexp-in-string "\\[#.\\][ \t]*" "" s))
+      (setq s (replace-regexp-in-string "[ \t]+:[[:alnum:]_@#%:]+:[ \t]*$" "" s))
+      (string-trim s)))
+
+  (defun tdw/active-clock-info ()
+    "Return (HEADING . START-TIME) for the most recent open CLOCK, or nil.
+Scans org-gtd-tasks.org and timesheet.org for a `CLOCK: [ts]' line with no
+closing `--', picking the latest. Reflects the true running clock across files
+and processes."
+    (let ((files (list tdw/timesheet-tasks-file
+                       (expand-file-name "timesheet.org" stag-org-gtd-directory)))
+          (best nil))
+      (dolist (file files best)
+        (when (file-exists-p file)
+          (with-temp-buffer
+            (insert-file-contents file)
+            (goto-char (point-min))
+            (while (re-search-forward "^[ \t]*CLOCK: \\(\\[[^]]+\\]\\)[ \t]*$" nil t)
+              (let* ((start (org-time-string-to-time (match-string 1)))
+                     (heading (save-excursion
+                                (when (re-search-backward "^\\*+ +\\(.*\\)$" nil t)
+                                  (match-string 1)))))
+                (when (or (null best) (time-less-p (cdr best) start))
+                  (setq best (cons (tdw/clean-heading (or heading "")) start))))))))))
 
   (defun tdw/insert-active-clock ()
-    "Insert the currently running org clock under the Today's Schedule header."
-    (when (org-clocking-p)
-      (let* ((inhibit-read-only t)
-             (heading (or org-clock-heading ""))
-             (elapsed (org-clock-get-clocked-time)) ; minutes, live
-             (since (format-time-string "%H:%M" org-clock-start-time))
-             (line (format "    ⏱ NOW: %s  (%d:%02d, since %s)\n"
-                           heading (/ elapsed 60) (% elapsed 60) since)))
-        (save-excursion
-          (goto-char (point-min))
-          (when (re-search-forward "📅 Today's Schedule[^\n]*\n" nil t)
-            (insert (propertize line 'face 'org-agenda-clocking)))))))
+    "Insert the currently running clock under the Today's Schedule header."
+    (let ((info (tdw/active-clock-info)))
+      (when info
+        (let* ((inhibit-read-only t)
+               (mins (floor (/ (float-time (time-since (cdr info))) 60)))
+               (since (format-time-string "%H:%M" (cdr info)))
+               (line (format "    ⏱ NOW: %s  (%d:%02d, since %s)\n"
+                             (car info) (/ mins 60) (% mins 60) since)))
+          (save-excursion
+            (goto-char (point-min))
+            (when (re-search-forward "📅 Today's Schedule[^\n]*\n" nil t)
+              (insert (propertize line 'face 'org-agenda-clocking))))))))
 
   (add-hook 'org-agenda-finalize-hook #'tdw/strip-tag-separators)
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
