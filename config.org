@@ -719,6 +719,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                                   (list (expand-file-name "orgnotes/gtd/inbox.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
                                         (expand-file-name "orgnotes/gtd/org-gtd-tasks.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
                                         (expand-file-name "orgnotes/gtd/gcal.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
+                                        (expand-file-name "orgnotes/gtd/timesheet.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
                                         (expand-file-name "~/my-google-life/orgnotes/gtd/org-gtd-tasks.org")
                                         (expand-file-name "~/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org")
                                         (expand-file-name "~/my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))))
@@ -1209,11 +1210,10 @@ A 20- or 25-minute meeting is really a 30-minute meeting."
   (defun tdw/get-schedule-effort-totals ()
     "Return (RITUAL-TOTAL SCHEDULE-TOTAL) as H:MM strings.
 RITUAL-TOTAL sums the effort of the Daily Rituals habits (see
-`tdw--ritual-habits').  SCHEDULE-TOTAL sums today's still-upcoming
-calendar meetings (TIMESTAMP after now) — each rounded up to the next 15
-minutes — plus the non-ritual habits, matching what the Today's Schedule
-block actually displays.  Habits already completed today, past meetings,
-and DNS calendar blocks are excluded."
+`tdw--ritual-habits').  SCHEDULE-TOTAL sums today's calendar meetings
+(past + future, each rounded up to the next 15 minutes) plus the
+non-ritual habits.  Habits already completed today and DNS calendar
+blocks are excluded."
     (let ((ritual 0)
           (calendar 0)
           (habit 0)
@@ -1234,8 +1234,8 @@ and DNS calendar blocks are excluded."
                         (heading (org-get-heading t t t t))
                         (done (org-entry-is-done-p)))
                     (cond
-                     ;; Future calendar meetings still ahead today — round
-                     ;; each up to the next 15 minutes.
+                     ;; All calendar meetings today (past + future),
+                     ;; each rounded up to the next 15 minutes.
                      ((and (string= gtd-val "Calendar") (not done)
                            heading (not (string-match-p "\\bDNS\\b" heading)))
                       (let* ((ts (org-entry-get (point) "TIMESTAMP"))
@@ -1246,7 +1246,6 @@ and DNS calendar blocks are excluded."
                                          (round (org-duration-to-minutes effort-str))
                                        (error 0)))))
                         (when (and mins (> mins 0) ts-time
-                                   (time-less-p now ts-time)
                                    (time-less-p ts-time today-end))
                           (setq calendar (+ calendar (tdw/round-up-15 mins))))))
                      ;; Habits — split ritual habits from the rest.
@@ -1699,24 +1698,88 @@ horizontal scrolling (e.g. fat-fingered `l' key near d/s/x)."
               (shell-quote-argument tdw/timesheet-tasks-file)
               (shell-quote-argument tdw/timesheet-gcal-file)))))
 
-  (defun tdw/insert-timesheet-after-schedule ()
-    "Insert the day's timesheet directly beneath the \"Today's Schedule\" header,
-above the future calendar entries."
+  ;;; --- Gap total in Today's Schedule header ---
+  ;; Computes unaccounted time between schedule entries and appends
+  ;; "| Gap: H:MM" to the Today's Schedule header.
+
+  (defun tdw/compute-gap-total ()
+    "Compute gap minutes from the Today's Schedule block in the agenda buffer.
+Scans time-grid entries (HH:MM lines) between the schedule header and the
+next section separator, collecting start times from timesheet.org and gcal.org
+entries. Returns the total unaccounted gap in minutes."
     (save-excursion
       (goto-char (point-min))
-      (when (and (file-exists-p tdw/timesheet-script)
-                 (re-search-forward "📅 Today's Schedule.*$" nil t))
+      (when (re-search-forward "📅 Today's Schedule" nil t)
+        (let ((section-end (save-excursion
+                             (if (re-search-forward "^=+" nil t)
+                                 (line-beginning-position)
+                               (point-max))))
+              (entries nil)
+              (now-minutes (+ (* (string-to-number (format-time-string "%H")) 60)
+                              (string-to-number (format-time-string "%M")))))
+          ;; Collect (start-min . end-min) pairs from agenda time entries.
+          ;; Agenda time entries look like: "   10:00...... 0:30  Meeting Name"
+          ;; where the time is the start and the effort (if present) gives duration.
+          (while (and (< (point) section-end)
+                      (re-search-forward
+                       "^\\s-+\\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)\\.\\{4,\\}\\s-+\\(?:\\([0-9]+\\):\\([0-9]\\{2\\}\\)\\)?"
+                       section-end t))
+            (let* ((sh (string-to-number (match-string 1)))
+                   (sm (string-to-number (match-string 2)))
+                   (start-min (+ (* sh 60) sm))
+                   (dur-h (when (match-string 3) (string-to-number (match-string 3))))
+                   (dur-m (when (match-string 4) (string-to-number (match-string 4))))
+                   (dur (if (and dur-h dur-m) (+ (* dur-h 60) dur-m) 30))
+                   (end-min (+ start-min dur)))
+              (push (cons start-min end-min) entries)))
+          ;; Also collect entries from Timesheet category lines (no dots)
+          ;; These appear as: "  Timesheet:  07:00-07:15 Task Name"
+          ;; or via the standard agenda format with a time range.
+          (goto-char (point-min))
+          (when (re-search-forward "📅 Today's Schedule" nil t)
+            (while (and (< (point) section-end)
+                        (re-search-forward
+                         "Timesheet:\\s-+\\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)-\\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)"
+                         section-end t))
+              (let* ((sh (string-to-number (match-string 1)))
+                     (sm (string-to-number (match-string 2)))
+                     (eh (string-to-number (match-string 3)))
+                     (em (string-to-number (match-string 4)))
+                     (start-min (+ (* sh 60) sm))
+                     (end-min (+ (* eh 60) em)))
+                (push (cons start-min end-min) entries))))
+          ;; Compute gap: sort entries, walk timeline, sum unaccounted gaps
+          (when entries
+            (setq entries (sort entries (lambda (a b) (< (car a) (car b)))))
+            (let ((gap 0)
+                  (cursor (caar entries)))
+              (dolist (e entries)
+                (when (> (car e) cursor)
+                  (setq gap (+ gap (- (car e) cursor))))
+                (when (> (cdr e) cursor)
+                  (setq cursor (cdr e))))
+              ;; Gap from last entry to now
+              (when (> now-minutes cursor)
+                (setq gap (+ gap (- now-minutes cursor))))
+              gap))))))
+
+  (defun tdw/insert-gap-total ()
+    "Append gap total to the Today's Schedule header."
+    (let ((gap (tdw/compute-gap-total)))
+      (when (and gap (> gap 0))
         (let ((inhibit-read-only t)
-              (ts (tdw/timesheet-string (tdw/timesheet-target-date))))
-          (unless (string-empty-p ts)
-            (insert "\n" ts))))))
+              (gap-str (format "%d:%02d" (/ gap 60) (% gap 60))))
+          (save-excursion
+            (goto-char (point-min))
+            (when (re-search-forward "\\(📅 Today's Schedule ([^)]+)\\)" nil t)
+              (replace-match (format "\\1 | Gap: %s" gap-str) t nil)))))))
 
   (add-hook 'org-agenda-finalize-hook #'tdw/strip-tag-separators)
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
   (add-hook 'org-agenda-finalize-hook #'tdw/insert-tgl-subheaders)
   (add-hook 'org-agenda-finalize-hook #'tdw/check-missing-tag-sections)
   (add-hook 'org-agenda-finalize-hook #'tdw/reset-agenda-hscroll)
-  (add-hook 'org-agenda-finalize-hook #'tdw/insert-timesheet-after-schedule)
+  (add-hook 'org-agenda-finalize-hook #'tdw/insert-gap-total)
 
   (defun tdw/agenda-adjust-effort (&optional delta)
     "Adjust effort of agenda item at point by DELTA minutes (defaults to 15)."
@@ -1999,7 +2062,7 @@ to the next 15 minutes, plus habits)."
                          (org-agenda-start-day nil)
                          (org-agenda-skip-additional-timestamps-same-entry t)
                          (org-agenda-prefix-format '((agenda . "  %i %?-12t%-6e% s")))
-                         (org-agenda-skip-function 'tdw/skip-unless-future-calendar-or-habit))))
+                         (org-agenda-skip-function 'tdw/skip-unless-calendar-or-habit))))
         `(agenda "" ,settings))))
 
   (defun org-gtd-agenda--resolve-tier ()
@@ -2485,33 +2548,29 @@ what is still ahead is shown."
       (and ts-time (not (time-less-p ts-time (current-time))))))
 
   (defun tdw/skip-ritual-habits-or-non-calendar ()
-    "Skip ritual habits (shown in Daily Rituals), past meetings, and non-calendar items.
+    "Skip ritual habits (shown in Daily Rituals) and non-calendar items.
 Inlines the Calendar/habit check to avoid org-gtd internal that hangs
-on entries without TODO keywords (e.g., gcal.org).  Past Calendar
-meetings are skipped so only upcoming meetings appear."
+on entries without TODO keywords (e.g., gcal.org).  Shows all Calendar
+meetings (past + future)."
     (let ((hdl (org-get-heading t t t t)))
       (if (and (stringp hdl)
                (cl-some (lambda (name) (string-match-p name hdl))
                          tdw--ritual-habits))
           (outline-next-heading)
-        ;; Inline version of org-gtd-view-lang--skip-unless-calendar-or-habit,
-        ;; plus a future-only filter on Calendar meetings.
+        ;; Inline version of org-gtd-view-lang--skip-unless-calendar-or-habit.
         (let ((org-gtd-value (org-entry-get (point) "ORG_GTD")))
           (if (and (not (org-entry-is-done-p))
-                   (or (and (equal org-gtd-value "Calendar")
-                            (tdw/calendar-meeting-future-p))
+                   (or (equal org-gtd-value "Calendar")
                        (equal org-gtd-value (org-gtd-type-org-gtd-value 'habit))))
               nil
             (org-entry-end-position))))))
 
-  (defun tdw/skip-unless-future-calendar-or-habit ()
-    "Like `org-gtd-view-lang--skip-unless-calendar-or-habit' but future-only.
-Keeps habits and upcoming Calendar meetings; skips past meetings so the
-Ordered view's Today's Schedule shows only what is still ahead today."
+  (defun tdw/skip-unless-calendar-or-habit ()
+    "Keep Calendar entries (past + future) and habits; skip everything else.
+Used by the Ordered View's Today's Schedule block."
     (let ((org-gtd-value (org-entry-get (point) "ORG_GTD")))
       (if (and (not (org-entry-is-done-p))
-               (or (and (equal org-gtd-value "Calendar")
-                        (tdw/calendar-meeting-future-p))
+               (or (equal org-gtd-value "Calendar")
                    (equal org-gtd-value (org-gtd-type-org-gtd-value 'habit))))
           nil
         (org-entry-end-position))))
