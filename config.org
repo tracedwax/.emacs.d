@@ -1213,6 +1213,10 @@ blocks are excluded."
           (calendar 0)
           (habit 0)
           (now (current-time))
+          (today-start (encode-time 0 0 0
+                                    (decoded-time-day (decode-time))
+                                    (decoded-time-month (decode-time))
+                                    (decoded-time-year (decode-time))))
           (today-end (encode-time 0 0 0
                                   (1+ (decoded-time-day (decode-time)))
                                   (decoded-time-month (decode-time))
@@ -1241,6 +1245,7 @@ blocks are excluded."
                                          (round (org-duration-to-minutes effort-str))
                                        (error 0)))))
                         (when (and mins (> mins 0) ts-time
+                                   (not (time-less-p ts-time today-start))
                                    (time-less-p ts-time today-end))
                           (setq calendar (+ calendar (tdw/round-up-15 mins))))))
                      ;; Habits — split ritual habits from the rest.
