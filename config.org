@@ -2715,15 +2715,7 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
-                    ;; 1a. Bells Ringing
-                    ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+bells_ringing"
-                                ((org-agenda-overriding-header ,(format "🔔🔔 Bells Ringing (%s)" effort-bell))
-                                 (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
-                                 (org-agenda-sorting-strategy '(category-keep))))))
-
-                    ;; 1b. Today's Schedule
+                    ;; 1a. Today's Schedule
                     ((native . (agenda ""
                                 ((org-agenda-overriding-header ,(format "📅 Today's Schedule (%s)" effort-schedule))
                                  (org-agenda-span 1)
@@ -2734,6 +2726,14 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
                                  (org-agenda-prefix-format '((agenda . "  %i %?-12t%-6e% s")))
                                  (org-agenda-sorting-strategy '(time-up category-keep))))))
+
+                    ;; 1b. Bells Ringing
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+bells_ringing"
+                                ((org-agenda-overriding-header ,(format "🔔🔔 Bells Ringing (%s)" effort-bell))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; 1c. On Deck
                     ((native . (tags-todo
