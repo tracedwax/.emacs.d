@@ -974,7 +974,7 @@ SOMEDAY/NEXT/CNCL visual markers."
               (local-set-key (kbd "I") #'org-agenda-clock-in)
               (local-set-key (kbd "O") #'org-agenda-clock-out)
               (local-set-key (kbd "m") #'tdw/agenda-move-to-someday)
-              (local-set-key (kbd "y") #'tdw/agenda-move-to-someday)
+              (local-set-key (kbd "y") #'org-agenda-earlier)
               (local-set-key (kbd "s") #'tdw/agenda-move-to-someday)
               (local-set-key (kbd "i") #'tdw/agenda-move-to-inbox)
               (local-set-key (kbd "n") #'tdw/agenda-move-to-next)
