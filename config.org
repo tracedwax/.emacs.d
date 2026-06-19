@@ -1797,12 +1797,35 @@ entries. Returns the total unaccounted gap in minutes."
             (when (re-search-forward "\\(📅 Today's Schedule ([^)]+)\\)" nil t)
               (replace-match (format "\\1 | Gap: %s" gap-str) t nil)))))))
 
+  ;;; --- Currently-running clock under the schedule header ---
+  ;; Emacs keeps ONE global clock regardless of which file the task lives in
+  ;; (org-gtd-tasks.org, timesheet.org, gcal.org, ...). So reading the live
+  ;; `org-clock-*' state captures whatever is clocked in, including timesheet.org
+  ;; entries, without re-scraping any file. Inserted right under the Today's
+  ;; Schedule header so it reads as "now" between the past and future entries.
+  ;; Static at render time; press `r' (tdw/sanity-refresh) to update the elapsed.
+
+  (defun tdw/insert-active-clock ()
+    "Insert the currently running org clock under the Today's Schedule header."
+    (when (org-clocking-p)
+      (let* ((inhibit-read-only t)
+             (heading (or org-clock-heading ""))
+             (elapsed (org-clock-get-clocked-time)) ; minutes, live
+             (since (format-time-string "%H:%M" org-clock-start-time))
+             (line (format "    ⏱ NOW: %s  (%d:%02d, since %s)\n"
+                           heading (/ elapsed 60) (% elapsed 60) since)))
+        (save-excursion
+          (goto-char (point-min))
+          (when (re-search-forward "📅 Today's Schedule[^\n]*\n" nil t)
+            (insert (propertize line 'face 'org-agenda-clocking)))))))
+
   (add-hook 'org-agenda-finalize-hook #'tdw/strip-tag-separators)
   (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
   (add-hook 'org-agenda-finalize-hook #'tdw/insert-tgl-subheaders)
   (add-hook 'org-agenda-finalize-hook #'tdw/check-missing-tag-sections)
   (add-hook 'org-agenda-finalize-hook #'tdw/reset-agenda-hscroll)
   (add-hook 'org-agenda-finalize-hook #'tdw/insert-gap-total)
+  (add-hook 'org-agenda-finalize-hook #'tdw/insert-active-clock)
 
   (defun tdw/agenda-adjust-effort (&optional delta)
     "Adjust effort of agenda item at point by DELTA minutes (defaults to 15)."
