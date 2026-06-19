@@ -1057,12 +1057,7 @@ Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
 
   (defun tdw/big-rock-p ()
     "Return non-nil if current entry has score >= 10."
-    (let* ((tags (org-get-tags nil t))
-           (score-tag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags))
-           (score (if score-tag
-                      (string-to-number (substring score-tag 6))
-                    (tdw/compute-score-at-point))))
-      (>= score 10)))
+    (>= (tdw/compute-score-at-point) 10))
 
   (defun tdw/quick-win-p ()
     "Return non-nil if current entry has effort > 0 and <= 5 minutes."
@@ -1511,7 +1506,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
     "Tags that have dedicated sections in the Ordered/Unordered views.")
 
   (defvar tdw--excluded-tag-prefixes
-    '("p0" "bells_ringing" "on_deck" "recently_considered" "paused" "wh_" "vh_" "h_" "sh_" "m_" "l_" "score_"
+    '("p0" "bells_ringing" "on_deck" "recently_considered" "paused" "wh_" "vh_" "h_" "sh_" "m_" "l_"
       "for_" "ARCHIVE" "FLAGGED")
     "Tag prefixes excluded from the missing-tag check (urgency/impact/score/meta).")
 
@@ -1817,9 +1812,7 @@ entries. Returns the total unaccounted gap in minutes."
                  (new-mins (max 0 (+ current-mins delta-mins)))
                  (new-effort (org-duration-from-minutes new-mins)))
             (org-with-point-at marker
-              (org-entry-put nil "Effort" new-effort)
-              ;; Recalculate score tag after effort change
-              (tdw/compute-and-set-score))
+              (org-entry-put nil "Effort" new-effort))
             ;; Update effort prefix in-place instead of full refresh
             ;; Restrict search to prefix area (before " — ") to avoid
             ;; matching habit graph brackets or scheduled times
@@ -1831,21 +1824,7 @@ entries. Returns the total unaccounted gap in minutes."
                                         (match-beginning 0)
                                       (line-end-position)))))
                   (when (re-search-forward "[0-9]+:[0-9]+" prefix-end t)
-                    (replace-match new-effort))
-                  ;; Also update score bracket — search only in prefix
-                  (beginning-of-line)
-                  (setq prefix-end (save-excursion
-                                     (if (re-search-forward " — " (line-end-position) t)
-                                         (match-beginning 0)
-                                       (line-end-position))))
-                  (when (re-search-forward "\\[\\w*\\]" prefix-end t)
-                    (let ((new-score-str (with-current-buffer (marker-buffer marker)
-                                           (org-with-wide-buffer
-                                            (goto-char (marker-position marker))
-                                            (let* ((tags (org-get-tags nil t))
-                                                   (stag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags)))
-                                              (if stag (format "[%s]" (substring stag 6)) "[]"))))))
-                      (replace-match new-score-str))))))
+                    (replace-match new-effort)))))
             (message "Effort: %s" new-effort))
         (message "No task at point"))))
 
@@ -2503,17 +2482,6 @@ Higher score = more value per unit of effort."
            (raw (+ (* 2 urg) imp)))
       (floor (/ (float raw) tier))))
 
-  (defun tdw/compute-and-set-score ()
-    "Compute score at point and update the :score_N: tag.
-Removes any existing score_* tags, then adds :score_N:."
-    (let ((new-score (tdw/compute-score-at-point))
-          (tags (org-get-tags nil t)))
-      ;; Remove any existing score_* tags
-      (dolist (tag tags)
-        (when (string-prefix-p "score_" tag)
-          (org-toggle-tag tag 'off)))
-      ;; Add new score tag
-      (org-toggle-tag (format "score_%d" new-score) 'on)))
 
   ;;; ——— Ordered View ———
 
@@ -2609,8 +2577,7 @@ Used by the Ordered View's Today's Schedule block."
   (defun tdw--score-effort-at-point ()
     "Return (score effort-mins on-p0-p done-p gc-next-p flyby-p) at point for skip functions."
     (let* ((tags (org-get-tags nil t))
-           (score-tag (cl-find-if (lambda (tg) (string-prefix-p "score_" tg)) tags))
-           (score (if score-tag (string-to-number (substring score-tag 6)) (tdw/compute-score-at-point)))
+           (score (tdw/compute-score-at-point))
            (effort-str (org-entry-get (point) "EFFORT"))
            (effort-mins (when (and effort-str
                                    (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
