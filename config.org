@@ -1674,9 +1674,13 @@ horizontal scrolling (e.g. fat-fingered `l' key near d/s/x)."
 
   (defvar tdw/timesheet-script "/Users/Shared/oacp-timesheet-output/timesheet_show.py"
     "Path to the Mode-1 timesheet renderer.")
-  (defvar tdw/timesheet-tasks-file "/Users/trace/my-personal-life/orgnotes/gtd/org-gtd-tasks.org"
+  ;; Derive the org sources from `stag-org-gtd-directory' so this works on any
+  ;; account/repo (trace -> my-personal-life, thecleverone -> my-venndoor-life).
+  (defvar tdw/timesheet-tasks-file
+    (expand-file-name "org-gtd-tasks.org" stag-org-gtd-directory)
     "Path to org-gtd-tasks.org (source of CLOCK entries).")
-  (defvar tdw/timesheet-gcal-file "/Users/trace/my-personal-life/orgnotes/gtd/gcal.org"
+  (defvar tdw/timesheet-gcal-file
+    (expand-file-name "gcal.org" stag-org-gtd-directory)
     "Path to gcal.org (source of calendar events).")
 
   (defun tdw/timesheet-target-date ()
@@ -1701,7 +1705,8 @@ horizontal scrolling (e.g. fat-fingered `l' key near d/s/x)."
 above the future calendar entries."
     (save-excursion
       (goto-char (point-min))
-      (when (re-search-forward "📅 Today's Schedule.*$" nil t)
+      (when (and (file-exists-p tdw/timesheet-script)
+                 (re-search-forward "📅 Today's Schedule.*$" nil t))
         (let ((inhibit-read-only t)
               (ts (tdw/timesheet-string (tdw/timesheet-target-date))))
           (unless (string-empty-p ts)
