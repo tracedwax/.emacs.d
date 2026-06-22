@@ -1698,16 +1698,23 @@ horizontal scrolling (e.g. fat-fingered `l' key near d/s/x)."
   ;; below. Keyed on the header text, so it follows wherever that block renders
   ;; and tracks whichever date the agenda is displaying.
 
-  (defvar tdw/timesheet-script "/Users/Shared/oacp-timesheet-output/timesheet_show.py"
+  (defvar tdw/timesheet-script
+    (expand-file-name "scripts/timesheet_show.py"
+                      (file-name-directory (directory-file-name stag-org-directory)))
     "Path to the Mode-1 timesheet renderer.")
   ;; Derive the org sources from `stag-org-gtd-directory' so this works on any
   ;; account/repo (trace -> my-personal-life, thecleverone -> my-venndoor-life).
-  (defvar tdw/timesheet-tasks-file
-    (expand-file-name "org-gtd-tasks.org" stag-org-gtd-directory)
-    "Path to org-gtd-tasks.org (source of CLOCK entries).")
   (defvar tdw/timesheet-gcal-file
     (expand-file-name "gcal.org" stag-org-gtd-directory)
     "Path to gcal.org (source of calendar events).")
+
+  (defun tdw/all-tasks-files ()
+    "Return list of all org-gtd-tasks.org files from `org-agenda-files'.
+Includes the primary file and all context repo task files."
+    (seq-filter
+     (lambda (f) (and (string-match-p "org-gtd-tasks\\.org$" f)
+                      (file-exists-p f)))
+     (org-agenda-files)))
 
   (defun tdw/timesheet-target-date ()
     "Return the agenda's displayed day as YYYY-MM-DD, defaulting to today."
@@ -1717,14 +1724,19 @@ horizontal scrolling (e.g. fat-fingered `l' key near d/s/x)."
       (format "%04d-%02d-%02d" (nth 2 greg) (nth 0 greg) (nth 1 greg))))
 
   (defun tdw/timesheet-string (date-str)
-    "Render the timesheet for DATE-STR by shelling out to the python script."
-    (string-trim
-     (shell-command-to-string
-      (format "python3 %s --date %s --tasks-file %s --gcal-file %s 2>/dev/null"
-              (shell-quote-argument tdw/timesheet-script)
-              (shell-quote-argument date-str)
-              (shell-quote-argument tdw/timesheet-tasks-file)
-              (shell-quote-argument tdw/timesheet-gcal-file)))))
+    "Render the timesheet for DATE-STR by shelling out to the python script.
+Passes all org-gtd-tasks.org files (primary + context repos) as --tasks-file args."
+    (let ((tasks-args (mapconcat
+                       (lambda (f) (format "--tasks-file %s" (shell-quote-argument f)))
+                       (tdw/all-tasks-files)
+                       " ")))
+      (string-trim
+       (shell-command-to-string
+        (format "python3 %s --date %s %s --gcal-file %s 2>/dev/null"
+                (shell-quote-argument tdw/timesheet-script)
+                (shell-quote-argument date-str)
+                tasks-args
+                (shell-quote-argument tdw/timesheet-gcal-file))))))
 
   ;;; --- Gap total in Today's Schedule header ---
   ;; Computes unaccounted time between schedule entries and appends
@@ -1822,11 +1834,11 @@ entries. Returns the total unaccounted gap in minutes."
 
   (defun tdw/active-clock-info ()
     "Return (HEADING . START-TIME) for the most recent open CLOCK, or nil.
-Scans org-gtd-tasks.org and timesheet.org for a `CLOCK: [ts]' line with no
-closing `--', picking the latest. Reflects the true running clock across files
-and processes."
-    (let ((files (list tdw/timesheet-tasks-file
-                       (expand-file-name "timesheet.org" stag-org-gtd-directory)))
+Scans all org-gtd-tasks.org files (primary + context repos) and timesheet.org
+for a `CLOCK: [ts]' line with no closing `--', picking the latest. Reflects the
+true running clock across files and processes."
+    (let ((files (append (tdw/all-tasks-files)
+                         (list (expand-file-name "timesheet.org" stag-org-gtd-directory))))
           (best nil))
       (dolist (file files best)
         (when (file-exists-p file)
