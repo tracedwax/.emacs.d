@@ -2640,6 +2640,18 @@ Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
           nil
         (outline-next-heading))))
 
+  (defun tdw/skip-unless-non-ritual-habit ()
+    "Skip unless this is an undone habit that is NOT a daily ritual."
+    (let* ((dominated (org-entry-get (point) "STYLE"))
+           (is-habit (string= (or dominated "") "habit"))
+           (done (org-entry-is-done-p))
+           (hdl (org-get-heading t t t t)))
+      (if (and is-habit (not done)
+               (not (cl-some (lambda (name) (string-match-p name hdl))
+                             tdw--ritual-habits)))
+          nil
+        (outline-next-heading))))
+
   (defun tdw/calendar-meeting-future-p ()
     "Non-nil if the Calendar entry at point has a TIMESTAMP at or after now.
 Past meetings are filtered out of the Today's Schedule views so only
@@ -2810,6 +2822,19 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))
                                  (org-agenda-skip-function 'tdw/skip-unless-daily-ritual)))))
+
+                    ;; 0c. Daily Habits (non-ritual habits: weekly plan, etc.)
+                    ((native . (agenda ""
+                                ((org-agenda-overriding-header "📋 Daily Habits")
+                                 (org-agenda-span 1)
+                                 (org-agenda-start-day nil)
+                                 (org-agenda-include-diary nil)
+                                 (org-agenda-entry-types '(:scheduled))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
+                                 (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))
+                                 (org-agenda-skip-function 'tdw/skip-unless-non-ritual-habit)))))
 
                     ;; 1b. Bells Ringing
                     ((native . (tags-todo
