@@ -2819,6 +2819,7 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-files (list (expand-file-name "orgnotes/gtd/timesheet.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
                                                          (expand-file-name "orgnotes/gtd/gcal.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))))
                                  (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
+                                 (org-agenda-use-time-grid nil)
                                  (org-agenda-prefix-format '((agenda . "  %i %-12:c%?-18t%-6e ")))
                                  (org-agenda-sorting-strategy '(time-up category-keep))))))
 
