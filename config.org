@@ -2172,7 +2172,7 @@ to the next 15 minutes, plus habits)."
                          (org-agenda-span 1)
                          (org-agenda-start-day nil)
                          (org-agenda-skip-additional-timestamps-same-entry t)
-                         (org-agenda-start-with-log-mode 'clockcheck)
+                         (org-agenda-start-with-log-mode t)
                          (org-agenda-log-mode-items '(clock))
                          (org-agenda-prefix-format '((agenda . "  %i %?-12t%-6e% s")))
                          (org-agenda-skip-function 'tdw/skip-unless-calendar-or-habit))))
@@ -2653,7 +2653,13 @@ what is still ahead is shown."
     "Skip ritual habits (shown in Daily Rituals) and non-calendar items.
 Inlines the Calendar/habit check to avoid org-gtd internal that hangs
 on entries without TODO keywords (e.g., gcal.org).  Shows all Calendar
-meetings (past + future)."
+meetings (past + future).  Also passes clock log entries through so
+log mode can render them in the schedule."
+    ;; Let clock log entries (from org-agenda-get-progress) through
+    (when (save-excursion
+            (beginning-of-line)
+            (looking-at-p ".*CLOCK:"))
+      (cl-return-from tdw/skip-ritual-habits-or-non-calendar nil))
     (let ((hdl (org-get-heading t t t t)))
       (if (and (stringp hdl)
                (cl-some (lambda (name) (string-match-p name hdl))
@@ -2668,8 +2674,13 @@ meetings (past + future)."
             (org-entry-end-position))))))
 
   (defun tdw/skip-unless-calendar-or-habit ()
-    "Keep Calendar entries (past + future) and habits; skip everything else.
+    "Keep Calendar entries (past + future), habits, and clock log entries.
 Used by the Ordered View's Today's Schedule block."
+    ;; Let clock log entries (from org-agenda-get-progress) through
+    (when (save-excursion
+            (beginning-of-line)
+            (looking-at-p ".*CLOCK:"))
+      (cl-return-from tdw/skip-unless-calendar-or-habit nil))
     (let ((org-gtd-value (org-entry-get (point) "ORG_GTD")))
       (if (and (not (org-entry-is-done-p))
                (or (equal org-gtd-value "Calendar")
@@ -2804,7 +2815,7 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-start-day nil)
                                  (org-agenda-include-diary nil)
                                  (org-agenda-skip-additional-timestamps-same-entry t)
-                                 (org-agenda-start-with-log-mode 'clockcheck)
+                                 (org-agenda-start-with-log-mode t)
                                  (org-agenda-log-mode-items '(clock))
                                  (org-agenda-skip-function 'tdw/skip-ritual-habits-or-non-calendar)
                                  (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
