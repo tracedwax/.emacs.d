@@ -2790,7 +2790,15 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-prefix-format '((agenda . "  %i %-12:c%?-12t%-6e ")))
                                  (org-agenda-sorting-strategy '(time-up category-keep))))))
 
-                    ;; 0a. Daily Rituals
+                    ;; 0a. P0
+                    ((native . (tags-todo
+                                "LEVEL>0+ORG_GTD=\"Actions\"+p0"
+                                ((org-agenda-overriding-header ,(format "🚨🚨 P0 (%s)" effort-p0))
+                                 (org-agenda-todo-keyword-format "")
+                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                                 (org-agenda-sorting-strategy '(category-keep))))))
+
+                    ;; 0b. Daily Rituals
                     ((native . (agenda ""
                                 ((org-agenda-overriding-header ,(format "⏰ Daily Rituals (%s)" effort-ritual))
                                  (org-agenda-span 1)
@@ -2802,14 +2810,6 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))
                                  (org-agenda-skip-function 'tdw/skip-unless-daily-ritual)))))
-
-                    ;; 1. P0
-                    ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+p0"
-                                ((org-agenda-overriding-header ,(format "🚨🚨 P0 (%s)" effort-p0))
-                                 (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
-                                 (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; 1b. Bells Ringing
                     ((native . (tags-todo
