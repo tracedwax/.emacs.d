@@ -716,13 +716,18 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     (org-gtd-agenda-property-position 'where-it-fits)
     (org-gtd-directory stag-org-gtd-directory)
     (org-agenda-files (seq-filter #'file-exists-p
-                                  (list (expand-file-name "orgnotes/gtd/inbox.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
-                                        (expand-file-name "orgnotes/gtd/org-gtd-tasks.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
-                                        (expand-file-name "orgnotes/gtd/gcal.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
-                                        (expand-file-name "orgnotes/gtd/timesheet.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
-                                        (expand-file-name "~/my-google-life/orgnotes/gtd/org-gtd-tasks.org")
-                                        (expand-file-name "~/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org")
-                                        (expand-file-name "~/my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))))
+                                  (append
+                                   ;; Core life-repo files
+                                   (list (expand-file-name "orgnotes/gtd/inbox.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
+                                         (expand-file-name "orgnotes/gtd/org-gtd-tasks.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
+                                         (expand-file-name "orgnotes/gtd/gcal.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
+                                         (expand-file-name "orgnotes/gtd/timesheet.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
+                                         (expand-file-name "~/my-google-life/orgnotes/gtd/org-gtd-tasks.org")
+                                         (expand-file-name "~/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org")
+                                         (expand-file-name "~/my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))
+                                   ;; Per-customer context repos (auto-discovered)
+                                   (file-expand-wildcards "~/workspace/non-oss/bfctrace/context-for-*/orgnotes/gtd/org-gtd-tasks.org")
+                                   (file-expand-wildcards "~/workspace/non-oss/thevendoor/context-for-*/orgnotes/gtd/org-gtd-tasks.org"))))
     (org-edna-use-inheritance t)
     (org-gtd-refile-to-any-target t)
     ;; Inbox captures are stamped ORG_GTD=Inbox + TODO so they show in the
