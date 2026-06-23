@@ -1812,18 +1812,22 @@ markers) so the agenda stays navigable."
                 (insert (plist-get e :payload)))))))))
 
   (defun tdw/reorder-tier-sections ()
-    "Float each project parent above its tasks in every tier section.
+    "Regroup every project section into project units: parent first, tasks next.
 Runs as an agenda finalize hook on the Unordered View.  org-gtd 4 files a
-project parent and its tasks in separate containers, so plain file order
-buries parents; this regroups each tier by tgl_ tag, parent first."
+project parent and its tasks in separate containers (`* Projects' vs
+`* Actions'), linked by ORG_GTD_PROJECT_IDS, so plain file order scatters them.
+Each listed section is regrouped by project membership via
+`tdw/--reorder-section-by-project': parent first, tasks in dependency order,
+orphan tasks (parent absent from the section) dropped."
     (when (get-text-property (point-min) 'org-agenda-type)
       (dolist (re '("^🚨🚨 P0 "
                     "^🔔🔔 Bells Ringing "
                     "^🥎 🥎 On Deck "
                     "^💭 💭 Recently Considered "
                     "^🕐 Paused "
-                    "^Unestimated "))
-        (tdw/--reorder-section-project-first re))))
+                    "^Unestimated "
+                    "^Toggl Projects"))
+        (tdw/--reorder-section-by-project re))))
 
 
   ;;; ——— Show only the tgl_ tag on the right ———
@@ -2787,9 +2791,11 @@ per-block `org-agenda-skip-function'."
 
 
 
-                    ;; Toggl Projects (regex matches all tgl_* tags in one query)
-                    ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+{tgl_.+}"
+                    ;; Toggl Projects: include project PARENTS (ORG_GTD=Projects)
+                    ;; so the finalize reorder can show each project as a unit
+                    ;; (parent first, tasks below) instead of orphaned tasks.
+                    ((native . (tags
+                                "LEVEL>0+ORG_GTD={Projects\\|Actions}+{tgl_.+}"
                                 ((org-agenda-overriding-header "Toggl Projects")
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format ',(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")"))
