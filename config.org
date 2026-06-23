@@ -1206,7 +1206,6 @@ Counted ancestors already include this entry's effort via
                   ((tdw/on-deck-p) (setq tdw--ef-deck (+ tdw--ef-deck effort)))
                   ((tdw/recently-considered-p) (setq tdw--ef-considered (+ tdw--ef-considered effort)))
                   ((tdw/paused-p) (setq tdw--ef-paused (+ tdw--ef-paused effort)))
-                  ((tdw/big-rock-p) (setq tdw--ef-big (+ tdw--ef-big effort)))
                   ((tdw/unestimated-p) (cl-incf tdw--ef-unest))
                   (t (setq tdw--ef-other (+ tdw--ef-other effort))))))))))
 
@@ -2169,13 +2168,12 @@ Shows only the tier emoji — no urgency/impact/score."
                      (tdw/unestimated-p)))))
 
   (defun tdw/get-actions-unestimated-count ()
-    "Count active, non-big-rock (score < threshold) Next Actions with no effort.
+    "Count active Next Actions with no effort estimate.
 Mirrors what `tdw/skip-unless-unestimated' shows in the Unestimated view block."
     (tdw/count-agenda-entries
      (lambda () (and (string= (org-entry-get (point) "ORG_GTD") "Actions")
                      (org-get-todo-state)
                      (tdw--entry-active-p)
-                     (< (tdw/score-at-point) tdw--big-rock-threshold)
                      (tdw/unestimated-p)))))
 
   (defun tdw-someday-priority-view (&optional keys)
@@ -2507,12 +2505,9 @@ non-nil when its heading names one of `tdw--ritual-habits'."
       (list score effort-mins (member "p0" tags) (org-entry-is-done-p) (member "gc_next" tags) (member "flyby" tags))))
 
   (defun tdw/skip-unless-unestimated ()
-    "Skip unless score < `tdw--big-rock-threshold' and the entry is unestimated."
-    (let* ((end (org-entry-end-position))
-           (info (tdw/entry-score-info))
-           (score (nth 0 info))
-           (done (nth 3 info)))
-      (if (and (not done) (< score tdw--big-rock-threshold)
+    "Skip unless the entry is active (not done) and unestimated."
+    (let ((end (org-entry-end-position)))
+      (if (and (not (org-entry-is-done-p))
                (tdw/unestimated-p))
           nil
         end)))
