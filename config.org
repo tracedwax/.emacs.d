@@ -1069,9 +1069,12 @@ remaining load."
     "Priority tiers, highest to lowest. Mutually exclusive: a task carries at most one.
 Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
 
+  (defconst tdw--big-rock-threshold 10
+    "Score at or above which a task counts as a Big Rock.")
+
   (defun tdw/big-rock-p ()
-    "Return non-nil if current entry has score >= 10."
-    (>= (tdw/compute-score-at-point) 10))
+    "Return non-nil if current entry has score >= `tdw--big-rock-threshold'."
+    (>= (tdw/compute-score-at-point) tdw--big-rock-threshold))
 
   (defun tdw/unestimated-p ()
     "Return non-nil if current entry has no effort or effort = 0."
@@ -2544,7 +2547,7 @@ Higher score = more value per unit of effort."
            (score (nth 0 info))
            (effort-mins (nth 1 info))
            (done (nth 3 info)))
-      (if (and (not done) (< score 10)
+      (if (and (not done) (< score tdw--big-rock-threshold)
                (or (not effort-mins) (<= effort-mins 0)))
           nil
         end)))
