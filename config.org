@@ -1633,6 +1633,26 @@ Standalone actions (:project nil) pass through in place."
                        (cons parent (tdw/--topo-order-tasks tasks)))))))
               (nreverse slot-order)))))
 
+  (defun tdw/--project-tier-table (headings)
+    "Fold HEADINGS into a hash: project id -> union of member tier tags.
+HEADINGS are plists (:project <id-or-nil> :tiers <list-of-strings>).  Each
+heading's tiers accrue under its :project (a parent's own id; a task's parent
+id).  Standalone headings (:project nil) contribute nothing.  Lets a tier
+section pull in a WHOLE project whenever ANY member carries the tier, even when
+the tasks live in `* Actions' and never inherit the parent's tier tag."
+    (let ((table (make-hash-table :test 'equal)))
+      (dolist (h headings)
+        (let ((proj (plist-get h :project)))
+          (when proj
+            (dolist (tier (plist-get h :tiers))
+              (cl-pushnew tier (gethash proj table) :test #'equal)))))
+      table))
+
+  (defun tdw/--project-qualifies-for-tier-p (project-id tier table)
+    "Non-nil when PROJECT-ID has a member carrying TIER, per TABLE.
+TABLE comes from `tdw/--project-tier-table'.  A nil PROJECT-ID never qualifies."
+    (and project-id (member tier (gethash project-id table))))
+
   (defun tdw/--agenda-line-project-entry (seq)
     "Build a `tdw/order-by-project' entry plist for the agenda line at point.
 SEQ is the file-order index.  Reads the line's org-marker to fetch ID,
