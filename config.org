@@ -1063,12 +1063,6 @@ Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
     "Return non-nil if current entry has score >= 10."
     (>= (tdw/compute-score-at-point) 10))
 
-  (defun tdw/quick-win-p ()
-    "Return non-nil if current entry has effort > 0 and <= 5 minutes."
-    (let* ((effort-str (org-entry-get (point) "EFFORT"))
-           (mins (when effort-str (tdw/get-effort-minutes effort-str))))
-      (and mins (> mins 0) (<= mins 5))))
-
   (defun tdw/unestimated-p ()
     "Return non-nil if current entry has no effort or effort = 0."
     (let* ((effort-str (org-entry-get (point) "EFFORT"))
@@ -2561,14 +2555,6 @@ Higher score = more value per unit of effort."
           nil
         (outline-next-heading))))
 
-  (defun tdw/calendar-meeting-future-p ()
-    "Non-nil if the Calendar entry at point has a TIMESTAMP at or after now.
-Past meetings are filtered out of the Today's Schedule views so only
-what is still ahead is shown."
-    (let* ((ts (org-entry-get (point) "TIMESTAMP"))
-           (ts-time (when ts (org-time-string-to-time ts))))
-      (and ts-time (not (time-less-p ts-time (current-time))))))
-
   (defun tdw/skip-ritual-habits-or-non-calendar ()
     "Skip ritual habits (shown in Daily Rituals) and non-calendar items.
 Inlines the Calendar/habit check to avoid org-gtd internal that hangs
@@ -2586,16 +2572,6 @@ meetings (past + future)."
                        (equal org-gtd-value (org-gtd-type-org-gtd-value 'habit))))
               nil
             (org-entry-end-position))))))
-
-  (defun tdw/skip-unless-calendar-or-habit ()
-    "Keep Calendar entries (past + future) and habits; skip everything else.
-Used by the Ordered View's Today's Schedule block."
-    (let ((org-gtd-value (org-entry-get (point) "ORG_GTD")))
-      (if (and (not (org-entry-is-done-p))
-               (or (equal org-gtd-value "Calendar")
-                   (equal org-gtd-value (org-gtd-type-org-gtd-value 'habit))))
-          nil
-        (org-entry-end-position))))
 
   (defun tdw/skip-unless-tickler-due ()
     "Skip unless this is an incubated item scheduled for today or earlier."
@@ -2619,40 +2595,6 @@ Used by the Ordered View's Today's Schedule block."
                           (+ (* 60 (string-to-number (match-string 1 effort-str)))
                              (string-to-number (match-string 2 effort-str))))))
       (list score effort-mins (member "p0" tags) (org-entry-is-done-p) (member "gc_next" tags) (member "flyby" tags))))
-
-  (defun tdw/skip-unless-big-rock ()
-    "Skip unless score >= 10."
-    (let* ((end (org-entry-end-position))
-           (info (tdw--score-effort-at-point))
-           (score (nth 0 info))
-           (done (nth 3 info)))
-      (if (and (not done) (>= score 10))
-          nil
-        end)))
-
-  (defun tdw/skip-unless-quick-win ()
-    "Skip unless score < 10, effort > 0 and <= 5 min."
-    (let* ((end (org-entry-end-position))
-           (info (tdw--score-effort-at-point))
-           (score (nth 0 info))
-           (effort-mins (nth 1 info))
-           (done (nth 3 info)))
-      (if (and (not done) (< score 10)
-               effort-mins (> effort-mins 0))
-          nil
-        end)))
-
-  (defun tdw/skip-unless-other-rock ()
-    "Skip unless score < 10, effort > 5 min."
-    (let* ((end (org-entry-end-position))
-           (info (tdw--score-effort-at-point))
-           (score (nth 0 info))
-           (effort-mins (nth 1 info))
-           (done (nth 3 info)))
-      (if (and (not done) (< score 10)
-               (and effort-mins (> effort-mins 5)))
-          nil
-        end)))
 
   (defun tdw/skip-unless-unestimated ()
     "Skip unless score < 10, no effort or effort = 0."
