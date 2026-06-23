@@ -1522,53 +1522,6 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
       "noexport" "crypt")
     "Individual tags excluded from the missing-tag check (people/meta).")
 
-  (defun tdw/generate-tgl-blocks (prefix-type)
-    "Generate one agenda block per active tgl_* tag.
-PREFIX-TYPE is either \\='score or \\='urg-imp.  Returns a list of
-native agenda block alists, or nil if no tgl_* tags exist.
-Each block uses a simple single-tag match (e.g., +tgl_admin),
-identical to how hardcoded tag sections work."
-    (let ((tgl-tags nil)
-          (sort-strat (if (eq prefix-type 'score)
-                          '(user-defined-down priority-down alpha-up)
-                        '(category-keep)))
-          (pfx-chain (if (eq prefix-type 'score)
-                         "(effort \" \" score \" — \")"
-                       "(effort \" \" urg-imp \" — \")")))
-      (let ((gtd-file (expand-file-name "~/my-life/orgnotes/gtd/org-gtd-tasks.org")))
-        (when (file-exists-p gtd-file)
-          (with-temp-buffer
-            (insert-file-contents gtd-file)
-            (goto-char (point-min))
-            (while (re-search-forward
-                    "^\\*+ +\\(NEXT\\|TODO\\) .+:\\(tgl_[a-z0-9_]+\\):" nil t)
-              (let ((tag (match-string 2)))
-                (unless (member tag tgl-tags)
-                  (push tag tgl-tags)))
-              (let ((tag-end (line-end-position))
-                    (case-fold-search nil))
-                (while (re-search-forward ":tgl_\\([a-z0-9_]+\\):" tag-end t)
-                  (let ((extra-tag (concat "tgl_" (match-string 1))))
-                    (unless (member extra-tag tgl-tags)
-                      (push extra-tag tgl-tags)))))))))
-      (when tgl-tags
-        (setq tgl-tags (sort tgl-tags #'string<))
-        (let ((pfx-format (format " %%i %%-25:(org-gtd-agenda--resolve-prefix-chain '%s 25) " pfx-chain)))
-          (mapcar
-           (lambda (tag)
-             (let* ((readable (mapconcat #'capitalize
-                                         (split-string (substring tag 4) "_")
-                                         " "))
-                    (match-str (format "LEVEL>0+ORG_GTD=\"Actions\"+%s" tag)))
-               `((native . (tags-todo
-                            ,match-str
-                            ((org-agenda-overriding-header ,readable)
-                             (org-agenda-todo-keyword-format "")
-                             (org-agenda-prefix-format '((tags . ,pfx-format)))
-                             (org-agenda-sorting-strategy ',sort-strat)))))))
-           tgl-tags)))))
-
-
   (defun tdw/check-missing-tag-sections ()
     "After agenda finalization, check if any Actions tags lack a view section.
 Displays a message listing uncovered tags, if any."
@@ -2554,24 +2507,6 @@ Higher score = more value per unit of effort."
                              tdw--ritual-habits)))
           nil
         (outline-next-heading))))
-
-  (defun tdw/skip-ritual-habits-or-non-calendar ()
-    "Skip ritual habits (shown in Daily Rituals) and non-calendar items.
-Inlines the Calendar/habit check to avoid org-gtd internal that hangs
-on entries without TODO keywords (e.g., gcal.org).  Shows all Calendar
-meetings (past + future)."
-    (let ((hdl (org-get-heading t t t t)))
-      (if (and (stringp hdl)
-               (cl-some (lambda (name) (string-match-p name hdl))
-                         tdw--ritual-habits))
-          (outline-next-heading)
-        ;; Inline version of org-gtd-view-lang--skip-unless-calendar-or-habit.
-        (let ((org-gtd-value (org-entry-get (point) "ORG_GTD")))
-          (if (and (not (org-entry-is-done-p))
-                   (or (equal org-gtd-value "Calendar")
-                       (equal org-gtd-value (org-gtd-type-org-gtd-value 'habit))))
-              nil
-            (org-entry-end-position))))))
 
   (defun tdw/skip-unless-tickler-due ()
     "Skip unless this is an incubated item scheduled for today or earlier."
