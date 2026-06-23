@@ -59,63 +59,55 @@ Sets score_15 tag for a high-scoring entry (>= 10)."
   (on-deck-test--with-scored-entry '("on_deck" "l_urgency" "l_impact") nil
     (assert-nil (tdw/skip-unless-unestimated))))
 
-;;;; ——— Prefix emoji for on_deck ———
+;;;; ——— Prefix emoji: org-gtd-agenda--resolve-tier ———
 
-(deftest on-deck/resolve-score-includes-baseball-emoji ()
-  "org-gtd-agenda--resolve-score includes ⚾️ when entry has :on_deck: tag."
+(deftest on-deck/resolve-tier-includes-softball-for-on-deck ()
+  "resolve-tier includes 🥎 when entry has :on_deck: tag."
   (with-temp-buffer
     (org-mode)
-    (insert "* TODO Test task  :on_deck:l_urgency:l_impact:\n")
+    (insert "* TODO Test task  :on_deck:\n")
     (goto-char (point-min))
-    (let ((result (org-gtd-agenda--resolve-score)))
-      (assert-true (string-match-p "⚾️" result)))))
+    (assert-true (string-match-p "🥎" (org-gtd-agenda--resolve-tier)))))
 
-(deftest on-deck/resolve-urg-imp-includes-baseball-emoji ()
-  "org-gtd-agenda--resolve-urg-imp includes ⚾️ when entry has :on_deck: tag."
+(deftest on-deck/resolve-tier-includes-siren-for-p0 ()
+  "resolve-tier includes 🚨 when entry has :p0: tag."
   (with-temp-buffer
     (org-mode)
-    (insert "* TODO Test task  :on_deck:l_urgency:l_impact:\n")
+    (insert "* TODO Test task  :p0:\n")
     (goto-char (point-min))
-    (let ((result (org-gtd-agenda--resolve-urg-imp)))
-      (assert-true (string-match-p "⚾️" result)))))
+    (assert-true (string-match-p "🚨" (org-gtd-agenda--resolve-tier)))))
 
-(deftest on-deck/resolve-score-shows-both-fire-and-deck ()
-  "resolve-score shows both 🔥 and ⚾️ when entry has both tags."
+(deftest on-deck/resolve-tier-shows-both-p0-and-on-deck ()
+  "resolve-tier shows both 🚨 and 🥎 when entry carries both tiers."
   (with-temp-buffer
     (org-mode)
-    (insert "* TODO Test task  :on_fire:on_deck:l_urgency:l_impact:\n")
+    (insert "* TODO Test task  :p0:on_deck:\n")
     (goto-char (point-min))
-    (let ((result (org-gtd-agenda--resolve-score)))
-      (assert-true (string-match-p "🔥" result))
-      (assert-true (string-match-p "⚾️" result)))))
+    (let ((result (org-gtd-agenda--resolve-tier)))
+      (assert-true (string-match-p "🚨" result))
+      (assert-true (string-match-p "🥎" result)))))
 
-(deftest on-deck/resolve-urg-imp-shows-both-fire-and-deck ()
-  "resolve-urg-imp shows both 🔥 and ⚾️ when entry has both tags."
+(deftest on-deck/resolve-tier-empty-for-untiered ()
+  "resolve-tier returns the empty string when no tier tag is present."
   (with-temp-buffer
     (org-mode)
-    (insert "* TODO Test task  :on_fire:on_deck:l_urgency:l_impact:\n")
+    (insert "* TODO Test task\n")
     (goto-char (point-min))
-    (let ((result (org-gtd-agenda--resolve-urg-imp)))
-      (assert-true (string-match-p "🔥" result))
-      (assert-true (string-match-p "⚾️" result)))))
+    (assert-equal "" (org-gtd-agenda--resolve-tier))))
 
-;;;; ——— Effort totals: on_deck bucket ———
+;;;; ——— Effort totals ———
 
-(deftest on-deck/effort-totals-returns-7-elements ()
-  "tdw/get-sanity-effort-totals should return a 7-element list (was 6).
-Elements: (TOTAL ON-FIRE ON-DECK BIG-ROCKS QUICK-WINS OTHER N-UNESTIMATED)."
+(deftest on-deck/effort-totals-returns-9-elements ()
+  "tdw/get-sanity-effort-totals returns a 9-element list:
+(TOTAL P0 BELLS DECK BIG-ROCKS OTHER N-UNESTIMATED CONSIDERED PAUSED)."
   (let ((result (tdw/get-sanity-effort-totals)))
-    (assert-equal 7 (length result))))
+    (assert-equal 9 (length result))))
 
-;;;; ——— Toggle function: tdw/agenda-toggle-on-deck ———
+;;;; ——— Tier-setting command ———
 
-;; Note: The toggle function requires `org-get-at-bol 'org-hd-marker` which
-;; is only available in an agenda buffer.  We test the existence and core
-;; tag-toggling behavior separately.
-
-(deftest on-deck/toggle-function-exists ()
-  "tdw/agenda-toggle-on-deck should be defined as a function."
-  (assert-true (fboundp 'tdw/agenda-toggle-on-deck)))
+(deftest on-deck/set-tier-command-exists ()
+  "tdw/agenda-set-tier (the command that sets on_deck and the other tiers) is defined."
+  (assert-true (fboundp 'tdw/agenda-set-tier)))
 
 (deftest on-deck/toggle-adds-on-deck-tag ()
   "Toggling on_deck on an untagged entry should add the tag."
