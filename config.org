@@ -2472,13 +2472,9 @@ Higher score = more value per unit of effort."
                           "l"))
            (urg (tdw/score-value-for-level urg-level))
            (imp (tdw/score-value-for-level imp-level))
-           (effort-str (org-entry-get (point) "EFFORT"))
-           (effort-mins (if (and effort-str
-                                 (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
-                            (let ((m (+ (* 60 (string-to-number (match-string 1 effort-str)))
-                                        (string-to-number (match-string 2 effort-str)))))
-                              (if (> m 0) m 5))
-                          5))
+           ;; Untimed or zero-effort items default to the smallest tier (5 min).
+           (effort-mins (let ((m (tdw/get-effort-minutes (org-entry-get (point) "EFFORT"))))
+                          (if (> m 0) m 5)))
            (tier (cond ((<= effort-mins 5) 1)
                        ((<= effort-mins 15) 2)
                        ((<= effort-mins 60) 3)
