@@ -2537,10 +2537,7 @@ Higher score = more value per unit of effort."
     (let* ((tags (org-get-tags nil t))
            (score (tdw/compute-score-at-point))
            (effort-str (org-entry-get (point) "EFFORT"))
-           (effort-mins (when (and effort-str
-                                   (string-match "\\([0-9]+\\):\\([0-9]+\\)" effort-str))
-                          (+ (* 60 (string-to-number (match-string 1 effort-str)))
-                             (string-to-number (match-string 2 effort-str))))))
+           (effort-mins (and effort-str (tdw/get-effort-minutes effort-str))))
       (list score effort-mins (member "p0" tags) (org-entry-is-done-p) (member "gc_next" tags) (member "flyby" tags))))
 
   (defun tdw/skip-unless-unestimated ()
