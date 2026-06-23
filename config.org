@@ -2500,29 +2500,25 @@ Higher score = more value per unit of effort."
   (defvar tdw--ritual-habits '("Meeting prep" "Start Time Out" "Vivian Vyvanse" "Catch up with billable hours")
     "Habit headings shown in the Daily Rituals section.")
 
-  (defun tdw/skip-unless-daily-ritual-habit ()
-    "Skip unless this is an undone daily ritual habit."
-    (let* ((dominated (org-entry-get (point) "STYLE"))
-           (is-habit (string= (or dominated "") "habit"))
+  (defun tdw--undone-ritual-habit-p ()
+    "Return (UNDONE-HABIT . RITUAL) for the entry at point.
+UNDONE-HABIT is non-nil when the entry is a habit that is not done; RITUAL is
+non-nil when its heading names one of `tdw--ritual-habits'."
+    (let* ((is-habit (string= (or (org-entry-get (point) "STYLE") "") "habit"))
            (done (org-entry-is-done-p))
            (hdl (org-get-heading t t t t)))
-      (if (and is-habit (not done)
-               (cl-some (lambda (name) (string-match-p name hdl))
-                        tdw--ritual-habits))
-          nil
-        (outline-next-heading))))
+      (cons (and is-habit (not done))
+            (cl-some (lambda (name) (string-match-p name hdl)) tdw--ritual-habits))))
+
+  (defun tdw/skip-unless-daily-ritual-habit ()
+    "Skip unless this is an undone daily ritual habit."
+    (let ((info (tdw--undone-ritual-habit-p)))
+      (if (and (car info) (cdr info)) nil (outline-next-heading))))
 
   (defun tdw/skip-unless-other-habit ()
     "Skip unless this is an undone habit that is NOT a daily ritual."
-    (let* ((dominated (org-entry-get (point) "STYLE"))
-           (is-habit (string= (or dominated "") "habit"))
-           (done (org-entry-is-done-p))
-           (hdl (org-get-heading t t t t)))
-      (if (and is-habit (not done)
-               (not (cl-some (lambda (name) (string-match-p name hdl))
-                             tdw--ritual-habits)))
-          nil
-        (outline-next-heading))))
+    (let ((info (tdw--undone-ritual-habit-p)))
+      (if (and (car info) (not (cdr info))) nil (outline-next-heading))))
 
   (defun tdw/skip-unless-tickler-due ()
     "Skip unless this is an incubated item scheduled for today or earlier."
