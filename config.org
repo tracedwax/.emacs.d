@@ -1570,32 +1570,6 @@ Displays a message listing uncovered tags, if any."
           (message "⚠️ Tags without view sections: %s"
                    (string-join (sort uncovered #'string<) ", "))))))
 
-  (defun tdw/order-project-first (entries)
-    "Reorder ENTRIES so each project's parent sits above its tasks.
-ENTRIES is a list of plists with :tgl (project tag string or nil), :type
-(the ORG_GTD value, e.g. \"Projects\" / \"Actions\"), and :payload (opaque).
-Groups are kept in first-appearance order; within each group, :type
-\"Projects\" entries come first (stable), then the rest (stable).  org-gtd 4
-files a project parent (ORG_GTD=Projects) and its tasks (ORG_GTD=Actions) in
-separate containers, so plain file order scatters them; this regroups by the
-shared tgl_ tag and floats the parent to the top of its group."
-    (let ((groups nil) (order nil))
-      (dolist (e entries)
-        (let ((k (or (plist-get e :tgl) "")))
-          (unless (assoc k groups)
-            (push k order)
-            (push (cons k nil) groups))
-          (push e (cdr (assoc k groups)))))
-      (apply #'append
-             (mapcar (lambda (k)
-                       (let ((es (nreverse (cdr (assoc k groups)))))
-                         (append
-                          (cl-remove-if-not
-                           (lambda (e) (equal (plist-get e :type) "Projects")) es)
-                          (cl-remove-if
-                           (lambda (e) (equal (plist-get e :type) "Projects")) es))))
-                     (nreverse order)))))
-
   (defun tdw/--topo-order-tasks (tasks)
     "Order TASKS (plists with :id :depends-on :seq) so dependencies come first.
 Sequential-dependency aware: each task follows the tasks it DEPENDS_ON.  Among
@@ -1764,52 +1738,6 @@ section with grouped lines, and inserts readable dividers."
                              (header (concat "  — " readable " —\n")))
                         (insert (propertize header 'face 'org-agenda-structure)))))
                   (insert text)))))))))
-
-  (defun tdw/--reorder-section-project-first (header-regex)
-    "Reorder the agenda section whose header matches HEADER-REGEX.
-Within the section, regroup lines by tgl_ project tag (first-appearance
-order) and float each ORG_GTD=Projects parent above its tasks, via
-`tdw/order-project-first'.  Preserves each line's text properties (faces,
-markers) so the agenda stays navigable."
-    (save-excursion
-      (goto-char (point-min))
-      (when (re-search-forward header-regex nil t)
-        (forward-line 1)
-        (let ((inhibit-read-only t)
-              (section-start (point))
-              (section-end nil)
-              (entries nil))
-          (save-excursion
-            (if (re-search-forward "^[^\n ].+$" nil t)
-                (setq section-end (line-beginning-position))
-              (setq section-end (point-max))))
-          (while (and (< (point) section-end) (not (eobp)))
-            (let* ((line-start (line-beginning-position))
-                   (line-end (min (1+ (line-end-position)) section-end))
-                   (line-text (buffer-substring line-start line-end))
-                   (tags (get-text-property (point) 'tags))
-                   (marker (or (org-get-at-bol 'org-marker)
-                               (org-get-at-bol 'org-hd-marker)))
-                   (tgl-tag nil)
-                   (type nil))
-              (when tags
-                (let ((found (cl-find-if
-                              (lambda (tg)
-                                (let ((s (if (symbolp tg) (symbol-name tg) tg)))
-                                  (and (stringp s) (string-prefix-p "tgl_" s))))
-                              tags)))
-                  (when found
-                    (setq tgl-tag (if (symbolp found) (symbol-name found) found)))))
-              (when (markerp marker)
-                (setq type (org-with-point-at marker (org-entry-get nil "ORG_GTD"))))
-              (push (list :tgl tgl-tag :type type :payload line-text) entries))
-            (forward-line 1))
-          (when entries
-            (let ((ordered (tdw/order-project-first (nreverse entries))))
-              (delete-region section-start section-end)
-              (goto-char section-start)
-              (dolist (e ordered)
-                (insert (plist-get e :payload)))))))))
 
   (defun tdw/reorder-tier-sections ()
     "Regroup every project section into project units: parent first, tasks next.
