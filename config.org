@@ -1570,6 +1570,32 @@ Displays a message listing uncovered tags, if any."
           (message "⚠️ Tags without view sections: %s"
                    (string-join (sort uncovered #'string<) ", "))))))
 
+  (defun tdw/order-project-first (entries)
+    "Reorder ENTRIES so each project's parent sits above its tasks.
+ENTRIES is a list of plists with :tgl (project tag string or nil), :type
+(the ORG_GTD value, e.g. \"Projects\" / \"Actions\"), and :payload (opaque).
+Groups are kept in first-appearance order; within each group, :type
+\"Projects\" entries come first (stable), then the rest (stable).  org-gtd 4
+files a project parent (ORG_GTD=Projects) and its tasks (ORG_GTD=Actions) in
+separate containers, so plain file order scatters them; this regroups by the
+shared tgl_ tag and floats the parent to the top of its group."
+    (let ((groups nil) (order nil))
+      (dolist (e entries)
+        (let ((k (or (plist-get e :tgl) "")))
+          (unless (assoc k groups)
+            (push k order)
+            (push (cons k nil) groups))
+          (push e (cdr (assoc k groups)))))
+      (apply #'append
+             (mapcar (lambda (k)
+                       (let ((es (nreverse (cdr (assoc k groups)))))
+                         (append
+                          (cl-remove-if-not
+                           (lambda (e) (equal (plist-get e :type) "Projects")) es)
+                          (cl-remove-if
+                           (lambda (e) (equal (plist-get e :type) "Projects")) es))))
+                     (nreverse order)))))
+
   (defun tdw/insert-tgl-subheaders ()
     "Insert visual sub-headers within the Toggl Projects section.
 Collects all task lines, groups them by tgl_* tag, rewrites the
