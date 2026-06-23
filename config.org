@@ -1650,6 +1650,66 @@ section with grouped lines, and inserts readable dividers."
                         (insert (propertize header 'face 'org-agenda-structure)))))
                   (insert text)))))))))
 
+  (defun tdw/--reorder-section-project-first (header-regex)
+    "Reorder the agenda section whose header matches HEADER-REGEX.
+Within the section, regroup lines by tgl_ project tag (first-appearance
+order) and float each ORG_GTD=Projects parent above its tasks, via
+`tdw/order-project-first'.  Preserves each line's text properties (faces,
+markers) so the agenda stays navigable."
+    (save-excursion
+      (goto-char (point-min))
+      (when (re-search-forward header-regex nil t)
+        (forward-line 1)
+        (let ((inhibit-read-only t)
+              (section-start (point))
+              (section-end nil)
+              (entries nil))
+          (save-excursion
+            (if (re-search-forward "^[^\n ].+$" nil t)
+                (setq section-end (line-beginning-position))
+              (setq section-end (point-max))))
+          (while (and (< (point) section-end) (not (eobp)))
+            (let* ((line-start (line-beginning-position))
+                   (line-end (min (1+ (line-end-position)) section-end))
+                   (line-text (buffer-substring line-start line-end))
+                   (tags (get-text-property (point) 'tags))
+                   (marker (or (org-get-at-bol 'org-marker)
+                               (org-get-at-bol 'org-hd-marker)))
+                   (tgl-tag nil)
+                   (type nil))
+              (when tags
+                (let ((found (cl-find-if
+                              (lambda (tg)
+                                (let ((s (if (symbolp tg) (symbol-name tg) tg)))
+                                  (and (stringp s) (string-prefix-p "tgl_" s))))
+                              tags)))
+                  (when found
+                    (setq tgl-tag (if (symbolp found) (symbol-name found) found)))))
+              (when (markerp marker)
+                (setq type (org-with-point-at marker (org-entry-get nil "ORG_GTD"))))
+              (push (list :tgl tgl-tag :type type :payload line-text) entries))
+            (forward-line 1))
+          (when entries
+            (let ((ordered (tdw/order-project-first (nreverse entries))))
+              (delete-region section-start section-end)
+              (goto-char section-start)
+              (dolist (e ordered)
+                (insert (plist-get e :payload)))))))))
+
+  (defun tdw/reorder-tier-sections ()
+    "Float each project parent above its tasks in every tier section.
+Runs as an agenda finalize hook on the Unordered View.  org-gtd 4 files a
+project parent and its tasks in separate containers, so plain file order
+buries parents; this regroups each tier by tgl_ tag, parent first."
+    (when (get-text-property (point-min) 'org-agenda-type)
+      (dolist (re '("^🚨🚨 P0 "
+                    "^🔔🔔 Bells Ringing "
+                    "^🥎 🥎 On Deck "
+                    "^💭 💭 Recently Considered "
+                    "^🕐 Paused "
+                    "^Unestimated "))
+        (tdw/--reorder-section-project-first re))))
+
 
   ;;; ——— Show only the tgl_ tag on the right ———
   ;; We want every agenda view (engage, unordered, someday, ...) to show the
@@ -1827,6 +1887,9 @@ true running clock across files and processes."
   (add-hook 'org-agenda-finalize-hook #'tdw/reset-agenda-hscroll)
   (add-hook 'org-agenda-finalize-hook #'tdw/insert-gap-total)
   (add-hook 'org-agenda-finalize-hook #'tdw/insert-active-clock)
+  ;; Registered last so it runs first (add-hook prepends): reorder while each
+  ;; line still carries its org-marker and tags text properties.
+  (add-hook 'org-agenda-finalize-hook #'tdw/reorder-tier-sections)
 
   ;;; --- Auto-sync CLOCKs to timesheet.org on agenda refresh ---
   ;; Before the agenda rebuilds, sync CLOCK entries from all context repos
