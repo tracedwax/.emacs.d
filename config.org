@@ -2668,7 +2668,10 @@ per-block `org-agenda-skip-function'."
     (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,_effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/effort-totals-by-tier))
                 (`(,effort-ritual ,effort-spent ,effort-remaining) (tdw/schedule-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
-            (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp))
+            (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
+            ;; Project -> tier-set, so a tiered parent pulls its * Actions tasks
+            ;; into the tier section even when they never inherit the tier tag.
+            (tdw/--current-project-tier-table (tdw/--scan-project-tier-table)))
        (org-gtd-view-show
        `((name . ,(format "📋 Unordered View — Total Effort: %s" total))
          (prefix-width . 25)
@@ -2702,12 +2705,13 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-sorting-strategy '(category-keep))
                                  (org-agenda-skip-function 'tdw/skip-unless-daily-ritual-habit)))))
 
-                    ;; 0b. P0  (project parents carry the tier; subtasks follow in file order)
+                    ;; 0b. P0  (whole project unit: a tiered parent pulls in its tasks)
                     ((native . (tags
-                                "LEVEL>0+ORG_GTD={Projects\\|Actions}+p0"
+                                "LEVEL>0+ORG_GTD={Projects\\|Actions}"
                                 ((org-agenda-overriding-header ,(format "🚨🚨 P0 (%s)" effort-p0))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format ',(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")"))
+                                 (org-agenda-skip-function (lambda () (tdw/skip-unless-project-tier "p0")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; 0c. Daily Habits (non-ritual habits: weekly plan, etc.)
@@ -2723,36 +2727,40 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-sorting-strategy '(category-keep))
                                  (org-agenda-skip-function 'tdw/skip-unless-other-habit)))))
 
-                    ;; 1b. Bells Ringing  (project parents carry the tier; subtasks follow in file order)
+                    ;; 1b. Bells Ringing  (whole project unit: a tiered parent pulls in its tasks)
                     ((native . (tags
-                                "LEVEL>0+ORG_GTD={Projects\\|Actions}+bells_ringing"
+                                "LEVEL>0+ORG_GTD={Projects\\|Actions}"
                                 ((org-agenda-overriding-header ,(format "🔔🔔 Bells Ringing (%s)" effort-bell))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format ',(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")"))
+                                 (org-agenda-skip-function (lambda () (tdw/skip-unless-project-tier "bells_ringing")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
-                    ;; 1c. On Deck  (project parents carry the tier; subtasks follow in file order)
+                    ;; 1c. On Deck  (whole project unit: a tiered parent pulls in its tasks)
                     ((native . (tags
-                                "LEVEL>0+ORG_GTD={Projects\\|Actions}+on_deck"
+                                "LEVEL>0+ORG_GTD={Projects\\|Actions}"
                                 ((org-agenda-overriding-header ,(format "🥎 🥎 On Deck (%s)" effort-deck))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format ',(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")"))
+                                 (org-agenda-skip-function (lambda () (tdw/skip-unless-project-tier "on_deck")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
-                    ;; 1d. Recently Considered  (project parents carry the tier; subtasks follow in file order)
+                    ;; 1d. Recently Considered  (whole project unit: a tiered parent pulls in its tasks)
                     ((native . (tags
-                                "LEVEL>0+ORG_GTD={Projects\\|Actions}+recently_considered"
+                                "LEVEL>0+ORG_GTD={Projects\\|Actions}"
                                 ((org-agenda-overriding-header ,(format "💭 💭 Recently Considered (%s)" effort-considered))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format ',(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")"))
+                                 (org-agenda-skip-function (lambda () (tdw/skip-unless-project-tier "recently_considered")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
-                    ;; 1e. Paused  (project parents carry the tier; subtasks follow in file order)
+                    ;; 1e. Paused  (whole project unit: a tiered parent pulls in its tasks)
                     ((native . (tags
-                                "LEVEL>0+ORG_GTD={Projects\\|Actions}+paused"
+                                "LEVEL>0+ORG_GTD={Projects\\|Actions}"
                                 ((org-agenda-overriding-header ,(format "🕐 Paused (%s)" effort-paused))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format ',(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")"))
+                                 (org-agenda-skip-function (lambda () (tdw/skip-unless-project-tier "paused")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
                     ;; 3. Delegated: overdue
