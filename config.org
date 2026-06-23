@@ -2571,9 +2571,10 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-skip-function 'tdw/skip-unless-tickler-due)))))
 
 
-                    ;; Unestimated
+                    ;; Unestimated  (project parents carry the estimate; include
+                    ;; them so freshly-groomed, untiered projects don't vanish)
                     ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\""
+                                "LEVEL>0+ORG_GTD={Projects\\|Actions}"
                                 ((org-agenda-overriding-header ,(format "Unestimated (%d items)" n-actions-unest))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format ',(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")"))
