@@ -50,19 +50,4 @@
   (assert-equal "1:30" (tdw/format-minutes 90))
   (assert-equal "2:05" (tdw/format-minutes 125)))
 
-;;;; ——— tdw/level-score ———
-
-(deftest level-score/maps-level-abbreviations-to-weights ()
-  "wh=8, vh=5, h=3, sh=2, m=1, l=0."
-  (assert-equal 8 (tdw/level-score "wh"))
-  (assert-equal 5 (tdw/level-score "vh"))
-  (assert-equal 3 (tdw/level-score "h"))
-  (assert-equal 2 (tdw/level-score "sh"))
-  (assert-equal 1 (tdw/level-score "m"))
-  (assert-equal 0 (tdw/level-score "l")))
-
-(deftest level-score/unknown-level-scores-zero ()
-  "An unrecognized level abbreviation scores 0 (same as l)."
-  (assert-equal 0 (tdw/level-score "xx")))
-
 ;;; effort-and-score-pure-test.el ends here

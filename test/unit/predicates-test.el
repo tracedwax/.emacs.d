@@ -130,57 +130,6 @@ Captured: (\"tag1\" \"tag2\") for tag1 on a :tag1:tag2: entry."
     (goto-char (point-min))
     (assert-nil (tdw/paused-p))))
 
-;;;; ——— tdw/big-rock-p (score >= 10) ———
-;;
-;; Score = floor((2*urg + imp) / effort-tier), where the tier is
-;; 0-5min=1, 6-15min=2, 16-60min=3, 60+=4, and the level weights are
-;; wh=8 vh=5 h=3 sh=2 m=1 l=0.  big-rock-p is (>= score 10).
-;; Values below were captured from tdw/score-at-point.
-
-(deftest predicates/big-rock-p-non-nil-when-score-15 ()
-  "High urgency+impact at small effort scores 15 (>= 10): big rock.
-Captured: vh_urgency + vh_impact, EFFORT 0:05 -> score 15 -> t."
-  (with-temp-buffer
-    (org-mode)
-    (insert "* TODO Title  :vh_urgency:vh_impact:\n")
-    (goto-char (point-min))
-    (org-set-property "EFFORT" "0:05")
-    (goto-char (point-min))
-    (assert-true (tdw/big-rock-p))))
-
-(deftest predicates/big-rock-p-non-nil-at-boundary-score-10 ()
-  "Score exactly 10 is a big rock (boundary is inclusive: >= 10).
-Captured: vh_urgency + l_impact, EFFORT 0:05 -> raw 10, tier 1 -> score 10 -> t."
-  (with-temp-buffer
-    (org-mode)
-    (insert "* TODO Title  :vh_urgency:l_impact:\n")
-    (goto-char (point-min))
-    (org-set-property "EFFORT" "0:05")
-    (goto-char (point-min))
-    (assert-true (tdw/big-rock-p))))
-
-(deftest predicates/big-rock-p-nil-just-below-boundary-score-9 ()
-  "Score 9 is NOT a big rock (just below the inclusive >= 10 boundary).
-Captured: h_urgency + h_impact, EFFORT 0:05 -> raw 9, tier 1 -> score 9 -> nil."
-  (with-temp-buffer
-    (org-mode)
-    (insert "* TODO Title  :h_urgency:h_impact:\n")
-    (goto-char (point-min))
-    (org-set-property "EFFORT" "0:05")
-    (goto-char (point-min))
-    (assert-nil (tdw/big-rock-p))))
-
-(deftest predicates/big-rock-p-nil-when-large-effort-dilutes-score ()
-  "Same high urgency+impact but a 1-hour effort dilutes the score below 10.
-Captured: vh_urgency + vh_impact, EFFORT 1:00 -> raw 15, tier 3 -> score 5 -> nil."
-  (with-temp-buffer
-    (org-mode)
-    (insert "* TODO Title  :vh_urgency:vh_impact:\n")
-    (goto-char (point-min))
-    (org-set-property "EFFORT" "1:00")
-    (goto-char (point-min))
-    (assert-nil (tdw/big-rock-p))))
-
 ;;;; ——— tdw/unestimated-p ———
 
 (deftest predicates/unestimated-p-non-nil-when-no-effort ()

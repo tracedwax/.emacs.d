@@ -1073,13 +1073,6 @@ remaining load."
     "Priority tiers, highest to lowest. Mutually exclusive: a task carries at most one.
 Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
 
-  (defconst tdw--big-rock-threshold 10
-    "Score at or above which a task counts as a Big Rock.")
-
-  (defun tdw/big-rock-p ()
-    "Return non-nil if current entry has score >= `tdw--big-rock-threshold'."
-    (>= (tdw/score-at-point) tdw--big-rock-threshold))
-
   (defun tdw/unestimated-p ()
     "Return non-nil if current entry has no effort or effort = 0."
     (let* ((effort-str (org-entry-get (point) "EFFORT"))
@@ -2410,41 +2403,6 @@ TAG is one of `tdw--tier-tags'. If the task already carries TAG, remove it inste
 
   ;;; ——— Score Computation ———
 
-  (defconst tdw--level-weights
-    '(("wh" . 8) ("vh" . 5) ("h" . 3) ("sh" . 2) ("m" . 1) ("l" . 0))
-    "Urgency/impact level abbreviations to numeric weight, highest first.
-Single source of truth for both the level vocabulary and the scoring.")
-
-  (defun tdw/level-score (level)
-    "Map urgency/impact level abbreviation to its numeric weight (unknown -> 0)."
-    (or (cdr (assoc level tdw--level-weights)) 0))
-
-  (defun tdw/score-at-point ()
-    "Compute floor((2*urg + imp) / effort-tier) at point. Returns integer.
-Effort tiers: 0-5min=1, 6-15min=2, 16-60min=3, 60+=4.
-Higher score = more value per unit of effort."
-    (let* ((tags (org-get-tags nil t))
-           (urg-level (or (cl-find-if (lambda (lvl)
-                                        (member (format "%s_urgency" lvl) tags))
-                                      (mapcar #'car tdw--level-weights))
-                          "l"))
-           (imp-level (or (cl-find-if (lambda (lvl)
-                                        (member (format "%s_impact" lvl) tags))
-                                      (mapcar #'car tdw--level-weights))
-                          "l"))
-           (urg (tdw/level-score urg-level))
-           (imp (tdw/level-score imp-level))
-           ;; Untimed or zero-effort items default to the smallest tier (5 min).
-           (effort-mins (let ((m (tdw/effort-string-to-minutes (org-entry-get (point) "EFFORT"))))
-                          (if (> m 0) m 5)))
-           (tier (cond ((<= effort-mins 5) 1)
-                       ((<= effort-mins 15) 2)
-                       ((<= effort-mins 60) 3)
-                       (t 4)))
-           (raw (+ (* 2 urg) imp)))
-      (floor (/ (float raw) tier))))
-
-
   ;; ——— Shared Agenda Skip Functions ———
   ;; Extracted from inline lambdas so both Ordered View and Unordered View
   ;; can reference them by name instead of duplicating escaped code.
@@ -2483,14 +2441,6 @@ non-nil when its heading names one of `tdw--ritual-habits'."
                    today))
           nil
         (org-entry-end-position))))
-
-  (defun tdw/entry-score-info ()
-    "Return (score effort-mins on-p0-p done-p gc-next-p flyby-p) at point for skip functions."
-    (let* ((tags (org-get-tags nil t))
-           (score (tdw/score-at-point))
-           (effort-str (org-entry-get (point) "EFFORT"))
-           (effort-mins (and effort-str (tdw/effort-string-to-minutes effort-str))))
-      (list score effort-mins (member "p0" tags) (org-entry-is-done-p) (member "gc_next" tags) (member "flyby" tags))))
 
   (defun tdw/skip-unless-unestimated ()
     "Skip unless the entry is active (not done) and unestimated."
