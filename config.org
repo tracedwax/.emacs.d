@@ -2158,59 +2158,6 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
                      "")))
         (truncate-string-to-width (or result "") width nil ?\s org-gtd-agenda-truncate-ellipsis))))
 
-  (with-eval-after-load 'org-gtd-view-language
-    (defun org-gtd-view-lang--create-calendar-day-block (_gtd-view-spec)
-      "Return Clock Log + Daily Rituals + Daily Habits blocks.
-Mirrors the Unordered View structure: replaces the old single
-Today's Schedule block with three focused blocks."
-      (pcase-let ((`(,ritual ,spent ,remaining) (tdw/get-schedule-effort-totals)))
-        (let ((ts-file (expand-file-name "orgnotes/gtd/timesheet.org"
-                         (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life"))))
-              (gc-file (expand-file-name "orgnotes/gtd/gcal.org"
-                         (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))))
-          ;; Return list of three native blocks
-          `((agenda ""
-             ((org-agenda-overriding-header ,(format "🕐 Clock Log (%s spent, %s remaining)" spent remaining))
-              (org-agenda-span 1)
-              (org-agenda-start-day nil)
-              (org-agenda-include-diary nil)
-              (org-agenda-start-with-log-mode 'only)
-              (org-agenda-log-mode-items '(clock))
-              (org-agenda-files (list ,ts-file ,gc-file))
-              (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
-              (org-agenda-time-grid '((daily today require-timed) () "" "now - - - - - - - - - - - - - - - - - - - - -"))
-              (org-agenda-prefix-format '((agenda . "  %i %-12:c%?-12t%-6e ")))
-              (org-agenda-sorting-strategy '(time-up category-keep))))))))
-
-    (defun org-gtd-view-lang--create-daily-rituals-block (_gtd-view-spec)
-      "Daily Rituals block for the Ordered View."
-      (pcase-let ((`(,ritual ,_spent ,_remaining) (tdw/get-schedule-effort-totals)))
-        `(agenda ""
-           ((org-agenda-overriding-header ,(format "⏰ Daily Rituals (%s)" ritual))
-            (org-agenda-span 1)
-            (org-agenda-start-day nil)
-            (org-agenda-include-diary nil)
-            (org-agenda-entry-types '(:scheduled))
-            (org-agenda-todo-keyword-format "")
-            (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
-            (org-agenda-prefix-format '((agenda . "  %i %?-12t%-6e% s")))
-            (org-agenda-sorting-strategy '(category-keep))
-            (org-agenda-skip-function 'tdw/skip-unless-daily-ritual)))))
-
-    (defun org-gtd-view-lang--create-daily-habits-block (_gtd-view-spec)
-      "Daily Habits block for the Ordered View."
-      `(agenda ""
-         ((org-agenda-overriding-header "📋 Daily Habits")
-          (org-agenda-span 1)
-          (org-agenda-start-day nil)
-          (org-agenda-include-diary nil)
-          (org-agenda-entry-types '(:scheduled))
-          (org-agenda-todo-keyword-format "")
-          (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
-          (org-agenda-prefix-format '((agenda . "  %i %?-12t%-6e% s")))
-          (org-agenda-sorting-strategy '(category-keep))
-          (org-agenda-skip-function 'tdw/skip-unless-non-ritual-habit)))))
-
   (defun org-gtd-agenda--resolve-tier ()
     "Return priority tier emoji string for the item at point.
 Shows only the tier emoji — no urgency/impact/score."
