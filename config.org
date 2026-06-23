@@ -2454,11 +2454,14 @@ TAG is one of `tdw--tier-tags'. If the task already carries TAG, remove it inste
 
   ;;; ——— Score Computation ———
 
+  (defconst tdw--level-weights
+    '(("wh" . 8) ("vh" . 5) ("h" . 3) ("sh" . 2) ("m" . 1) ("l" . 0))
+    "Urgency/impact level abbreviations to numeric weight, highest first.
+Single source of truth for both the level vocabulary and the scoring.")
+
   (defun tdw/score-value-for-level (level)
-    "Map urgency/impact level abbreviation to numeric score.
-Levels: l=0, m=1, sh=2, h=3, vh=5, wh=8."
-    (pcase level
-      ("wh" 8) ("vh" 5) ("h" 3) ("sh" 2) ("m" 1) (_ 0)))
+    "Map urgency/impact level abbreviation to its numeric weight (unknown -> 0)."
+    (or (cdr (assoc level tdw--level-weights)) 0))
 
   (defun tdw/compute-score-at-point ()
     "Compute floor((2*urg + imp) / effort-tier) at point. Returns integer.
@@ -2467,11 +2470,11 @@ Higher score = more value per unit of effort."
     (let* ((tags (org-get-tags nil t))
            (urg-level (or (cl-find-if (lambda (lvl)
                                         (member (format "%s_urgency" lvl) tags))
-                                      '("wh" "vh" "h" "sh" "m" "l"))
+                                      (mapcar #'car tdw--level-weights))
                           "l"))
            (imp-level (or (cl-find-if (lambda (lvl)
                                         (member (format "%s_impact" lvl) tags))
-                                      '("wh" "vh" "h" "sh" "m" "l"))
+                                      (mapcar #'car tdw--level-weights))
                           "l"))
            (urg (tdw/score-value-for-level urg-level))
            (imp (tdw/score-value-for-level imp-level))
