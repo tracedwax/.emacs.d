@@ -722,14 +722,12 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                                   (if (string= (user-login-name) "trace")
                                       ;; trace: throwaway test fixtures ONLY (real task
                                       ;; management lives on thecleverone).
-                                      (list (expand-file-name "orgnotes/gtd/inbox.org" "~/my-test-life")
-                                            (expand-file-name "orgnotes/gtd/org-gtd-tasks.org" "~/my-test-life")
+                                      (list (expand-file-name "orgnotes/gtd/org-gtd-tasks.org" "~/my-test-life")
                                             (expand-file-name "orgnotes/gtd/gcal.org" "~/my-test-life")
                                             (expand-file-name "orgnotes/gtd/timesheet.org" "~/my-test-life"))
                                     (append
                                      ;; Core life-repo files
-                                     (list (expand-file-name "orgnotes/gtd/inbox.org" "~/my-venndoor-life")
-                                           (expand-file-name "orgnotes/gtd/org-gtd-tasks.org" "~/my-venndoor-life")
+                                     (list (expand-file-name "orgnotes/gtd/org-gtd-tasks.org" "~/my-venndoor-life")
                                            (expand-file-name "orgnotes/gtd/gcal.org" "~/my-venndoor-life")
                                            (expand-file-name "orgnotes/gtd/timesheet.org" "~/my-venndoor-life")
                                            (expand-file-name "~/my-google-life/orgnotes/gtd/org-gtd-tasks.org")
@@ -737,9 +735,7 @@ Inheritance respects `my/org-gtd-inherit-priority' and
                                            (expand-file-name "~/my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))
                                      ;; Per-customer context repos (auto-discovered)
                                      (file-expand-wildcards "~/workspace/non-oss/bfctrace/context-for-*/orgnotes/gtd/org-gtd-tasks.org")
-                                     (file-expand-wildcards "~/workspace/non-oss/thevendoor/context-for-*/orgnotes/gtd/org-gtd-tasks.org")
-                                     (file-expand-wildcards "~/workspace/non-oss/bfctrace/context-for-*/orgnotes/gtd/inbox.org")
-                                     (file-expand-wildcards "~/workspace/non-oss/thevendoor/context-for-*/orgnotes/gtd/inbox.org")))))
+                                     (file-expand-wildcards "~/workspace/non-oss/thevendoor/context-for-*/orgnotes/gtd/org-gtd-tasks.org")))))
     (org-edna-use-inheritance t)
     (org-gtd-refile-to-any-target t)
     ;; Inbox captures are stamped ORG_GTD=Inbox + TODO so they show in the
@@ -798,6 +794,40 @@ Inheritance respects `my/org-gtd-inherit-priority' and
 
   ;; ——— Agenda single-task move commands ———
 
+  (defun tdw/same-repo-refile-target (type)
+    "Return an `org-refile' target for the level-1 ORG_GTD_REFILE=TYPE container in
+the `org-gtd-tasks.org' that lives in the SAME repo as the entry at point, so move
+commands never yank a task into another repo's file. TYPE is e.g. \"Actions\" or
+\"Someday\" (matched as a member of the space-separated ORG_GTD_REFILE value, like
+org-gtd does). Creates the container at end of file if absent."
+    (let* ((src (buffer-file-name (buffer-base-buffer)))
+           (dir (and src (file-name-directory src)))
+           (file (and dir (expand-file-name "org-gtd-tasks.org" dir))))
+      (unless (and file (file-exists-p file))
+        (user-error "No org-gtd-tasks.org beside %s" (or src "this buffer")))
+      (with-current-buffer (find-file-noselect file)
+        (org-with-wide-buffer
+         (let (pos)
+           (goto-char (point-min))
+           (org-map-entries
+            (lambda ()
+              (when (and (not pos)
+                         (= (org-current-level) 1)
+                         (let ((p (org-entry-get (point) "ORG_GTD_REFILE")))
+                           (and p (member type (split-string p)))))
+                (setq pos (point))))
+            nil 'file)
+           (unless pos
+             (goto-char (point-max))
+             (unless (bolp) (insert "\n"))
+             (insert (format "* %s\n:PROPERTIES:\n:ORG_GTD_REFILE: %s\n:END:\n" type type))
+             (save-buffer)
+             (goto-char (point-max))
+             (org-back-to-heading t)
+             (setq pos (point)))
+           (goto-char pos)
+           (list (org-get-heading t t t t) file nil pos))))))
+
   (defun tdw/agenda-move-to-someday ()
     "Move the task at point to Someday/Maybe.
 If the task is already in Someday (e.g. after pressing c by mistake), resets
@@ -833,10 +863,10 @@ Updates the agenda-line marker after refile so change-your-mind works."
               (when (looking-at "CLOSED: ")
                 (delete-region (point) (1+ (line-end-position)))))
             (let ((org-gtd-organize-hooks nil))
-              (let ((targets (org-gtd-refile--get-targets "Someday")))
-                (if (null targets)
-                    (user-error "No Someday refile targets found")
-                  (org-refile nil nil (car targets)))))
+              (let ((target (tdw/same-repo-refile-target "Someday")))
+                (if (null target)
+                    (user-error "No Someday refile target found in this repo")
+                  (org-refile nil nil target))))
             (save-buffer))))
       ;; Update marker to new location so change-your-mind works
       (when task-id
@@ -900,10 +930,10 @@ Updates the agenda-line marker after refile so change-your-mind works."
               (when (looking-at "CLOSED: ")
                 (delete-region (point) (1+ (line-end-position)))))
             (let ((org-gtd-organize-hooks nil))
-              (let ((targets (org-gtd-refile--get-targets "Actions")))
-                (if (null targets)
-                    (user-error "No Actions refile targets found")
-                  (org-refile nil nil (car targets)))))
+              (let ((target (tdw/same-repo-refile-target "Actions")))
+                (if (null target)
+                    (user-error "No Actions refile target found in this repo")
+                  (org-refile nil nil target))))
             (save-buffer))))
       ;; Update marker to new location so change-your-mind works
       (when task-id
