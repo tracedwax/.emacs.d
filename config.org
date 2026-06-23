@@ -2583,30 +2583,6 @@ Higher score = more value per unit of effort."
       (floor (/ (float raw) tier))))
 
 
-  ;;; ——— Ordered View ———
-
-
-  (defun tdw/agenda-score-at-marker (marker)
-    "Compute (2*urg + imp) * (effort/5) at MARKER for agenda sorting."
-    (or (org-with-point-at marker
-          (tdw/compute-score-at-point))
-        0))
-
-  (defun tdw/agenda-cmp-score (a b)
-    "Compare agenda entries A and B by urgency/impact score.
-Returns +1 if A should sort first (higher score), -1 if B, nil if equal."
-    (let* ((ma (or (get-text-property 1 'org-marker a)
-                   (get-text-property 1 'org-hd-marker a)))
-           (mb (or (get-text-property 1 'org-marker b)
-                   (get-text-property 1 'org-hd-marker b)))
-           (sa (if ma (tdw/agenda-score-at-marker ma) 0))
-           (sb (if mb (tdw/agenda-score-at-marker mb) 0)))
-      (cond ((> sa sb) +1)
-            ((< sa sb) -1)
-            (t nil))))
-
-  (setq org-agenda-cmp-user-defined #'tdw/agenda-cmp-score)
-
   ;; ——— Shared Agenda Skip Functions ———
   ;; Extracted from inline lambdas so both Ordered View and Unordered View
   ;; can reference them by name instead of duplicating escaped code.
