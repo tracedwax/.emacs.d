@@ -767,7 +767,6 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     (setq org-id-search-archives nil)
     :bind
     (("C-c d c" . org-gtd-capture)
-     ("C-c d e" . org-gtd-engage)
      ("C-c d p" . org-gtd-process-inbox)
      ("C-c d n" . org-gtd-show-all-next)
      ("C-c d s" . org-gtd-show-stuck-projects)
@@ -2100,8 +2099,6 @@ Runs before `org-agenda-redo' so entries are visible on refresh."
     (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
     (define-key org-agenda-mode-map (kbd "=") #'tdw-agenda-effort-increment)
     (define-key org-agenda-mode-map (kbd "-") #'tdw-agenda-effort-decrement)
-    (define-key org-agenda-mode-map (kbd "u") #'tdw/agenda-cycle-urgency)
-    (define-key org-agenda-mode-map (kbd "i") #'tdw/agenda-cycle-impact)
     (define-key org-agenda-mode-map (kbd "I") #'org-agenda-diary-entry)
     (define-key org-agenda-mode-map (kbd "c") (lambda () (interactive) (tdw/agenda-set-tier "recently_considered")))
     (define-key org-agenda-mode-map (kbd "d") (lambda () (interactive) (org-agenda-todo "DONE")))
@@ -2450,54 +2447,6 @@ Press 'n' to promote to Next Actions, 's' for Someday, 'x' to cancel."
                                  (org-agenda-sorting-strategy '(category-keep))))))
                     ))) (or keys "i")))))
 
-
-  ;;; ——— Ordered View: Urgency/Impact cycling ———
-
-  (defun tdw/agenda-cycle-tag (prefix levels)
-    "Cycle a tag with PREFIX through LEVELS on the task at point.
-PREFIX is e.g. \"urgency\" or \"impact\".
-LEVELS is a list like (\"l\" \"m\" \"h\" \"vh\")."
-    (let* ((hdmarker (or (org-get-at-bol 'org-hd-marker)
-                         (org-agenda-error)))
-           (buffer (marker-buffer hdmarker))
-           (pos (marker-position hdmarker))
-           current-level current-tag next-level next-tag)
-      (with-current-buffer buffer
-        (widen)
-        (goto-char pos)
-        (let ((tags (org-get-tags nil t)))
-          ;; Find current level
-          (setq current-level
-                (cl-find-if (lambda (lvl)
-                              (member (format "%s_%s" lvl prefix) tags))
-                            levels))
-          (setq current-tag (when current-level
-                              (format "%s_%s" current-level prefix)))
-          ;; Determine next level (cycle)
-          (setq next-level
-                (if current-level
-                    (let ((idx (cl-position current-level levels :test #'equal)))
-                      (nth (mod (1+ idx) (length levels)) levels))
-                  (car levels)))
-          (setq next-tag (format "%s_%s" next-level prefix))
-          ;; Remove old, add new
-          (when current-tag (org-toggle-tag current-tag 'off))
-          (org-toggle-tag next-tag 'on)
-          ;; Recalculate score tag
-          (tdw/compute-and-set-score)))
-      ;; Update prefix in-place instead of full refresh
-      (tdw/agenda--refresh-prefix hdmarker buffer)
-      (message "Set %s → %s" prefix next-level)))
-
-  (defun tdw/agenda-cycle-urgency ()
-    "Cycle urgency tag: l → m → sh → h → vh → wh → l."
-    (interactive)
-    (tdw/agenda-cycle-tag "urgency" '("l" "m" "sh" "h" "vh" "wh")))
-
-  (defun tdw/agenda-cycle-impact ()
-    "Cycle impact tag: l → m → sh → h → vh → wh → l."
-    (interactive)
-    (tdw/agenda-cycle-tag "impact" '("l" "m" "sh" "h" "vh" "wh")))
 
   (defun tdw/agenda--refresh-prefix (hdmarker buffer)
     "Re-resolve the agenda prefix annotation for the line at point, in place.
