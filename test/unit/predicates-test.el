@@ -135,7 +135,7 @@ Captured: (\"tag1\" \"tag2\") for tag1 on a :tag1:tag2: entry."
 ;; Score = floor((2*urg + imp) / effort-tier), where the tier is
 ;; 0-5min=1, 6-15min=2, 16-60min=3, 60+=4, and the level weights are
 ;; wh=8 vh=5 h=3 sh=2 m=1 l=0.  big-rock-p is (>= score 10).
-;; Values below were captured from tdw/compute-score-at-point.
+;; Values below were captured from tdw/score-at-point.
 
 (deftest predicates/big-rock-p-non-nil-when-score-15 ()
   "High urgency+impact at small effort scores 15 (>= 10): big rock.

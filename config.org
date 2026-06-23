@@ -999,7 +999,7 @@ SOMEDAY/NEXT/CNCL visual markers."
               ;; Prevent horizontal scroll from ever persisting
               (add-hook 'post-command-hook #'tdw/reset-agenda-hscroll nil t)))
 
-  (defun tdw/get-effort-minutes (effort-str)
+  (defun tdw/effort-string-to-minutes (effort-str)
     "Convert EFFORT-STR to minutes. Handles H:MM, NNmin, NNh, bare numbers."
     (cond
      ((null effort-str) 0)
@@ -1023,7 +1023,7 @@ SOMEDAY/NEXT/CNCL visual markers."
     "Format MINUTES as an H:MM string (e.g. 90 -> \"1:30\")."
     (format "%d:%02d" (/ minutes 60) (% minutes 60)))
 
-  (defun tdw/get-subtree-effort-minutes ()
+  (defun tdw/subtree-remaining-effort-minutes ()
     "Sum effort of current entry and all its children in minutes.
 Children in a DONE or CNCL state are excluded — finished work is not
 remaining load."
@@ -1031,14 +1031,14 @@ remaining load."
       (save-excursion
         (org-back-to-heading t)
         (let ((effort (org-entry-get (point) "EFFORT")))
-          (when effort (setq total (tdw/get-effort-minutes effort))))
+          (when effort (setq total (tdw/effort-string-to-minutes effort))))
         (let ((end (save-excursion (org-end-of-subtree t) (point))))
           (outline-next-heading)
           (while (and (< (point) end) (not (eobp)))
             (let ((effort (org-entry-get (point) "EFFORT")))
               (when (and effort
                          (not (member (org-get-todo-state) '("DONE" "CNCL"))))
-                (setq total (+ total (or (tdw/get-effort-minutes effort) 0)))))
+                (setq total (+ total (or (tdw/effort-string-to-minutes effort) 0)))))
             (outline-next-heading))))
       total))
 
@@ -1078,12 +1078,12 @@ Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
 
   (defun tdw/big-rock-p ()
     "Return non-nil if current entry has score >= `tdw--big-rock-threshold'."
-    (>= (tdw/compute-score-at-point) tdw--big-rock-threshold))
+    (>= (tdw/score-at-point) tdw--big-rock-threshold))
 
   (defun tdw/unestimated-p ()
     "Return non-nil if current entry has no effort or effort = 0."
     (let* ((effort-str (org-entry-get (point) "EFFORT"))
-           (mins (when effort-str (tdw/get-effort-minutes effort-str))))
+           (mins (when effort-str (tdw/effort-string-to-minutes effort-str))))
       (or (not effort-str) (not mins) (<= mins 0))))
 
   ;;; ——— Ordered View: Effort totals by section ———
@@ -1101,11 +1101,11 @@ Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
   (defvar tdw--ef-unest 0)
   (defvar tdw--ef-now nil)
   (defvar tdw--ef-target-gtd nil
-    "When non-nil, `tdw/--effort-accumulate' only counts items matching this ORG_GTD value.
+    "When non-nil, `tdw/effort-accumulate-entry' only counts items matching this ORG_GTD value.
 When nil, uses default behavior (Actions items, excluding Inbox/Someday/Habit).")
   (defvar tdw--ef-today-end nil)
 
-  (defun tdw/get-sanity-effort-totals ()
+  (defun tdw/effort-totals-by-tier ()
     "Return a list (TOTAL ON-FIRE BELLS DECK BIG-ROCKS OTHER UNEST CONSIDERED PAUSED) formatted as H:MM.
 TOTAL excludes PAUSED — paused work is parked and does not count toward active load.
 Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after now)."
@@ -1124,7 +1124,7 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
           (with-current-buffer (find-file-noselect expanded-file)
             (org-with-wide-buffer
              (goto-char (point-min))
-             (org-map-entries #'tdw/--effort-accumulate nil nil))))))
+             (org-map-entries #'tdw/effort-accumulate-entry nil nil))))))
     (let ((fmt #'tdw/format-minutes))
       (list (funcall fmt (+ tdw--ef-p0 tdw--ef-bell tdw--ef-deck
                             tdw--ef-considered tdw--ef-big
@@ -1138,7 +1138,7 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
             (funcall fmt tdw--ef-considered)
             (funcall fmt tdw--ef-paused))))
 
-  (defun tdw/--effort-counted-p (todo gtd-val)
+  (defun tdw/effort-counts-p (todo gtd-val)
     "Non-nil if an entry with TODO state and GTD-VAL ORG_GTD would be counted."
     (if tdw--ef-target-gtd
         (and todo (not (member todo '("DONE" "CNCL")))
@@ -1146,19 +1146,19 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
       (and (member todo '("NEXT" "TODO"))
            (not (member gtd-val '("Inbox" "Someday" "Habit" "Delegated" "Projects"))))))
 
-  (defun tdw/--effort-ancestor-counted-p ()
+  (defun tdw/ancestor-counts-p ()
     "Non-nil if an ancestor of the entry at point is itself counted.
 Counted ancestors already include this entry's effort via
-`tdw/get-subtree-effort-minutes', so counting it again would double it."
+`tdw/subtree-remaining-effort-minutes', so counting it again would double it."
     (save-excursion
       (let (found)
         (while (and (not found) (org-up-heading-safe))
-          (when (tdw/--effort-counted-p (org-get-todo-state)
+          (when (tdw/effort-counts-p (org-get-todo-state)
                                         (org-entry-get (point) "ORG_GTD"))
             (setq found t)))
         found)))
 
-  (defun tdw/--effort-accumulate ()
+  (defun tdw/effort-accumulate-entry ()
     "Accumulate effort for one org entry into tdw--ef-* variables."
     (let ((todo (org-get-todo-state))
           (gtd-val (org-entry-get (point) "ORG_GTD"))
@@ -1182,7 +1182,7 @@ Counted ancestors already include this entry's effort via
         ;; Habits: count only if not yet completed today and not scheduled
         ;; for the future (next occurrence hasn't arrived yet).
         (when (and (not tdw--ef-target-gtd) (string= gtd-val "Habit"))
-          (let* ((effort (or (tdw/get-subtree-effort-minutes) 0))
+          (let* ((effort (or (tdw/subtree-remaining-effort-minutes) 0))
                  (last-repeat (org-entry-get (point) "LAST_REPEAT"))
                  (completed-today (and last-repeat
                                        (string-match-p (format-time-string "%Y-%m-%d" tdw--ef-now)
@@ -1198,9 +1198,9 @@ Counted ancestors already include this entry's effort via
               (setq tdw--ef-other (+ tdw--ef-other effort)))))
         ;; Regular tasks. Skip entries whose ancestor is already counted —
         ;; the ancestor's subtree sum includes this entry's effort.
-        (when (and (tdw/--effort-counted-p todo gtd-val)
-                   (not (tdw/--effort-ancestor-counted-p)))
-          (let ((effort (or (tdw/get-subtree-effort-minutes) 0)))
+        (when (and (tdw/effort-counts-p todo gtd-val)
+                   (not (tdw/ancestor-counts-p)))
+          (let ((effort (or (tdw/subtree-remaining-effort-minutes) 0)))
             (cond ((tdw/p0-p) (setq tdw--ef-p0 (+ tdw--ef-p0 effort)))
                   ((tdw/bells-ringing-p) (setq tdw--ef-bell (+ tdw--ef-bell effort)))
                   ((tdw/on-deck-p) (setq tdw--ef-deck (+ tdw--ef-deck effort)))
@@ -1210,14 +1210,14 @@ Counted ancestors already include this entry's effort via
                   ((tdw/unestimated-p) (cl-incf tdw--ef-unest))
                   (t (setq tdw--ef-other (+ tdw--ef-other effort))))))))))
 
-  (defun tdw/round-up-15 (mins)
+  (defun tdw/round-up-to-quarter-hour (mins)
     "Round MINS up to the next multiple of 15.
 A 20- or 25-minute meeting is really a 30-minute meeting."
     (if (and mins (> mins 0))
         (* 15 (ceiling mins 15))
       (or mins 0)))
 
-  (defun tdw/get-schedule-effort-totals ()
+  (defun tdw/schedule-effort-totals ()
     "Return (RITUAL-TOTAL SPENT-TOTAL REMAINING-TOTAL) as H:MM strings.
 RITUAL-TOTAL sums the effort of the Daily Rituals habits (see
 `tdw--ritual-habits').  SPENT-TOTAL sums today's past calendar meetings
@@ -1265,8 +1265,8 @@ blocks are excluded."
                                    (not (time-less-p ts-time today-start))
                                    (time-less-p ts-time today-end))
                           (if (time-less-p ts-time now)
-                              (setq cal-past (+ cal-past (tdw/round-up-15 mins)))
-                            (setq cal-future (+ cal-future (tdw/round-up-15 mins)))))))
+                              (setq cal-past (+ cal-past (tdw/round-up-to-quarter-hour mins)))
+                            (setq cal-future (+ cal-future (tdw/round-up-to-quarter-hour mins)))))))
                      ;; Habits: split ritual habits from the rest.
                      ;; Only count habits scheduled today or earlier (overdue).
                      ;; Skip habits whose next occurrence is in the future.
@@ -1286,7 +1286,7 @@ blocks are excluded."
                                                (error nil))))
                                (scheduled-future (and sched-time
                                                        (not (time-less-p sched-time today-end))))
-                               (effort (or (tdw/get-subtree-effort-minutes) 0)))
+                               (effort (or (tdw/subtree-remaining-effort-minutes) 0)))
                           (unless (or completed-today scheduled-future)
                             (if is-ritual
                                 (setq ritual (+ ritual effort))
@@ -1424,7 +1424,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
                   (re-search-forward "💭 💭 Recently Considered" nil t)
                   (re-search-forward "🕐 Paused" nil t)
                   (re-search-forward "🪨🪨 Big Rocks" nil t))
-          (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals)))
+          (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/effort-totals-by-tier)))
             ;; Render the prominent 2-line banner for the 4 banner-able views
             ;; (Inbox / Someday / Unordered / Ordered, incl. the initial
             ;; "GTD Engage View" name). Replaces the old per-view title rewrites
@@ -1705,7 +1705,7 @@ Passes all org-gtd-tasks.org files (primary + context repos) as --tasks-file arg
   ;; Computes unaccounted time between schedule entries and appends
   ;; "| Gap: H:MM" to the Today's Schedule header.
 
-  (defun tdw/compute-gap-total ()
+  (defun tdw/schedule-gap-minutes ()
     "Compute gap minutes from the Today's Schedule block in the agenda buffer.
 Scans time-grid entries (HH:MM lines) between the schedule header and the
 next section separator, collecting start times from timesheet.org and gcal.org
@@ -1768,7 +1768,7 @@ entries. Returns the total unaccounted gap in minutes."
 
   (defun tdw/insert-gap-total ()
     "Append gap total to the Today's Schedule header."
-    (let ((gap (tdw/compute-gap-total)))
+    (let ((gap (tdw/schedule-gap-minutes)))
       (when (and gap (> gap 0))
         (let ((inhibit-read-only t)
               (gap-str (tdw/format-minutes gap)))
@@ -1795,7 +1795,7 @@ entries. Returns the total unaccounted gap in minutes."
       (setq s (replace-regexp-in-string "[ \t]+:[[:alnum:]_@#%:]+:[ \t]*$" "" s))
       (string-trim s)))
 
-  (defun tdw/active-clock-info ()
+  (defun tdw/latest-open-clock ()
     "Return (HEADING . START-TIME) for the most recent open CLOCK, or nil.
 Scans all org-gtd-tasks.org files (primary + context repos) and timesheet.org
 for a `CLOCK: [ts]' line with no closing `--', picking the latest. Reflects the
@@ -1818,7 +1818,7 @@ true running clock across files and processes."
 
   (defun tdw/insert-active-clock ()
     "Insert the currently running clock under the Today's Schedule header."
-    (let ((info (tdw/active-clock-info)))
+    (let ((info (tdw/latest-open-clock)))
       (when info
         (let* ((inhibit-read-only t)
                (mins (floor (/ (float-time (time-since (cdr info))) 60)))
@@ -1904,8 +1904,8 @@ Runs before `org-agenda-redo' so entries are visible on refresh."
             (message "Effort: %s" new-effort))
         (message "No task at point"))))
 
-  (defun tdw-agenda-effort-increment () (interactive) (tdw/agenda-adjust-effort 5))
-  (defun tdw-agenda-effort-decrement () (interactive) (tdw/agenda-adjust-effort -5))
+  (defun tdw/agenda-effort-increment () (interactive) (tdw/agenda-adjust-effort 5))
+  (defun tdw/agenda-effort-decrement () (interactive) (tdw/agenda-adjust-effort -5))
 
   (defvar tdw-agenda-comma-map (make-sparse-keymap)
     "Keymap for quick adjustments in org-agenda.")
@@ -2060,9 +2060,9 @@ Runs before `org-agenda-redo' so entries are visible on refresh."
 
   (with-eval-after-load 'org-agenda
     (define-key org-agenda-mode-map (kbd ",") tdw-agenda-comma-map)
-    (define-key org-agenda-mode-map (kbd "+") #'tdw-agenda-effort-increment)
-    (define-key org-agenda-mode-map (kbd "=") #'tdw-agenda-effort-increment)
-    (define-key org-agenda-mode-map (kbd "-") #'tdw-agenda-effort-decrement)
+    (define-key org-agenda-mode-map (kbd "+") #'tdw/agenda-effort-increment)
+    (define-key org-agenda-mode-map (kbd "=") #'tdw/agenda-effort-increment)
+    (define-key org-agenda-mode-map (kbd "-") #'tdw/agenda-effort-decrement)
     (define-key org-agenda-mode-map (kbd "I") #'org-agenda-diary-entry)
     (define-key org-agenda-mode-map (kbd "c") (lambda () (interactive) (tdw/agenda-set-tier "recently_considered")))
     (define-key org-agenda-mode-map (kbd "d") (lambda () (interactive) (org-agenda-todo "DONE")))
@@ -2072,10 +2072,10 @@ Runs before `org-agenda-redo' so entries are visible on refresh."
     (define-key org-agenda-mode-map (kbd "b") (lambda () (interactive) (tdw/agenda-set-tier "bells_ringing")))
     (define-key org-agenda-mode-map (kbd "l") #'tdw/agenda-toggle-flyby)
     (define-key org-agenda-mode-map (kbd "p") (lambda () (interactive) (tdw/agenda-set-tier "paused")))
-    (define-key org-agenda-mode-map (kbd "r") #'tdw/sanity-refresh)
+    (define-key org-agenda-mode-map (kbd "r") #'tdw/agenda-refresh-all)
     (define-key org-agenda-mode-map (kbd "SPC") #'tdw/agenda-clear-tier))
 
-  (defun tdw/sanity-refresh ()
+  (defun tdw/agenda-refresh-all ()
     "Rebuild agenda and scroll to top so P0 is visible."
     (interactive)
     (org-agenda-redo-all)
@@ -2084,7 +2084,7 @@ Runs before `org-agenda-redo' so entries are visible on refresh."
   (with-eval-after-load 'org-gtd-agenda
     (defun org-gtd-agenda--resolve-effort ()
       "Return sum of EFFORT for item at point and its children."
-      (let* ((total (tdw/get-subtree-effort-minutes))
+      (let* ((total (tdw/subtree-remaining-effort-minutes))
              (effort (if (> total 0)
                          (tdw/format-minutes total)
                        (org-entry-get (point) "EFFORT"))))
@@ -2139,7 +2139,7 @@ Shows only the tier emoji — no urgency/impact/score."
 Excludes DONE and CNCL entries so the count matches what the skip function
 actually shows in the Unestimated block.
 Used to populate the Unestimated header in the Someday view (distinct from
-`tdw/get-sanity-effort-totals' which counts NEXT/TODO items, not Someday items)."
+`tdw/effort-totals-by-tier' which counts NEXT/TODO items, not Someday items)."
     (let ((n 0))
       (dolist (file (org-agenda-files))
         (let ((expanded-file (expand-file-name file)))
@@ -2152,7 +2152,7 @@ Used to populate the Unestimated header in the Someday view (distinct from
                   (when (string= (org-entry-get (point) "ORG_GTD") org-gtd-someday)
                     (let* ((todo (org-get-todo-state))
                            (effort-str (org-entry-get (point) "EFFORT"))
-                           (mins (when effort-str (tdw/get-effort-minutes effort-str))))
+                           (mins (when effort-str (tdw/effort-string-to-minutes effort-str))))
                       (when (and (not (member todo '("DONE" "CNCL")))
                                  (or (not effort-str) (not mins) (<= mins 0)))
                         (cl-incf n)))))
@@ -2176,7 +2176,7 @@ header in the Inbox view, mirroring `tdw/get-someday-unestimated-count'."
                   (when (string= (org-entry-get (point) "ORG_GTD") "Inbox")
                     (let* ((todo (org-get-todo-state))
                            (effort-str (org-entry-get (point) "EFFORT"))
-                           (mins (when effort-str (tdw/get-effort-minutes effort-str))))
+                           (mins (when effort-str (tdw/effort-string-to-minutes effort-str))))
                       (when (and (not (member todo '("DONE" "CNCL")))
                                  (or (not effort-str) (not mins) (<= mins 0)))
                         (cl-incf n)))))
@@ -2187,7 +2187,7 @@ header in the Inbox view, mirroring `tdw/get-someday-unestimated-count'."
     "Count Next Actions (ORG_GTD=Actions) items with score < 10 and no effort.
 This mirrors exactly what `tdw/skip-unless-unestimated' shows in the ordered/
 unordered views — items that are not done, not a big rock (score < 10), and
-have no effort estimate.  `tdw/get-sanity-effort-totals' under-counts because
+have no effort estimate.  `tdw/effort-totals-by-tier' under-counts because
 its cond chain excludes tier-tagged items (p0, bells_ringing, etc.) that
 are unestimated, but those items still appear in the Unestimated view block."
     (let ((n 0))
@@ -2202,8 +2202,8 @@ are unestimated, but those items still appear in the Unestimated view block."
                   (when (string= (org-entry-get (point) "ORG_GTD") "Actions")
                     (let* ((todo (org-get-todo-state))
                            (effort-str (org-entry-get (point) "EFFORT"))
-                           (mins (when effort-str (tdw/get-effort-minutes effort-str)))
-                           (score (tdw/compute-score-at-point)))
+                           (mins (when effort-str (tdw/effort-string-to-minutes effort-str)))
+                           (score (tdw/score-at-point)))
                       (when (and todo
                                  (not (member todo '("DONE" "CNCL")))
                                  (< score 10)
@@ -2359,7 +2359,7 @@ Press 'n' to promote to Next Actions, 's' for Someday, 'x' to cancel."
                     ))) (or keys "i")))))
 
 
-  (defun tdw/agenda--refresh-prefix (hdmarker buffer)
+  (defun tdw/agenda--repaint-tier-glyph (hdmarker buffer)
     "Re-resolve the agenda prefix annotation for the line at point, in place.
 Refreshes the tier glyph (🚨/🔔/🥎/💭/🕐) after a tier change without rebuilding
 the whole agenda. The tier glyph cluster sits immediately before the ' — '
@@ -2402,7 +2402,7 @@ TAG is one of `tdw--tier-tags'. If the task already carries TAG, remove it inste
          ;; Re-pressing the active tier clears to nothing; else apply the choice
          (unless had-tag
            (org-toggle-tag tag 'on))))
-      (tdw/agenda--refresh-prefix hdmarker buffer)
+      (tdw/agenda--repaint-tier-glyph hdmarker buffer)
       (message "%s %s" (if had-tag "Cleared" "Set") tag)))
 
   (defun tdw/agenda-clear-tier ()
@@ -2417,7 +2417,7 @@ TAG is one of `tdw--tier-tags'. If the task already carries TAG, remove it inste
          (dolist (tier tdw--tier-tags)
            (when (member tier (org-get-tags nil t))
              (org-toggle-tag tier 'off)))))
-      (tdw/agenda--refresh-prefix hdmarker buffer)
+      (tdw/agenda--repaint-tier-glyph hdmarker buffer)
       (message "Cleared all tiers")))
 
   (defun tdw/agenda-toggle-google ()
@@ -2435,7 +2435,7 @@ TAG is one of `tdw--tier-tags'. If the task already carries TAG, remove it inste
              (org-toggle-tag "google" 'off)
            (org-toggle-tag "google" 'on))))
       ;; In-place update of the prefix
-      (tdw/agenda--refresh-prefix hdmarker buffer)
+      (tdw/agenda--repaint-tier-glyph hdmarker buffer)
       (message "%s google" (if has-tag "Removed" "Added"))))
 
   (defun tdw/agenda-toggle-flyby ()
@@ -2453,7 +2453,7 @@ TAG is one of `tdw--tier-tags'. If the task already carries TAG, remove it inste
              (org-toggle-tag "flyby" 'off)
            (org-toggle-tag "flyby" 'on))))
       ;; In-place update of the prefix
-      (tdw/agenda--refresh-prefix hdmarker buffer)
+      (tdw/agenda--repaint-tier-glyph hdmarker buffer)
       (message "%s flyby" (if has-tag "Removed" "Added"))))
 
   ;;; ——— Score Computation ———
@@ -2463,11 +2463,11 @@ TAG is one of `tdw--tier-tags'. If the task already carries TAG, remove it inste
     "Urgency/impact level abbreviations to numeric weight, highest first.
 Single source of truth for both the level vocabulary and the scoring.")
 
-  (defun tdw/score-value-for-level (level)
+  (defun tdw/level-score (level)
     "Map urgency/impact level abbreviation to its numeric weight (unknown -> 0)."
     (or (cdr (assoc level tdw--level-weights)) 0))
 
-  (defun tdw/compute-score-at-point ()
+  (defun tdw/score-at-point ()
     "Compute floor((2*urg + imp) / effort-tier) at point. Returns integer.
 Effort tiers: 0-5min=1, 6-15min=2, 16-60min=3, 60+=4.
 Higher score = more value per unit of effort."
@@ -2480,10 +2480,10 @@ Higher score = more value per unit of effort."
                                         (member (format "%s_impact" lvl) tags))
                                       (mapcar #'car tdw--level-weights))
                           "l"))
-           (urg (tdw/score-value-for-level urg-level))
-           (imp (tdw/score-value-for-level imp-level))
+           (urg (tdw/level-score urg-level))
+           (imp (tdw/level-score imp-level))
            ;; Untimed or zero-effort items default to the smallest tier (5 min).
-           (effort-mins (let ((m (tdw/get-effort-minutes (org-entry-get (point) "EFFORT"))))
+           (effort-mins (let ((m (tdw/effort-string-to-minutes (org-entry-get (point) "EFFORT"))))
                           (if (> m 0) m 5)))
            (tier (cond ((<= effort-mins 5) 1)
                        ((<= effort-mins 15) 2)
@@ -2500,7 +2500,7 @@ Higher score = more value per unit of effort."
   (defvar tdw--ritual-habits '("Meeting prep" "Start Time Out" "Vivian Vyvanse" "Catch up with billable hours")
     "Habit headings shown in the Daily Rituals section.")
 
-  (defun tdw/skip-unless-daily-ritual ()
+  (defun tdw/skip-unless-daily-ritual-habit ()
     "Skip unless this is an undone daily ritual habit."
     (let* ((dominated (org-entry-get (point) "STYLE"))
            (is-habit (string= (or dominated "") "habit"))
@@ -2512,7 +2512,7 @@ Higher score = more value per unit of effort."
           nil
         (outline-next-heading))))
 
-  (defun tdw/skip-unless-non-ritual-habit ()
+  (defun tdw/skip-unless-other-habit ()
     "Skip unless this is an undone habit that is NOT a daily ritual."
     (let* ((dominated (org-entry-get (point) "STYLE"))
            (is-habit (string= (or dominated "") "habit"))
@@ -2536,18 +2536,18 @@ Higher score = more value per unit of effort."
           nil
         (org-entry-end-position))))
 
-  (defun tdw--score-effort-at-point ()
+  (defun tdw/entry-score-info ()
     "Return (score effort-mins on-p0-p done-p gc-next-p flyby-p) at point for skip functions."
     (let* ((tags (org-get-tags nil t))
-           (score (tdw/compute-score-at-point))
+           (score (tdw/score-at-point))
            (effort-str (org-entry-get (point) "EFFORT"))
-           (effort-mins (and effort-str (tdw/get-effort-minutes effort-str))))
+           (effort-mins (and effort-str (tdw/effort-string-to-minutes effort-str))))
       (list score effort-mins (member "p0" tags) (org-entry-is-done-p) (member "gc_next" tags) (member "flyby" tags))))
 
   (defun tdw/skip-unless-unestimated ()
     "Skip unless score < `tdw--big-rock-threshold' and the entry is unestimated."
     (let* ((end (org-entry-end-position))
-           (info (tdw--score-effort-at-point))
+           (info (tdw/entry-score-info))
            (score (nth 0 info))
            (done (nth 3 info)))
       (if (and (not done) (< score tdw--big-rock-threshold)
@@ -2555,7 +2555,7 @@ Higher score = more value per unit of effort."
           nil
         end)))
 
-  (defun tdw/skip-cncl-globally ()
+  (defun tdw/skip-done-or-canceled-globally ()
     "Skip CNCL (canceled) or DONE entries in ALL agenda views.
 The custom views are built from `tags' searches on the ORG_GTD property,
 which match entries regardless of TODO state — so canceled and done items
@@ -2566,7 +2566,7 @@ per-block `org-agenda-skip-function'."
       (when (or (string= state "CNCL")
                 (string= state "DONE"))
         (org-entry-end-position))))
-  (setq org-agenda-skip-function-global #'tdw/skip-cncl-globally)
+  (setq org-agenda-skip-function-global #'tdw/skip-done-or-canceled-globally)
 
   (defun tdw-unordered-view (&optional keys)
     "Like Ordered View but without score annotations, priority cookies, or custom sorting."
@@ -2576,8 +2576,8 @@ per-block `org-agenda-skip-function'."
     ;; Signal to the finalize hook that this is an Unordered View.
     (setq tdw--is-unordered-view t)
     (let ((n-actions-unest (tdw/get-actions-unestimated-count)))
-    (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/get-sanity-effort-totals))
-                (`(,effort-ritual ,effort-spent ,effort-remaining) (tdw/get-schedule-effort-totals)))
+    (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/effort-totals-by-tier))
+                (`(,effort-ritual ,effort-spent ,effort-remaining) (tdw/schedule-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
             (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp))
        (org-gtd-view-show
@@ -2611,7 +2611,7 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
                                  (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))
-                                 (org-agenda-skip-function 'tdw/skip-unless-daily-ritual)))))
+                                 (org-agenda-skip-function 'tdw/skip-unless-daily-ritual-habit)))))
 
                     ;; 0b. P0  (project parents carry the tier; subtasks follow in file order)
                     ((native . (tags
@@ -2632,7 +2632,7 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
                                  (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))
-                                 (org-agenda-skip-function 'tdw/skip-unless-non-ritual-habit)))))
+                                 (org-agenda-skip-function 'tdw/skip-unless-other-habit)))))
 
                     ;; 1b. Bells Ringing  (project parents carry the tier; subtasks follow in file order)
                     ((native . (tags

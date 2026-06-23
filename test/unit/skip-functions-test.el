@@ -5,11 +5,11 @@
 ;; Characterization tests that LOCK the current behavior of the shared agenda
 ;; skip functions in config.org, so the POODR refactor cannot regress them:
 ;;
-;;   - tdw/skip-unless-daily-ritual
-;;   - tdw/skip-unless-non-ritual-habit
+;;   - tdw/skip-unless-daily-ritual-habit
+;;   - tdw/skip-unless-other-habit
 ;;   - tdw/skip-unless-tickler-due
 ;;   - tdw/skip-unless-unestimated
-;;   - tdw/skip-cncl-globally
+;;   - tdw/skip-done-or-canceled-globally
 ;;
 ;; CONTRACT: each function returns nil to KEEP the entry at point, or a buffer
 ;; position (non-nil) to SKIP it.  These return values are consumed by
@@ -25,7 +25,7 @@
 ;;   - Habits are marked with the :STYLE: habit property drawer.
 ;;   - Ritual habit headings must match one of `tdw--ritual-habits'
 ;;     (e.g. "Meeting prep"); any other habit heading is non-ritual.
-;;   - tdw/skip-cncl-globally reads the TODO state, so a #+TODO header is
+;;   - tdw/skip-done-or-canceled-globally reads the TODO state, so a #+TODO header is
 ;;     inserted to register CNCL as a recognized keyword (the live org config
 ;;     defines it; a bare temp buffer only knows TODO/DONE).
 ;;
@@ -36,7 +36,7 @@
 (require 'e-unit)
 (e-unit-initialize)
 
-;;;; ——— tdw/skip-unless-daily-ritual ———
+;;;; ——— tdw/skip-unless-daily-ritual-habit ———
 
 (deftest predicates/daily-ritual-keeps-undone-ritual-habit ()
   "KEEP (nil): an undone habit whose heading matches a ritual name."
@@ -44,7 +44,7 @@
     (org-mode)
     (insert "* TODO Meeting prep\n:PROPERTIES:\n:STYLE: habit\n:END:\n* TODO Next\n")
     (goto-char (point-min))
-    (assert-nil (tdw/skip-unless-daily-ritual))))
+    (assert-nil (tdw/skip-unless-daily-ritual-habit))))
 
 (deftest predicates/daily-ritual-skips-non-ritual-habit ()
   "SKIP (non-nil): a habit whose heading is not a ritual name."
@@ -52,7 +52,7 @@
     (org-mode)
     (insert "* TODO Floss teeth\n:PROPERTIES:\n:STYLE: habit\n:END:\n* TODO Next\n")
     (goto-char (point-min))
-    (assert-true (tdw/skip-unless-daily-ritual))))
+    (assert-true (tdw/skip-unless-daily-ritual-habit))))
 
 (deftest predicates/daily-ritual-skips-ritual-that-is-not-a-habit ()
   "SKIP (non-nil): a ritual-named heading that lacks :STYLE: habit."
@@ -60,7 +60,7 @@
     (org-mode)
     (insert "* TODO Meeting prep\n* TODO Next\n")
     (goto-char (point-min))
-    (assert-true (tdw/skip-unless-daily-ritual))))
+    (assert-true (tdw/skip-unless-daily-ritual-habit))))
 
 (deftest predicates/daily-ritual-skips-done-ritual-habit ()
   "SKIP (non-nil): a ritual habit that is already DONE."
@@ -68,9 +68,9 @@
     (org-mode)
     (insert "* DONE Meeting prep\n:PROPERTIES:\n:STYLE: habit\n:END:\n* TODO Next\n")
     (goto-char (point-min))
-    (assert-true (tdw/skip-unless-daily-ritual))))
+    (assert-true (tdw/skip-unless-daily-ritual-habit))))
 
-;;;; ——— tdw/skip-unless-non-ritual-habit ———
+;;;; ——— tdw/skip-unless-other-habit ———
 
 (deftest predicates/non-ritual-habit-keeps-undone-non-ritual-habit ()
   "KEEP (nil): an undone habit whose heading is NOT a ritual name."
@@ -78,7 +78,7 @@
     (org-mode)
     (insert "* TODO Floss teeth\n:PROPERTIES:\n:STYLE: habit\n:END:\n* TODO Next\n")
     (goto-char (point-min))
-    (assert-nil (tdw/skip-unless-non-ritual-habit))))
+    (assert-nil (tdw/skip-unless-other-habit))))
 
 (deftest predicates/non-ritual-habit-skips-ritual-habit ()
   "SKIP (non-nil): a ritual-named habit (those belong to the daily-ritual view)."
@@ -86,7 +86,7 @@
     (org-mode)
     (insert "* TODO Meeting prep\n:PROPERTIES:\n:STYLE: habit\n:END:\n* TODO Next\n")
     (goto-char (point-min))
-    (assert-true (tdw/skip-unless-non-ritual-habit))))
+    (assert-true (tdw/skip-unless-other-habit))))
 
 (deftest predicates/non-ritual-habit-skips-non-habit ()
   "SKIP (non-nil): a non-ritual heading that lacks :STYLE: habit."
@@ -94,7 +94,7 @@
     (org-mode)
     (insert "* TODO Floss teeth\n* TODO Next\n")
     (goto-char (point-min))
-    (assert-true (tdw/skip-unless-non-ritual-habit))))
+    (assert-true (tdw/skip-unless-other-habit))))
 
 ;;;; ——— tdw/skip-unless-tickler-due ———
 
@@ -181,7 +181,7 @@
     (goto-char (point-min))
     (assert-true (tdw/skip-unless-unestimated))))
 
-;;;; ——— tdw/skip-cncl-globally ———
+;;;; ——— tdw/skip-done-or-canceled-globally ———
 ;; The #+TODO header registers CNCL as a recognized keyword so
 ;; `org-get-todo-state' can see it (the live config defines CNCL; a bare
 ;; temp buffer otherwise only knows TODO/DONE).
@@ -194,7 +194,7 @@
     (goto-char (point-min))
     (re-search-forward "CNCL Task")
     (beginning-of-line)
-    (assert-true (tdw/skip-cncl-globally))))
+    (assert-true (tdw/skip-done-or-canceled-globally))))
 
 (deftest predicates/cncl-global-skips-done ()
   "SKIP (non-nil): a DONE entry."
@@ -204,7 +204,7 @@
     (goto-char (point-min))
     (re-search-forward "DONE Task")
     (beginning-of-line)
-    (assert-true (tdw/skip-cncl-globally))))
+    (assert-true (tdw/skip-done-or-canceled-globally))))
 
 (deftest predicates/cncl-global-keeps-todo ()
   "KEEP (nil): an active TODO entry."
@@ -214,7 +214,7 @@
     (goto-char (point-min))
     (re-search-forward "TODO Task")
     (beginning-of-line)
-    (assert-nil (tdw/skip-cncl-globally))))
+    (assert-nil (tdw/skip-done-or-canceled-globally))))
 
 (deftest predicates/cncl-global-keeps-stateless-heading ()
   "KEEP (nil): a heading with no TODO keyword at all."
@@ -224,6 +224,6 @@
     (goto-char (point-min))
     (re-search-forward "Plain heading")
     (beginning-of-line)
-    (assert-nil (tdw/skip-cncl-globally))))
+    (assert-nil (tdw/skip-done-or-canceled-globally))))
 
 ;;; skip-functions-test.el ends here
