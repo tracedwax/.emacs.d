@@ -2134,83 +2134,49 @@ Shows only the tier emoji — no urgency/impact/score."
       (let ((result (concat p0 bell deck considered paused)))
         (if (string-empty-p result) "" result))))
 
-  (defun tdw/get-someday-unestimated-count ()
-    "Count Someday/Maybe items across all agenda files that have no effort estimate.
-Excludes DONE and CNCL entries so the count matches what the skip function
-actually shows in the Unestimated block.
-Used to populate the Unestimated header in the Someday view (distinct from
-`tdw/effort-totals-by-tier' which counts NEXT/TODO items, not Someday items)."
+  (defun tdw/map-agenda-entries (fn)
+    "Call FN with point at each heading across `org-agenda-files'."
+    (dolist (file (org-agenda-files))
+      (let ((expanded (expand-file-name file)))
+        (when (file-exists-p expanded)
+          (with-current-buffer (find-file-noselect expanded)
+            (org-with-wide-buffer
+             (goto-char (point-min))
+             (org-map-entries fn nil nil)))))))
+
+  (defun tdw/count-agenda-entries (pred)
+    "Count headings across `org-agenda-files' where PRED returns non-nil at point."
     (let ((n 0))
-      (dolist (file (org-agenda-files))
-        (let ((expanded-file (expand-file-name file)))
-          (when (file-exists-p expanded-file)
-            (with-current-buffer (find-file-noselect expanded-file)
-              (org-with-wide-buffer
-               (goto-char (point-min))
-               (org-map-entries
-                (lambda ()
-                  (when (string= (org-entry-get (point) "ORG_GTD") org-gtd-someday)
-                    (let* ((todo (org-get-todo-state))
-                           (effort-str (org-entry-get (point) "EFFORT"))
-                           (mins (when effort-str (tdw/effort-string-to-minutes effort-str))))
-                      (when (and (not (member todo '("DONE" "CNCL")))
-                                 (or (not effort-str) (not mins) (<= mins 0)))
-                        (cl-incf n)))))
-                nil nil))))))
+      (tdw/map-agenda-entries (lambda () (when (funcall pred) (cl-incf n))))
       n))
+
+  (defun tdw--entry-active-p ()
+    "Non-nil when the entry at point is neither DONE nor CNCL."
+    (not (member (org-get-todo-state) '("DONE" "CNCL"))))
+
+  (defun tdw/get-someday-unestimated-count ()
+    "Count active Someday/Maybe items with no effort estimate (Someday view header)."
+    (tdw/count-agenda-entries
+     (lambda () (and (string= (org-entry-get (point) "ORG_GTD") org-gtd-someday)
+                     (tdw--entry-active-p)
+                     (tdw/unestimated-p)))))
 
   (defun tdw/get-inbox-unestimated-count ()
-    "Count Inbox items (ORG_GTD=\"Inbox\") across all agenda files with no effort estimate.
-Excludes DONE and CNCL entries so the count matches what the skip function
-actually shows in the Unestimated block. Used to populate the Unestimated
-header in the Inbox view, mirroring `tdw/get-someday-unestimated-count'."
-    (let ((n 0))
-      (dolist (file (org-agenda-files))
-        (let ((expanded-file (expand-file-name file)))
-          (when (file-exists-p expanded-file)
-            (with-current-buffer (find-file-noselect expanded-file)
-              (org-with-wide-buffer
-               (goto-char (point-min))
-               (org-map-entries
-                (lambda ()
-                  (when (string= (org-entry-get (point) "ORG_GTD") "Inbox")
-                    (let* ((todo (org-get-todo-state))
-                           (effort-str (org-entry-get (point) "EFFORT"))
-                           (mins (when effort-str (tdw/effort-string-to-minutes effort-str))))
-                      (when (and (not (member todo '("DONE" "CNCL")))
-                                 (or (not effort-str) (not mins) (<= mins 0)))
-                        (cl-incf n)))))
-                nil nil))))))
-      n))
+    "Count active Inbox items with no effort estimate (Inbox view header)."
+    (tdw/count-agenda-entries
+     (lambda () (and (string= (org-entry-get (point) "ORG_GTD") "Inbox")
+                     (tdw--entry-active-p)
+                     (tdw/unestimated-p)))))
 
   (defun tdw/get-actions-unestimated-count ()
-    "Count Next Actions (ORG_GTD=Actions) items with score < 10 and no effort.
-This mirrors exactly what `tdw/skip-unless-unestimated' shows in the ordered/
-unordered views — items that are not done, not a big rock (score < 10), and
-have no effort estimate.  `tdw/effort-totals-by-tier' under-counts because
-its cond chain excludes tier-tagged items (p0, bells_ringing, etc.) that
-are unestimated, but those items still appear in the Unestimated view block."
-    (let ((n 0))
-      (dolist (file (org-agenda-files))
-        (let ((expanded-file (expand-file-name file)))
-          (when (file-exists-p expanded-file)
-            (with-current-buffer (find-file-noselect expanded-file)
-              (org-with-wide-buffer
-               (goto-char (point-min))
-               (org-map-entries
-                (lambda ()
-                  (when (string= (org-entry-get (point) "ORG_GTD") "Actions")
-                    (let* ((todo (org-get-todo-state))
-                           (effort-str (org-entry-get (point) "EFFORT"))
-                           (mins (when effort-str (tdw/effort-string-to-minutes effort-str)))
-                           (score (tdw/score-at-point)))
-                      (when (and todo
-                                 (not (member todo '("DONE" "CNCL")))
-                                 (< score 10)
-                                 (or (not effort-str) (not mins) (<= mins 0)))
-                        (cl-incf n)))))
-                nil nil))))))
-      n))
+    "Count active, non-big-rock (score < threshold) Next Actions with no effort.
+Mirrors what `tdw/skip-unless-unestimated' shows in the Unestimated view block."
+    (tdw/count-agenda-entries
+     (lambda () (and (string= (org-entry-get (point) "ORG_GTD") "Actions")
+                     (org-get-todo-state)
+                     (tdw--entry-active-p)
+                     (< (tdw/score-at-point) tdw--big-rock-threshold)
+                     (tdw/unestimated-p)))))
 
   (defun tdw-someday-priority-view (&optional keys)
     "Someday/Maybe items — mirrors Unordered View layout (minus habits/delegated/tickler).
