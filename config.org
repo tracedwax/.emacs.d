@@ -1659,6 +1659,58 @@ Standalone actions (:project nil) pass through in place."
                        (cons parent (tdw/--topo-order-tasks tasks)))))))
               (nreverse slot-order)))))
 
+  (defun tdw/--agenda-line-project-entry (seq)
+    "Build a `tdw/order-by-project' entry plist for the agenda line at point.
+SEQ is the file-order index.  Reads the line's org-marker to fetch ID,
+ORG_GTD, ORG_GTD_PROJECT_IDS, ORG_GTD_DEPENDS_ON.  For a Projects parent the
+:project is its own ID so it groups with its tasks; for a task it is the
+parent id from ORG_GTD_PROJECT_IDS.  :project is nil for a standalone action."
+    (let* ((marker (or (org-get-at-bol 'org-marker) (org-get-at-bol 'org-hd-marker)))
+           (line-start (line-beginning-position))
+           (line-end (1+ (line-end-position)))
+           (payload (buffer-substring line-start line-end))
+           id type project depends)
+      (when (markerp marker)
+        (org-with-point-at marker
+          (setq id (org-id-get))
+          (setq type (org-entry-get nil "ORG_GTD"))
+          (setq depends (org-entry-get-multivalued-property (point) "ORG_GTD_DEPENDS_ON"))
+          (let ((pids (org-entry-get-multivalued-property (point) "ORG_GTD_PROJECT_IDS")))
+            (setq project (cond ((equal type "Projects") id)
+                                (pids (car pids))
+                                (t nil))))))
+      (list :id id :project project :type type
+            :depends-on depends :seq seq :payload payload)))
+
+  (defun tdw/--reorder-section-by-project (header-regex)
+    "Reorder the agenda section under HEADER-REGEX into project units.
+Groups by ORG_GTD project membership, parent first, tasks in dependency
+order, via `tdw/order-by-project'.  Drops project tasks whose parent is not
+present in the section (never an orphan).  Preserves line text properties."
+    (save-excursion
+      (goto-char (point-min))
+      (when (re-search-forward header-regex nil t)
+        (forward-line 1)
+        (let ((inhibit-read-only t)
+              (section-start (point))
+              (section-end nil)
+              (entries nil)
+              (seq 0))
+          (save-excursion
+            (if (re-search-forward "^[^\n ].+$" nil t)
+                (setq section-end (line-beginning-position))
+              (setq section-end (point-max))))
+          (while (and (< (point) section-end) (not (eobp)))
+            (push (tdw/--agenda-line-project-entry seq) entries)
+            (setq seq (1+ seq))
+            (forward-line 1))
+          (when entries
+            (let ((ordered (tdw/order-by-project (nreverse entries))))
+              (delete-region section-start section-end)
+              (goto-char section-start)
+              (dolist (e ordered)
+                (insert (plist-get e :payload)))))))))
+
   (defun tdw/insert-tgl-subheaders ()
     "Insert visual sub-headers within the Toggl Projects section.
 Collects all task lines, groups them by tgl_* tag, rewrites the
