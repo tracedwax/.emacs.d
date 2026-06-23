@@ -2596,6 +2596,54 @@ non-nil when its heading names one of `tdw--ritual-habits'."
           nil
         end)))
 
+  (defvar tdw/--current-project-tier-table nil
+    "Project-id -> tier-set hash for the current agenda render.
+`tdw-unordered-view' binds this so `tdw/skip-unless-project-tier' can pull a
+whole project into a tier section when ANY member carries the tier.")
+
+  (defun tdw/--heading-tier-entry ()
+    "Return a (:project ID-or-nil :tiers (..)) plist for the heading at point.
+:tiers are the heading's OWN tier tags (no inheritance).  :project is its own id
+for a Projects parent, the parent id for a task (first ORG_GTD_PROJECT_IDS), or
+nil for a standalone action."
+    (let* ((type (org-entry-get nil "ORG_GTD"))
+           (id (org-id-get))
+           (pids (org-entry-get-multivalued-property (point) "ORG_GTD_PROJECT_IDS"))
+           (project (cond ((equal type "Projects") id)
+                          (pids (car pids))
+                          (t nil)))
+           (tiers (cl-intersection (org-get-tags nil t) tdw--tier-tags :test #'equal)))
+      (list :project project :tiers tiers)))
+
+  (defun tdw/--scan-project-tier-table ()
+    "Scan all agenda task files and build the project-id -> tier-set table."
+    (let (headings)
+      (tdw/map-agenda-entries
+       (lambda () (push (tdw/--heading-tier-entry) headings)))
+      (tdw/--project-tier-table headings)))
+
+  (defun tdw/skip-unless-project-tier (tier)
+    "Agenda skip function: keep the entry only if its PROJECT qualifies for TIER.
+A standalone action (no project) is kept iff it carries TIER itself.  A project
+member (parent or task) is kept iff any member of its project carries TIER, per
+`tdw/--current-project-tier-table' — so a tiered parent pulls in its tasks even
+when they live in `* Actions' and never inherit the tier tag.  Returns the
+skip position to drop the entry, or nil to keep it."
+    (let* ((type (org-entry-get nil "ORG_GTD"))
+           (id (org-id-get))
+           (pids (org-entry-get-multivalued-property (point) "ORG_GTD_PROJECT_IDS"))
+           (project (cond ((equal type "Projects") id)
+                          (pids (car pids))
+                          (t nil)))
+           (keep (cond
+                  ((null tdw/--current-project-tier-table)
+                   (member tier (org-get-tags nil t)))
+                  (project
+                   (tdw/--project-qualifies-for-tier-p
+                    project tier tdw/--current-project-tier-table))
+                  (t (member tier (org-get-tags nil t))))))
+      (unless keep (org-entry-end-position))))
+
   (defun tdw/skip-done-or-canceled-globally ()
     "Skip CNCL (canceled) or DONE entries in ALL agenda views.
 The custom views are built from `tags' searches on the ORG_GTD property,
