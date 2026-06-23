@@ -637,13 +637,6 @@ I've been having some issues exporting, so I'm actively loading libraries here.
     :group 'org-gtd
     :prefix "my/org-gtd-inherit-")
 
-  (defcustom my/org-gtd-inherit-priority t
-    "Whether to inherit priority from parent project.
-When non-nil, project tasks automatically inherit the priority
-from their parent project heading."
-    :type 'boolean
-    :group 'my/org-gtd-inherit)
-
   (defcustom my/org-gtd-inherit-tags t
     "Whether to inherit tags from parent project.
 When non-nil, project tasks automatically inherit the tags
