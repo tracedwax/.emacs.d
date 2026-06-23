@@ -1596,6 +1596,69 @@ shared tgl_ tag and floats the parent to the top of its group."
                            (lambda (e) (equal (plist-get e :type) "Projects")) es))))
                      (nreverse order)))))
 
+  (defun tdw/--topo-order-tasks (tasks)
+    "Order TASKS (plists with :id :depends-on :seq) so dependencies come first.
+Sequential-dependency aware: each task follows the tasks it DEPENDS_ON.  Among
+tasks that are ready (all deps already emitted, or a dep that is not in this
+set), the lowest :seq (file order) wins.  Cycles fall back to :seq order."
+    (let ((remaining (copy-sequence tasks))
+          (emitted nil)
+          (emitted-ids (make-hash-table :test 'equal)))
+      (while remaining
+        (let* ((ids (mapcar (lambda (e) (plist-get e :id)) remaining))
+               (ready (cl-remove-if-not
+                       (lambda (e)
+                         (cl-every (lambda (d)
+                                     (or (gethash d emitted-ids)
+                                         (not (member d ids))))
+                                   (plist-get e :depends-on)))
+                       remaining)))
+          (unless ready (setq ready (list (car remaining)))) ;; cycle guard
+          (let ((pick (car (sort (copy-sequence ready)
+                                 (lambda (a b)
+                                   (< (or (plist-get a :seq) 0)
+                                      (or (plist-get b :seq) 0)))))))
+            (push pick emitted)
+            (puthash (plist-get pick :id) t emitted-ids)
+            (setq remaining (delq pick remaining)))))
+      (nreverse emitted)))
+
+  (defun tdw/order-by-project (entries)
+    "Reorder agenda ENTRIES into project units: parent first, then its tasks.
+ENTRIES are plists with :id, :project (project id, or nil for a standalone
+action), :type (\"Projects\"/\"Actions\"), :depends-on, :seq, :payload.
+Groups stay in first-appearance order.  Within a group the ORG_GTD=Projects
+parent leads, then tasks in dependency order (`tdw/--topo-order-tasks').  A
+project task whose parent is absent from ENTRIES is DROPPED (never orphaned).
+Standalone actions (:project nil) pass through in place."
+    (let ((groups (make-hash-table :test 'equal))
+          (slot-order nil))
+      (dolist (e entries)
+        (let ((proj (plist-get e :project)))
+          (if (null proj)
+              (push (list :standalone e) slot-order)
+            (progn
+              (unless (gethash proj groups)
+                (puthash proj nil groups)
+                (push (list :group proj) slot-order))
+              (puthash proj (cons e (gethash proj groups)) groups)))))
+      (apply #'append
+             (mapcar
+              (lambda (slot)
+                (pcase slot
+                  (`(:standalone ,e) (list e))
+                  (`(:group ,id)
+                   (let* ((es (nreverse (gethash id groups)))
+                          (parent (cl-find "Projects" es
+                                           :key (lambda (e) (plist-get e :type))
+                                           :test #'equal))
+                          (tasks (cl-remove "Projects" es
+                                            :key (lambda (e) (plist-get e :type))
+                                            :test #'equal)))
+                     (when parent
+                       (cons parent (tdw/--topo-order-tasks tasks)))))))
+              (nreverse slot-order)))))
+
   (defun tdw/insert-tgl-subheaders ()
     "Insert visual sub-headers within the Toggl Projects section.
 Collects all task lines, groups them by tgl_* tag, rewrites the
