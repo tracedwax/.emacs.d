@@ -2288,14 +2288,24 @@ Shows only the tier emoji — no urgency/impact/score."
                      (tdw--entry-active-p)
                      (tdw/unestimated-p)))))
 
+  (defun tdw/--project-subtask-p ()
+    "Non-nil when the entry at point is a project SUBTASK (an Action linked to a
+parent via ORG_GTD_PROJECT_IDS).  Estimates and tier tags live on the parent
+only, so subtasks neither need an estimate nor carry a tier."
+    (and (equal (org-entry-get nil "ORG_GTD") "Actions")
+         (org-entry-get-multivalued-property (point) "ORG_GTD_PROJECT_IDS")
+         t))
+
   (defun tdw/get-actions-unestimated-count ()
-    "Count active Next Actions with no effort estimate.
+    "Count items that NEED an estimate: active, unestimated project parents or
+standalone actions.  Subtasks are excluded — the parent carries the estimate.
 Mirrors what `tdw/skip-unless-unestimated' shows in the Unestimated view block."
     (tdw/count-agenda-entries
-     (lambda () (and (string= (org-entry-get (point) "ORG_GTD") "Actions")
+     (lambda () (and (member (org-entry-get (point) "ORG_GTD") '("Projects" "Actions"))
                      (org-get-todo-state)
                      (tdw--entry-active-p)
-                     (tdw/unestimated-p)))))
+                     (tdw/unestimated-p)
+                     (not (tdw/--project-subtask-p))))))
 
   (defun tdw/tier-prefix-format (width chain)
     "Return an `org-agenda-prefix-format' alist rendering CHAIN padded to WIDTH.
@@ -2589,10 +2599,13 @@ non-nil when its heading names one of `tdw--ritual-habits'."
         (org-entry-end-position))))
 
   (defun tdw/skip-unless-unestimated ()
-    "Skip unless the entry is active (not done) and unestimated."
+    "Skip unless the entry NEEDS an estimate: active, unestimated, and a project
+parent or standalone action.  Project subtasks are skipped — estimates live on
+the parent only, so a subtask never needs (or shows in) the Unestimated list."
     (let ((end (org-entry-end-position)))
       (if (and (not (org-entry-is-done-p))
-               (tdw/unestimated-p))
+               (tdw/unestimated-p)
+               (not (tdw/--project-subtask-p)))
           nil
         end)))
 
