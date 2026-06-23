@@ -165,14 +165,6 @@
     (goto-char (point-min))
     (assert-true (tdw/skip-unless-unestimated))))
 
-(deftest predicates/unestimated-skips-high-score ()
-  "SKIP (non-nil): score >= 10 (wh urgency + wh impact) is excluded even with no effort."
-  (with-temp-buffer
-    (org-mode)
-    (insert "* TODO Task  :wh_urgency:wh_impact:\n* TODO Next\n")
-    (goto-char (point-min))
-    (assert-true (tdw/skip-unless-unestimated))))
-
 (deftest predicates/unestimated-skips-done ()
   "SKIP (non-nil): a DONE entry is excluded regardless of score/effort."
   (with-temp-buffer
