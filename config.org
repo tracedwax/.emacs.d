@@ -2611,9 +2611,9 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-sorting-strategy '(category-keep))
                                  (org-agenda-skip-function 'tdw/skip-unless-daily-ritual)))))
 
-                    ;; 0b. P0
-                    ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+p0"
+                    ;; 0b. P0  (project parents carry the tier; subtasks follow in file order)
+                    ((native . (tags
+                                "LEVEL>0+ORG_GTD={Projects\\|Actions}+p0"
                                 ((org-agenda-overriding-header ,(format "🚨🚨 P0 (%s)" effort-p0))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
@@ -2632,33 +2632,33 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-sorting-strategy '(category-keep))
                                  (org-agenda-skip-function 'tdw/skip-unless-non-ritual-habit)))))
 
-                    ;; 1b. Bells Ringing
-                    ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+bells_ringing"
+                    ;; 1b. Bells Ringing  (project parents carry the tier; subtasks follow in file order)
+                    ((native . (tags
+                                "LEVEL>0+ORG_GTD={Projects\\|Actions}+bells_ringing"
                                 ((org-agenda-overriding-header ,(format "🔔🔔 Bells Ringing (%s)" effort-bell))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
-                    ;; 1c. On Deck
-                    ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+on_deck"
+                    ;; 1c. On Deck  (project parents carry the tier; subtasks follow in file order)
+                    ((native . (tags
+                                "LEVEL>0+ORG_GTD={Projects\\|Actions}+on_deck"
                                 ((org-agenda-overriding-header ,(format "🥎 🥎 On Deck (%s)" effort-deck))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
-                    ;; 1d. Recently Considered
-                    ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+recently_considered"
+                    ;; 1d. Recently Considered  (project parents carry the tier; subtasks follow in file order)
+                    ((native . (tags
+                                "LEVEL>0+ORG_GTD={Projects\\|Actions}+recently_considered"
                                 ((org-agenda-overriding-header ,(format "💭 💭 Recently Considered (%s)" effort-considered))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
-                    ;; 1e. Paused
-                    ((native . (tags-todo
-                                "LEVEL>0+ORG_GTD=\"Actions\"+paused"
+                    ;; 1e. Paused  (project parents carry the tier; subtasks follow in file order)
+                    ((native . (tags
+                                "LEVEL>0+ORG_GTD={Projects\\|Actions}+paused"
                                 ((org-agenda-overriding-header ,(format "🕐 Paused (%s)" effort-paused))
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format '((tags . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
