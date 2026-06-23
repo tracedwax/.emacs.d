@@ -2545,14 +2545,13 @@ Higher score = more value per unit of effort."
       (list score effort-mins (member "p0" tags) (org-entry-is-done-p) (member "gc_next" tags) (member "flyby" tags))))
 
   (defun tdw/skip-unless-unestimated ()
-    "Skip unless score < 10, no effort or effort = 0."
+    "Skip unless score < `tdw--big-rock-threshold' and the entry is unestimated."
     (let* ((end (org-entry-end-position))
            (info (tdw--score-effort-at-point))
            (score (nth 0 info))
-           (effort-mins (nth 1 info))
            (done (nth 3 info)))
       (if (and (not done) (< score tdw--big-rock-threshold)
-               (or (not effort-mins) (<= effort-mins 0)))
+               (tdw/unestimated-p))
           nil
         end)))
 
