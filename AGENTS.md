@@ -31,3 +31,7 @@ Instructions for any AI agent (Claude on `trace`, Antigravity/Gemini on `theclev
 ## Writing
 
 - No em-dashes anywhere (code, comments, commits, docs). Use a colon, comma, parentheses, or period.
+
+## Remotes
+
+- **origin only.** `origin` is `git@github.com:tracedwax/.emacs.d.git`. There is no upstream remote. The Trevoke fork diverged long ago; never re-add it, never fetch from it, never rebase on it.
