@@ -97,11 +97,11 @@ Sets score_15 tag for a high-scoring entry (>= 10)."
 
 ;;;; ——— Effort totals ———
 
-(deftest on-deck/effort-totals-returns-9-elements ()
-  "tdw/effort-totals-by-tier returns a 9-element list:
-(TOTAL P0 BELLS DECK BIG-ROCKS OTHER N-UNESTIMATED CONSIDERED PAUSED)."
+(deftest on-deck/effort-totals-returns-8-elements ()
+  "tdw/effort-totals-by-tier returns an 8-element list:
+(TOTAL P0 BELLS DECK OTHER N-UNESTIMATED CONSIDERED PAUSED)."
   (let ((result (tdw/effort-totals-by-tier)))
-    (assert-equal 9 (length result))))
+    (assert-equal 8 (length result))))
 
 ;;;; ——— Tier-setting command ———
 

@@ -1095,7 +1095,6 @@ Set on the agenda with `tdw/agenda-set-tier' (keys f/b/d/c/p).")
   (defvar tdw--ef-deck 0)
   (defvar tdw--ef-considered 0)
   (defvar tdw--ef-paused 0)
-  (defvar tdw--ef-big 0)
   (defvar tdw--ef-other 0)
   (defvar tdw--ef-calendar 0)
   (defvar tdw--ef-unest 0)
@@ -1106,12 +1105,12 @@ When nil, uses default behavior (Actions items, excluding Inbox/Someday/Habit)."
   (defvar tdw--ef-today-end nil)
 
   (defun tdw/effort-totals-by-tier ()
-    "Return a list (TOTAL ON-FIRE BELLS DECK BIG-ROCKS OTHER UNEST CONSIDERED PAUSED) formatted as H:MM.
+    "Return a list (TOTAL ON-FIRE BELLS DECK OTHER UNEST CONSIDERED PAUSED) formatted as H:MM.
 TOTAL excludes PAUSED — paused work is parked and does not count toward active load.
 Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after now)."
     (setq tdw--ef-p0 0 tdw--ef-bell 0 tdw--ef-deck 0
           tdw--ef-considered 0 tdw--ef-paused 0
-          tdw--ef-big 0 tdw--ef-other 0
+          tdw--ef-other 0
           tdw--ef-calendar 0 tdw--ef-unest 0
           tdw--ef-now (current-time)
           tdw--ef-today-end (encode-time 0 0 0
@@ -1127,12 +1126,11 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
              (org-map-entries #'tdw/effort-accumulate-entry nil nil))))))
     (let ((fmt #'tdw/format-minutes))
       (list (funcall fmt (+ tdw--ef-p0 tdw--ef-bell tdw--ef-deck
-                            tdw--ef-considered tdw--ef-big
+                            tdw--ef-considered
                             tdw--ef-other tdw--ef-calendar))
             (funcall fmt tdw--ef-p0)
             (funcall fmt tdw--ef-bell)
             (funcall fmt tdw--ef-deck)
-            (funcall fmt tdw--ef-big)
             (funcall fmt tdw--ef-other)
             tdw--ef-unest
             (funcall fmt tdw--ef-considered)
@@ -1341,8 +1339,6 @@ Alerts on on-p0 > 5, bells-ringing > 10, on-deck > 5."
         (push (cons "🥎 🥎 On Deck"
                      " [next up after the bells are quiet] 🥎🥎")
               warnings))
-      (push (cons "🪨🪨 Big Rocks" " 🪨🪨") warnings)
-      (push (cons "🪨 Other Rocks" " 🪨") warnings)
       warnings))
 
   ;;; ——— Ordered View: Buffer-local state ———
@@ -1423,7 +1419,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
                   (re-search-forward "💭 💭 Recently Considered" nil t)
                   (re-search-forward "🕐 Paused" nil t)
                   (re-search-forward "🪨🪨 Big Rocks" nil t))
-          (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-other ,n-unest ,effort-considered ,effort-paused) (tdw/effort-totals-by-tier)))
+          (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,_effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/effort-totals-by-tier)))
             ;; Render the prominent 2-line banner for the 4 banner-able views
             ;; (Inbox / Someday / Unordered / Ordered, incl. the initial
             ;; "GTD Engage View" name). Replaces the old per-view title rewrites
@@ -1456,14 +1452,6 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
             (goto-char (point-min))
             (while (re-search-forward "\\(🕐 Paused\\( ([^)]*)\\)?\\)" nil t)
               (replace-match (format "🕐 Paused (%s)" effort-paused) t t nil 1))
-            ;; Big Rocks effort
-            (goto-char (point-min))
-            (while (re-search-forward "\\(🪨🪨 Big Rocks\\( ([^)]*)\\)? ?🪨?🪨?\\)" nil t)
-              (replace-match (format "🪨🪨 Big Rocks (%s)" effort-big) t t nil 1))
-            ;; Other Rocks effort
-            (goto-char (point-min))
-            (while (re-search-forward "\\(🪨 Other Rocks\\( ([^)]*)\\)? ?🪨?\\)" nil t)
-              (replace-match (format "🪨 Other Rocks (%s)" effort-other) t t nil 1))
             ;; NOTE: Unestimated count is intentionally NOT updated here.
             ;; Each view (Someday, Ordered) computes its own accurate count
             ;; at construction time using tdw/get-someday-unestimated-count or
@@ -2533,7 +2521,7 @@ per-block `org-agenda-skip-function'."
     ;; Signal to the finalize hook that this is an Unordered View.
     (setq tdw--is-unordered-view t)
     (let ((n-actions-unest (tdw/get-actions-unestimated-count)))
-    (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,effort-big ,effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/effort-totals-by-tier))
+    (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,_effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/effort-totals-by-tier))
                 (`(,effort-ritual ,effort-spent ,effort-remaining) (tdw/schedule-effort-totals)))
       (let ((org-agenda-todo-keyword-format "")
             (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp))
