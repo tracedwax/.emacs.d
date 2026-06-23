@@ -27,7 +27,10 @@ I set a [[*Bookmarks][bookmark]] with =C-x r m= and I can get back here with =C-
           stag-easy-hugo-root "~/src/projects/trevoke.github.io"
           stag-org-reveal-root "/home/stag/mnt/internal/src/vendor/reveal.js"
           stag-org-directory (expand-file-name "orgnotes/" (concat "~/" life-repo))
-          stag-org-gtd-directory (expand-file-name "orgnotes/gtd" (concat "~/" life-repo))
+          ;; trace uses the throwaway test fixtures (~/my-test-life) for GTD;
+          ;; thecleverone uses its real life-repo. Only GTD is redirected — roam,
+          ;; bbdb, ledger, etc. stay on the account's life-repo.
+          stag-org-gtd-directory (expand-file-name "orgnotes/gtd" (if (string= (user-login-name) "trace") "~/my-test-life" (concat "~/" life-repo)))
           stag-org-roam-directory (expand-file-name "orgnotes/roam" (concat "~/" life-repo))
           stag-org-roam-db-location "~/.emacs.d/local-files/org-roam.db"
           stag-bbdb-file (expand-file-name "orgnotes/bbdb/big-brother-database" (concat "~/" life-repo))
@@ -716,18 +719,25 @@ Inheritance respects `my/org-gtd-inherit-priority' and
     (org-gtd-agenda-property-position 'where-it-fits)
     (org-gtd-directory stag-org-gtd-directory)
     (org-agenda-files (seq-filter #'file-exists-p
-                                  (append
-                                   ;; Core life-repo files
-                                   (list (expand-file-name "orgnotes/gtd/inbox.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
-                                         (expand-file-name "orgnotes/gtd/org-gtd-tasks.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
-                                         (expand-file-name "orgnotes/gtd/gcal.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
-                                         (expand-file-name "orgnotes/gtd/timesheet.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
-                                         (expand-file-name "~/my-google-life/orgnotes/gtd/org-gtd-tasks.org")
-                                         (expand-file-name "~/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org")
-                                         (expand-file-name "~/my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))
-                                   ;; Per-customer context repos (auto-discovered)
-                                   (file-expand-wildcards "~/workspace/non-oss/bfctrace/context-for-*/orgnotes/gtd/org-gtd-tasks.org")
-                                   (file-expand-wildcards "~/workspace/non-oss/thevendoor/context-for-*/orgnotes/gtd/org-gtd-tasks.org"))))
+                                  (if (string= (user-login-name) "trace")
+                                      ;; trace: throwaway test fixtures ONLY (real task
+                                      ;; management lives on thecleverone).
+                                      (list (expand-file-name "orgnotes/gtd/inbox.org" "~/my-test-life")
+                                            (expand-file-name "orgnotes/gtd/org-gtd-tasks.org" "~/my-test-life")
+                                            (expand-file-name "orgnotes/gtd/gcal.org" "~/my-test-life")
+                                            (expand-file-name "orgnotes/gtd/timesheet.org" "~/my-test-life"))
+                                    (append
+                                     ;; Core life-repo files
+                                     (list (expand-file-name "orgnotes/gtd/inbox.org" "~/my-venndoor-life")
+                                           (expand-file-name "orgnotes/gtd/org-gtd-tasks.org" "~/my-venndoor-life")
+                                           (expand-file-name "orgnotes/gtd/gcal.org" "~/my-venndoor-life")
+                                           (expand-file-name "orgnotes/gtd/timesheet.org" "~/my-venndoor-life")
+                                           (expand-file-name "~/my-google-life/orgnotes/gtd/org-gtd-tasks.org")
+                                           (expand-file-name "~/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org")
+                                           (expand-file-name "~/my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))
+                                     ;; Per-customer context repos (auto-discovered)
+                                     (file-expand-wildcards "~/workspace/non-oss/bfctrace/context-for-*/orgnotes/gtd/org-gtd-tasks.org")
+                                     (file-expand-wildcards "~/workspace/non-oss/thevendoor/context-for-*/orgnotes/gtd/org-gtd-tasks.org")))))
     (org-edna-use-inheritance t)
     (org-gtd-refile-to-any-target t)
     ;; Inbox captures are stamped ORG_GTD=Inbox + TODO so they show in the
@@ -1649,7 +1659,7 @@ horizontal scrolling (e.g. fat-fingered `l' key near d/s/x)."
                       (file-name-directory (directory-file-name stag-org-directory)))
     "Path to the Mode-1 timesheet renderer.")
   ;; Derive the org sources from `stag-org-gtd-directory' so this works on any
-  ;; account/repo (trace -> my-personal-life, thecleverone -> my-venndoor-life).
+  ;; account/repo (trace -> my-test-life fixtures, thecleverone -> my-venndoor-life).
   (defvar tdw/timesheet-gcal-file
     (expand-file-name "gcal.org" stag-org-gtd-directory)
     "Path to gcal.org (source of calendar events).")
@@ -2581,8 +2591,8 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-include-diary nil)
                                  (org-agenda-start-with-log-mode 'only)
                                  (org-agenda-log-mode-items '(clock))
-                                 (org-agenda-files (list (expand-file-name "orgnotes/gtd/timesheet.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))
-                                                         (expand-file-name "orgnotes/gtd/gcal.org" (concat "~/" (if (string= (user-login-name) "trace") "my-personal-life" "my-venndoor-life")))))
+                                 (org-agenda-files (list (expand-file-name "timesheet.org" stag-org-gtd-directory)
+                                                         (expand-file-name "gcal.org" stag-org-gtd-directory)))
                                  (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
                                  (org-agenda-time-grid '((daily today require-timed) () "" "now - - - - - - - - - - - - - - - - - - - - -"))
                                  (org-agenda-prefix-format '((agenda . "  %i %-12:c%?-12t%-6e ")))
