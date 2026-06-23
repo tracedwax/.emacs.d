@@ -41,6 +41,15 @@
   (assert-equal 30 (tdw/round-up-15 16))
   (assert-equal 60 (tdw/round-up-15 60)))
 
+;;;; ——— tdw/format-minutes ———
+
+(deftest format-minutes/renders-h-mm ()
+  "Minutes render as H:MM with a zero-padded minute field."
+  (assert-equal "0:00" (tdw/format-minutes 0))
+  (assert-equal "0:15" (tdw/format-minutes 15))
+  (assert-equal "1:30" (tdw/format-minutes 90))
+  (assert-equal "2:05" (tdw/format-minutes 125)))
+
 ;;;; ——— tdw/score-value-for-level ———
 
 (deftest level-score/maps-level-abbreviations-to-weights ()

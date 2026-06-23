@@ -1019,6 +1019,10 @@ SOMEDAY/NEXT/CNCL visual markers."
      ;; Fallback
      (t 0)))
 
+  (defun tdw/format-minutes (minutes)
+    "Format MINUTES as an H:MM string (e.g. 90 -> \"1:30\")."
+    (format "%d:%02d" (/ minutes 60) (% minutes 60)))
+
   (defun tdw/get-subtree-effort-minutes ()
     "Sum effort of current entry and all its children in minutes.
 Children in a DONE or CNCL state are excluded — finished work is not
@@ -1121,7 +1125,7 @@ Also includes future calendar meetings (ORG_GTD=Calendar with timestamps after n
             (org-with-wide-buffer
              (goto-char (point-min))
              (org-map-entries #'tdw/--effort-accumulate nil nil))))))
-    (let ((fmt (lambda (m) (format "%d:%02d" (/ m 60) (% m 60)))))
+    (let ((fmt #'tdw/format-minutes))
       (list (funcall fmt (+ tdw--ef-p0 tdw--ef-bell tdw--ef-deck
                             tdw--ef-considered tdw--ef-big
                             tdw--ef-other tdw--ef-calendar))
@@ -1288,7 +1292,7 @@ blocks are excluded."
                                 (setq ritual (+ ritual effort))
                               (setq habit (+ habit effort))))))))))
                 nil nil))))))
-      (let ((fmt (lambda (m) (format "%d:%02d" (/ m 60) (% m 60)))))
+      (let ((fmt #'tdw/format-minutes))
         (list (funcall fmt ritual)
               (funcall fmt cal-past)
               (funcall fmt (+ cal-future habit))))))
@@ -1767,7 +1771,7 @@ entries. Returns the total unaccounted gap in minutes."
     (let ((gap (tdw/compute-gap-total)))
       (when (and gap (> gap 0))
         (let ((inhibit-read-only t)
-              (gap-str (format "%d:%02d" (/ gap 60) (% gap 60))))
+              (gap-str (tdw/format-minutes gap)))
           (save-excursion
             (goto-char (point-min))
             (when (re-search-forward "\\(📅 Today's Schedule ([^)]+)\\)" nil t)
@@ -2082,7 +2086,7 @@ Runs before `org-agenda-redo' so entries are visible on refresh."
       "Return sum of EFFORT for item at point and its children."
       (let* ((total (tdw/get-subtree-effort-minutes))
              (effort (if (> total 0)
-                         (format "%d:%02d" (/ total 60) (% total 60))
+                         (tdw/format-minutes total)
                        (org-entry-get (point) "EFFORT"))))
         (or effort "0:00")))
 
