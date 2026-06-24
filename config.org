@@ -726,7 +726,7 @@ Tag inheritance respects the `my/org-gtd-inherit-tags' customization variable."
                                            (expand-file-name "~/my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))
                                      ;; Per-customer context repos (auto-discovered)
                                      (file-expand-wildcards "~/workspace/non-oss/bfctrace/context-for-*/orgnotes/gtd/org-gtd-tasks.org")
-                                     (file-expand-wildcards "~/workspace/non-oss/thevendoor/context-for-*/orgnotes/gtd/org-gtd-tasks.org")))))
+                                     (file-expand-wildcards "~/workspace/non-oss/venndoor-group/context-for-*/orgnotes/gtd/org-gtd-tasks.org")))))
     (org-edna-use-inheritance t)
     (org-gtd-refile-to-any-target t)
     ;; Inbox captures are stamped ORG_GTD=Inbox + TODO so they show in the
