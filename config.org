@@ -2624,6 +2624,14 @@ per-block `org-agenda-skip-function'."
         (org-entry-end-position))))
   (setq org-agenda-skip-function-global #'tdw/skip-done-or-canceled-globally)
 
+  (defun tdw/skip-non-actionable-in-toggl ()
+    "Skip entries with no TODO keyword in the Toggl Projects section.
+Work-log entries from /log-work-block have ORG_GTD=Actions and tgl_
+tags but no TODO state.  They are completed-work records (CLOCK only)
+and should not appear in the engage view."
+    (unless (org-get-todo-state)
+      (org-entry-end-position)))
+
   (defun tdw-unordered-view (&optional keys)
     "Like Ordered View but without score annotations, priority cookies, or custom sorting."
     (interactive)
@@ -2774,7 +2782,8 @@ per-block `org-agenda-skip-function'."
                                 ((org-agenda-overriding-header "Toggl Projects")
                                  (org-agenda-todo-keyword-format "")
                                  (org-agenda-prefix-format ',(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")"))
-                                 (org-agenda-sorting-strategy '(category-keep))))))
+                                 (org-agenda-sorting-strategy '(category-keep))
+                                 (org-agenda-skip-function 'tdw/skip-non-actionable-in-toggl)))))
                     ))) (or keys "u"))))))
 #+END_SRC
 ** Diary
