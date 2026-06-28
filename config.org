@@ -2196,10 +2196,16 @@ Runs before `org-agenda-redo' so entries are visible on refresh."
     (define-key org-agenda-mode-map (kbd "SPC") #'tdw/agenda-clear-tier))
 
   (defun tdw/agenda-refresh-all ()
-    "Rebuild agenda and scroll to top so P0 is visible."
+    "Full rebuild: kill sticky buffer, clear element caches, regenerate.
+Unlike `org-agenda-redo-all', this re-runs the view constructor so
+let-bound effort totals, tier tables, and header strings are recomputed.
+Also resets org-element parse caches to avoid stale data after disk edits."
     (interactive)
-    (org-agenda-redo-all)
-    (goto-char (point-min)))
+    (org-element-cache-reset)
+    (if tdw--is-unordered-view
+        (tdw-unordered-view)
+      (org-agenda-redo-all)
+      (goto-char (point-min))))
 
   (with-eval-after-load 'org-gtd-agenda
     (defun org-gtd-agenda--resolve-effort ()
@@ -2930,6 +2936,15 @@ dired-jump is awesome (=C-x C-j= in any buffer)
  (setq global-auto-revert-non-file-buffers t)
  (setq auto-revert-verbose nil)
  (global-auto-revert-mode 1)
+
+ ;; Clear org-element parse cache after any org buffer revert.
+ ;; Without this, org-agenda-redo can see stale parsed data even
+ ;; after revert-buffer reloads the file from disk (Org 9.6+ bug).
+ (defun tdw/clear-element-cache-on-revert ()
+   "Clear org-element cache after buffer revert so agenda sees fresh data."
+   (when (derived-mode-p 'org-mode)
+     (org-element-cache-reset)))
+ (add-hook 'after-revert-hook #'tdw/clear-element-cache-on-revert)
 #+END_SRC
 
 This will make dired behave kinda like a two-pane file manager: with two direds open, you can copy/rename and the default target will be the other pane.
