@@ -112,6 +112,12 @@ This is first because nano-theme, while providing a gorgeous UI, has lots of opi
 
   (global-hl-line-mode t)
 
+  ;; Fix emoji char-width mismatches that corrupt terminal redisplay.
+  ;; iTerm2 renders certain Unicode chars as 2 columns (emoji presentation)
+  ;; but Emacs defaults to char-width=1.  The mismatch causes hl-line
+  ;; redraw artifacts: visual line duplication on cursor movement.
+  (set-char-table-range char-width-table #x262F 2)  ; ☯ YIN YANG
+
   (setq column-number-mode t)
   (setq ring-bell-function 'ignore)
   (setq visible-bell t)
