@@ -1939,39 +1939,6 @@ true running clock across files and processes."
   ;; line still carries its org-marker and tags text properties.
   (add-hook 'org-agenda-finalize-hook #'tdw/reorder-tier-sections)
 
-  ;;; --- Auto-sync CLOCKs to timesheet.org on agenda refresh ---
-  ;; Before the agenda rebuilds, sync CLOCK entries from all context repos
-  ;; into timesheet.org so they appear as schedule items immediately.
-
-  (defvar tdw/timesheet-sync-script
-    (expand-file-name "scripts/update_timesheet_org.py"
-                      (file-name-directory (directory-file-name stag-org-directory)))
-    "Path to the CLOCK-to-timesheet.org sync script.")
-
-  (defun tdw/sync-timesheet-before-agenda (&rest _)
-    "Sync today's CLOCK entries from all repos into timesheet.org.
-Runs before `org-agenda-redo' so entries are visible on refresh."
-    (let* ((date-str (format-time-string "%Y-%m-%d"))
-           (tasks-args (mapconcat
-                        (lambda (f) (format "--tasks-file %s" (shell-quote-argument f)))
-                        (tdw/all-tasks-files)
-                        " "))
-           (ts-file (expand-file-name "timesheet.org" stag-org-gtd-directory))
-           (cmd (format "python3 %s --date %s %s --timesheet-file %s 2>/dev/null"
-                        (shell-quote-argument tdw/timesheet-sync-script)
-                        (shell-quote-argument date-str)
-                        tasks-args
-                        (shell-quote-argument ts-file))))
-      (shell-command-to-string cmd)
-      ;; Revert the timesheet buffer so Emacs sees the updated file
-      (let ((buf (find-buffer-visiting ts-file)))
-        (when buf
-          (with-current-buffer buf (revert-buffer t t t))))))
-
-  (advice-add 'org-agenda-redo :before #'tdw/sync-timesheet-before-agenda)
-  (add-hook 'org-clock-in-hook #'tdw/sync-timesheet-before-agenda)
-  (add-hook 'org-clock-out-hook #'tdw/sync-timesheet-before-agenda)
-
   (defun tdw/agenda-adjust-effort (&optional delta)
     "Adjust effort of agenda item at point by DELTA minutes (defaults to 15)."
     (interactive "P")
