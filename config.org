@@ -2652,9 +2652,12 @@ per-block `org-agenda-skip-function'."
                                  (org-agenda-include-diary nil)
                                  (org-agenda-start-with-log-mode 'only)
                                  (org-agenda-log-mode-items '(clock))
-                                 (org-agenda-files (list (expand-file-name "timesheet.org" stag-org-gtd-directory)
-                                                         (expand-file-name "gcal.org" stag-org-gtd-directory)
-                                                         (expand-file-name "org-gtd-tasks.org" stag-org-gtd-directory)))
+                                 (org-agenda-files (cons (expand-file-name "gcal.org" stag-org-gtd-directory)
+                                                         (tdw/all-tasks-files)))
+                                 ;; Log lines only: without this, scheduled NEXT items
+                                 ;; from the task files leak into the log view (the
+                                 ;; regression that once resurrected timesheet.org).
+                                 (org-agenda-entry-types '())
                                  (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
                                  (org-agenda-time-grid '((daily today require-timed) () "" "now - - - - - - - - - - - - - - - - - - - - -"))
                                  (org-agenda-prefix-format '((agenda . "  %i %-12:c%?-12t%-6e ")))
