@@ -714,13 +714,11 @@ Tag inheritance respects the `my/org-gtd-inherit-tags' customization variable."
                                       ;; trace: throwaway test fixtures ONLY (real task
                                       ;; management lives on thecleverone).
                                       (list (expand-file-name "orgnotes/gtd/org-gtd-tasks.org" "~/my-test-life")
-                                            (expand-file-name "orgnotes/gtd/gcal.org" "~/my-test-life")
-                                            (expand-file-name "orgnotes/gtd/timesheet.org" "~/my-test-life"))
+                                            (expand-file-name "orgnotes/gtd/gcal.org" "~/my-test-life"))
                                     (append
                                      ;; Core life-repo files
                                      (list (expand-file-name "orgnotes/gtd/org-gtd-tasks.org" "~/my-venndoor-life")
                                            (expand-file-name "orgnotes/gtd/gcal.org" "~/my-venndoor-life")
-                                           (expand-file-name "orgnotes/gtd/timesheet.org" "~/my-venndoor-life")
                                            (expand-file-name "~/my-google-life/orgnotes/gtd/org-gtd-tasks.org")
                                            (expand-file-name "~/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org")
                                            (expand-file-name "~/my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))
