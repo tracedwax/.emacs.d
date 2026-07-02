@@ -1823,7 +1823,7 @@ Includes the primary file and all context repo task files."
   (defun tdw/schedule-gap-minutes ()
     "Compute gap minutes from the Today's Schedule block in the agenda buffer.
 Scans time-grid entries (HH:MM lines) between the schedule header and the
-next section separator, collecting start times from timesheet.org and gcal.org
+next section separator, collecting start times from gcal.org and clocked
 entries. Returns the total unaccounted gap in minutes."
     (save-excursion
       (goto-char (point-min))
@@ -1850,22 +1850,6 @@ entries. Returns the total unaccounted gap in minutes."
                    (dur (if (and dur-h dur-m) (+ (* dur-h 60) dur-m) 30))
                    (end-min (+ start-min dur)))
               (push (cons start-min end-min) entries)))
-          ;; Also collect entries from Timesheet category lines (no dots)
-          ;; These appear as: "  Timesheet:  07:00-07:15 Task Name"
-          ;; or via the standard agenda format with a time range.
-          (goto-char (point-min))
-          (when (re-search-forward "📅 Today's Schedule" nil t)
-            (while (and (< (point) section-end)
-                        (re-search-forward
-                         "Timesheet:\\s-+\\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)-\\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)"
-                         section-end t))
-              (let* ((sh (string-to-number (match-string 1)))
-                     (sm (string-to-number (match-string 2)))
-                     (eh (string-to-number (match-string 3)))
-                     (em (string-to-number (match-string 4)))
-                     (start-min (+ (* sh 60) sm))
-                     (end-min (+ (* eh 60) em)))
-                (push (cons start-min end-min) entries))))
           ;; Compute gap: sort entries, walk timeline, sum unaccounted gaps
           (when entries
             (setq entries (sort entries (lambda (a b) (< (car a) (car b)))))
