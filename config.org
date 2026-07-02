@@ -1912,11 +1912,10 @@ entries. Returns the total unaccounted gap in minutes."
 
   (defun tdw/latest-open-clock ()
     "Return (HEADING . START-TIME) for the most recent open CLOCK, or nil.
-Scans all org-gtd-tasks.org files (primary + context repos) and timesheet.org
-for a `CLOCK: [ts]' line with no closing `--', picking the latest. Reflects the
+Scans all org-gtd-tasks.org files (primary + context repos) for a
+`CLOCK: [ts]' line with no closing `--', picking the latest. Reflects the
 true running clock across files and processes."
-    (let ((files (append (tdw/all-tasks-files)
-                         (list (expand-file-name "timesheet.org" stag-org-gtd-directory))))
+    (let ((files (tdw/all-tasks-files))
           (best nil))
       (dolist (file files best)
         (when (file-exists-p file)
