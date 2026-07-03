@@ -8,7 +8,7 @@
 ;; timestamps in task files (excluded by the skip function).
 ;;
 ;; This file exists so the Unordered View block in config.org and the
-;; ERT suite in tests/tdw-diary-test.el share ONE definition of those
+;; suite in test/unit/tdw-diary-test.el share ONE definition of those
 ;; semantics: the view splices in `tdw-diary-agenda-options', and the
 ;; tests run `tdw-diary-build-agenda', which binds exactly what that
 ;; function returns.  Change the options and the tests see it; break

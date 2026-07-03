@@ -18,8 +18,10 @@ Instructions for any AI agent (Claude on `trace`, Antigravity/Gemini on `theclev
 
 ## Tests
 
+- **TDD is mandatory** (Trace, 2026-07-03, after the diary leak recurred 18 times). For every behavior change: write the failing test FIRST, run it, commit it red; then implement, run, commit green. A regression fix must add a test that pins the bug. Skipping TDD requires Trace's express permission, per instance.
 - `test/run-tests.sh` runs the e-unit suite (`test/unit/*.el`). **Refactor under green**: keep the suite passing after every change, and add characterization tests before changing behavior.
-- The agenda views are not unit-tested. Verify them by rendering via `emacsclient -s gtd` (the unit suite cannot catch view-build errors).
+- If logic is buried where tests can't reach (inline in a view block), extract it to `lisp/` and have config.org and the tests consume that one definition. Model: `lisp/tdw-diary.el` + `test/unit/tdw-diary-test.el` (the Today's Diary block).
+- View BUILD errors still need a live render via `emacsclient -s gtd` (the unit suite loads config with use-package stubbed).
 
 ## GTD design (current intent)
 
