@@ -2658,20 +2658,24 @@ and should not appear in the engage view."
          (prefix-width . 25)
          (prefix . (effort " " urg-imp " — "))
          (blocks . (
-                    ;; 0. Clock Log (today's CLOCK entries as flat lines)
+                    ;; 0. Clock Log (today's CLOCK entries + gcal.org meetings)
                     ((native . (agenda ""
                                 ((org-agenda-overriding-header ,(format "🕐 Clock Log (%s spent, %s remaining)" effort-spent effort-remaining))
                                  (org-agenda-span 1)
                                  (org-agenda-start-day nil)
                                  (org-agenda-include-diary nil)
-                                 (org-agenda-start-with-log-mode 'only)
+                                 ;; t, NOT 'only: 'only fetches ONLY :closed log items
+                                 ;; and ignores org-agenda-entry-types, which hides
+                                 ;; every gcal.org meeting (they are plain timestamps).
+                                 (org-agenda-start-with-log-mode t)
                                  (org-agenda-log-mode-items '(clock))
                                  (org-agenda-files (cons (expand-file-name "gcal.org" stag-org-gtd-directory)
                                                          (tdw/all-tasks-files)))
-                                 ;; Log lines only: without this, scheduled NEXT items
-                                 ;; from the task files leak into the log view (the
+                                 ;; :timestamp only: meetings (past AND future) render,
+                                 ;; while :scheduled stays out so NEXT items from the
+                                 ;; task files can't leak into the log view (the
                                  ;; regression that once resurrected timesheet.org).
-                                 (org-agenda-entry-types '())
+                                 (org-agenda-entry-types '(:timestamp))
                                  (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
                                  (org-agenda-time-grid '((daily today require-timed) () "" "now - - - - - - - - - - - - - - - - - - - - -"))
                                  (org-agenda-prefix-format '((agenda . "  %i %-12:c%?-12t%-6e ")))
