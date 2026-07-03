@@ -2757,6 +2757,11 @@ and should not appear in the engage view."
                      (type . delegated)
                      (,(intern "when") . today))
 
+                    ;; 3a. Delegated: due after today
+                    ((name . "Delegated (Due After Today)")
+                     (type . delegated)
+                     (,(intern "when") . future))
+
                     ;; 3b. Ticklers Due
                     ((native . (tags-todo
                                 "LEVEL>0+ORG_GTD=\"Incubated\""
