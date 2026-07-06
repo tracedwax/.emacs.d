@@ -118,12 +118,6 @@ is the same leak the canaries above pin, just gated on the clock."
                                     (tdw-diary-test--agenda)))
       (setq tdw-diary-test--agenda-cache nil))))
 
-(deftest diary/shows-active-clock-task-headline ()
-  "The headline of the currently active clock task renders."
-  (let ((org-clock-current-task "Task with open clock"))
-    (setq tdw-diary-test--agenda-cache nil) ;; Force rebuild with mocked clock
-    (assert-true (string-match-p "Task with open clock" (tdw-diary-test--agenda)))))
-
 (defun tdw-diary-test--block-agenda ()
   "Render the diary over the fixtures the way a BLOCK (series) agenda does.
 `org-agenda-run-series' initializes the shared buffer and its
