@@ -2531,7 +2531,7 @@ TAG is one of `tdw--tier-tags'. If the task already carries TAG, remove it inste
   ;; Extracted from inline lambdas so both Ordered View and Unordered View
   ;; can reference them by name instead of duplicating escaped code.
 
-  (defvar tdw--ritual-habits '("Meeting prep" "Start Time Out" "Vivian Vyvanse" "Catch up with billable hours")
+  (defvar tdw--ritual-habits '("Meeting prep" "Start Time Out" "Vivian Vyvanse" "Catch up with billable hours" "Create weekly plan")
     "Habit headings shown in the Daily Rituals section.")
 
   (defun tdw--undone-ritual-habit-p ()
