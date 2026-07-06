@@ -97,30 +97,31 @@
     (assert-true (tdw/skip-unless-other-habit))))
 
 ;;;; ——— weekly-plan dedup regression (real-world shape) ———
-;; Pins the bug reported when "Create weekly plan" was added to
-;; `tdw--ritual-habits': the real heading is level 2, tagged, with a
-;; double space before the tag (`** TODO Create weekly plan  :tgl_...:'),
+;; Pins the real-world heading shape: level 2, tagged, with a double
+;; space before the tag (`** TODO Create weekly plan  :tgl_...:'),
 ;; unlike every fixture above (level 1, untagged). Both functions must
 ;; agree on exactly one section for this exact shape, or the habit
-;; duplicates across Daily Rituals and Daily Habits.
+;; duplicates across Daily Rituals and Daily Habits. Since 6a566b4
+;; "Create weekly plan" is NOT in `tdw--ritual-habits', so its one
+;; section is Daily Habits, not Daily Rituals.
 
-(deftest predicates/daily-ritual-keeps-tagged-multiword-ritual-habit ()
-  "KEEP (nil): a level-2, tagged ritual habit heading with a double space
-before the tag, matching the real-world report verbatim."
+(deftest predicates/daily-ritual-skips-tagged-multiword-non-ritual-habit ()
+  "SKIP (non-nil): a level-2, tagged habit heading with a double space
+before the tag that is no longer listed in `tdw--ritual-habits'."
   (with-temp-buffer
     (org-mode)
     (insert "** TODO Create weekly plan  :tgl_barefoot_internal_sales:\n:PROPERTIES:\n:STYLE: habit\n:END:\n* TODO Next\n")
     (goto-char (point-min))
-    (assert-nil (tdw/skip-unless-daily-ritual-habit))))
+    (assert-true (tdw/skip-unless-daily-ritual-habit))))
 
-(deftest predicates/non-ritual-habit-skips-tagged-multiword-ritual-habit ()
-  "SKIP (non-nil): the same heading must NOT also survive the Daily Habits
-skip function — it belongs in exactly one section, not both."
+(deftest predicates/non-ritual-habit-keeps-tagged-multiword-non-ritual-habit ()
+  "KEEP (nil): the same heading must survive the Daily Habits skip
+function: it belongs in exactly that one section, not both."
   (with-temp-buffer
     (org-mode)
     (insert "** TODO Create weekly plan  :tgl_barefoot_internal_sales:\n:PROPERTIES:\n:STYLE: habit\n:END:\n* TODO Next\n")
     (goto-char (point-min))
-    (assert-true (tdw/skip-unless-other-habit))))
+    (assert-nil (tdw/skip-unless-other-habit))))
 
 ;;;; ——— tdw/skip-unless-tickler-due ———
 
