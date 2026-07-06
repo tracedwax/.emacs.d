@@ -105,6 +105,19 @@ SCHEDULED: <2026-07-03 Fri>
   "Timed plain timestamps on tasks must not leak either."
   (assert-nil (string-match-p "Timed timestamp canary" (tdw-diary-test--agenda))))
 
+(deftest diary/never-shows-active-task-plain-timestamps ()
+  "Even the ACTIVE task's plain timestamps must not leak.
+The active task is visible through its open CLOCK line (log mode), not
+through a timestamps-collector exemption: a headline whitelist in the
+skip function lets the clocked task's plain timestamps through, which
+is the same leak the canaries above pin, just gated on the clock."
+  (let ((org-clock-current-task "Timed timestamp canary"))
+    (setq tdw-diary-test--agenda-cache nil)
+    (unwind-protect
+        (assert-nil (string-match-p "Timed timestamp canary"
+                                    (tdw-diary-test--agenda)))
+      (setq tdw-diary-test--agenda-cache nil))))
+
 (deftest diary/shows-active-clock-task-headline ()
   "The headline of the currently active clock task renders."
   (let ((org-clock-current-task "Task with open clock"))
