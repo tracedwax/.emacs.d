@@ -105,6 +105,12 @@ SCHEDULED: <2026-07-03 Fri>
   "Timed plain timestamps on tasks must not leak either."
   (assert-nil (string-match-p "Timed timestamp canary" (tdw-diary-test--agenda))))
 
+(deftest diary/shows-active-clock-task-headline ()
+  "The headline of the currently active clock task renders."
+  (let ((org-clock-current-task "Task with open clock"))
+    (setq tdw-diary-test--agenda-cache nil) ;; Force rebuild with mocked clock
+    (assert-true (string-match-p "Task with open clock" (tdw-diary-test--agenda)))))
+
 ;;;; Wiring guards: config.org must consume the shared, tested definition.
 
 (defun tdw-diary-test--config ()

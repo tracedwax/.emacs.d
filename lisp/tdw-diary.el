@@ -16,6 +16,7 @@
 
 (require 'org)
 (require 'org-agenda)
+(require 'org-clock)
 
 (defvar tdw-diary-timestamp-file-regexp "\\(?:\\`\\|/\\)gcal\\.org\\'"
   "Files whose plain-timestamp entries may appear in Today's Diary.
@@ -36,6 +37,10 @@ lines must be whitelisted explicitly or the log itself disappears."
   (unless (or (save-excursion
                 (beginning-of-line)
                 (looking-at-p (concat "[ \t]*" (regexp-quote org-clock-string))))
+              ;; Whitelist the headline of the currently active clock task
+              (and (derived-mode-p 'org-mode)
+                   org-clock-current-task
+                   (string= (org-get-heading t t t t) org-clock-current-task))
               (tdw-diary--timestamp-file-p))
     (org-entry-end-position)))
 
