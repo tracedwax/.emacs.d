@@ -111,6 +111,53 @@ SCHEDULED: <2026-07-03 Fri>
     (setq tdw-diary-test--agenda-cache nil) ;; Force rebuild with mocked clock
     (assert-true (string-match-p "Task with open clock" (tdw-diary-test--agenda)))))
 
+(defun tdw-diary-test--block-agenda ()
+  "Render the diary over the fixtures the way a BLOCK (series) agenda does.
+`org-agenda-run-series' initializes the shared buffer and its
+`org-agenda-mode' ONCE, before any block's option bindings, then runs
+each block with `org-agenda-multi' non-nil.  Options honored only at
+mode init (`org-agenda-start-with-log-mode') are invisible to blocks,
+so this path, unlike `tdw-diary-build-agenda', matches the production
+Unordered View."
+  (let* ((dir (make-temp-file "tdw-diary-test" t))
+         (gcal (expand-file-name "gcal.org" dir))
+         (tasks (expand-file-name "org-gtd-tasks.org" dir)))
+    (unwind-protect
+        (progn
+          (with-temp-file gcal (insert tdw-diary-test--gcal-content))
+          (with-temp-file tasks (insert tdw-diary-test--tasks-content))
+          (let* ((org-agenda-sticky nil)
+                 (org-agenda-buffer-name "*tdw-diary-test-block-agenda*")
+                 (options (tdw-diary-agenda-options (list gcal tasks)
+                                                    "Today's Diary"))
+                 (variables (mapcar #'car options))
+                 (values (mapcar (lambda (option) (eval (cadr option) t))
+                                 options)))
+            ;; Series prep: buffer + mode exist BEFORE block options bind.
+            (with-current-buffer (get-buffer-create org-agenda-buffer-name)
+              (org-agenda-mode)
+              (cl-progv variables values
+                ;; In a real series `org-agenda-buffer' is the live series
+                ;; buffer; earlier standalone tests leave it pointing at a
+                ;; killed one, which `org-compile-prefix-format' would select.
+                (let ((org-agenda-buffer (current-buffer))
+                      (org-agenda-multi t))
+                  (org-agenda-list nil tdw-diary-test--day 1)))
+              (prog1 (buffer-string)
+                (kill-buffer)))))
+      (delete-directory dir t))))
+
+(deftest diary/block-agenda-shows-open-clock ()
+  "CLOCK lines must survive the real view's BLOCK context too.
+`org-agenda-mode' copies `org-agenda-start-with-log-mode' into
+`org-agenda-show-log' only at mode init, once per series and outside
+per-block bindings, while `org-agenda-list' reads `org-agenda-show-log'
+at execution.  The shared options must therefore carry
+`org-agenda-show-log' explicitly, or the production diary block
+silently drops every clock line while the standalone path keeps them."
+  (assert-true (string-match-p "Task with open clock"
+                               (tdw-diary-test--block-agenda))))
+
 ;;;; Wiring guards: config.org must consume the shared, tested definition.
 
 (defun tdw-diary-test--config ()
