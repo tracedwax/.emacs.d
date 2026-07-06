@@ -47,6 +47,7 @@ I set a [[*Bookmarks][bookmark]] with =C-x r m= and I can get back here with =C-
 ;; Home-grown libraries with ERT coverage under ~/.emacs.d/tests/.
 (add-to-list 'load-path "~/.emacs.d/lisp")
 (require 'tdw-diary)
+(require 'tdw-delegated)
 #+END_SRC
 ** Themes
 #+BEGIN_SRC emacs-lisp
@@ -2651,15 +2652,20 @@ and should not appear in the engage view."
     (let ((n-actions-unest (tdw/get-actions-unestimated-count)))
     (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,_effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/effort-totals-by-tier))
                 (`(,effort-ritual ,effort-spent ,effort-remaining) (tdw/schedule-effort-totals)))
-      (let ((org-agenda-todo-keyword-format "")
+      (let* ((org-agenda-todo-keyword-format "")
             (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
             ;; Project -> tier-set, so a tiered parent pulls its * Actions tasks
             ;; into the tier section even when they never inherit the tier tag.
-            (tdw/--current-project-tier-table (tdw/--scan-project-tier-table)))
+            (tdw/--current-project-tier-table (tdw/--scan-project-tier-table))
+            ;; One prefix definition for the whole view: DSL blocks take the
+            ;; element list via (prefix . ...); the native Delegated blocks
+            ;; take the expanded format string, so items render identically.
+            (uv-prefix-elements '(effort " " urg-imp " — "))
+            (uv-prefix-format (org-gtd-view-lang--expand-prefix uv-prefix-elements 25)))
        (org-gtd-view-show
        `((name . ,(format "📋 Unordered View — Total Effort: %s" total))
          (prefix-width . 25)
-         (prefix . (effort " " urg-imp " — "))
+         (prefix . ,uv-prefix-elements)
          (blocks . (
                     ;; 0. Today's Diary: gcal.org meetings (past and future) +
                     ;; CLOCK lines from every task file, and NOTHING else.
@@ -2747,20 +2753,17 @@ and should not appear in the engage view."
                                  (org-agenda-skip-function (lambda () (tdw/skip-unless-project-tier "paused")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
-                    ;; 3. Delegated: overdue
-                    ((name . "Delegated (Overdue)")
-                     (type . delegated)
-                     (,(intern "when") . past))
-
-                    ;; 3. Delegated: due today
-                    ((name . "Delegated (Due Today)")
-                     (type . delegated)
-                     (,(intern "when") . today))
-
-                    ;; 3a. Delegated: due after today
-                    ((name . "Delegated (Due After Today)")
-                     (type . delegated)
-                     (,(intern "when") . future))
+                    ;; 3. Delegated: Overdue / Due Today / Due After Today.
+                    ;; Native blocks from lisp/tdw-delegated.el, pinned by
+                    ;; test/unit/tdw-delegated-test.el.  The check-in day is
+                    ;; DEADLINE first (what Trace edits), ORG_GTD_TIMESTAMP
+                    ;; as fallback (what org-gtd-delegate writes); the DSL's
+                    ;; when-filter reads only the property, which real tasks
+                    ;; lack, so the old specs here rendered zero items ever.
+                    ,@(tdw-delegated-agenda-blocks
+                       `((org-agenda-prefix-format
+                          '((tags . ,uv-prefix-format)
+                            (todo . ,uv-prefix-format)))))
 
                     ;; 3b. Ticklers Due
                     ((native . (tags-todo
