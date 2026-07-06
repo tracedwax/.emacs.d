@@ -28,10 +28,11 @@ I set a [[*Bookmarks][bookmark]] with =C-x r m= and I can get back here with =C-
           stag-org-reveal-root "/home/stag/mnt/internal/src/vendor/reveal.js"
           stag-org-directory (expand-file-name "orgnotes/" (concat "~/" life-repo))
           ;; trace uses the throwaway test fixtures (~/my-test-life) for GTD;
-          ;; thecleverone: org-gtd home is context-for-bfc-internal (the internal
-          ;; catchall). my-venndoor-life no longer holds any GTD tasks — all tasks
-          ;; route to per-customer context repos via tgl-repo-routing.json.
-          stag-org-gtd-directory (expand-file-name "orgnotes/gtd" (if (string= (user-login-name) "trace") "~/my-test-life" "~/workspace/non-oss/bfctrace/context-for-bfc-internal"))
+          ;; thecleverone: org-gtd-directory stays on my-venndoor-life as a
+          ;; transient inbox staging area (thecleverone-only, not shared with
+          ;; Claude or any external agent). No permanent tasks live here —
+          ;; all tasks route to per-customer context repos via tgl-repo-routing.json.
+          stag-org-gtd-directory (expand-file-name "orgnotes/gtd" (if (string= (user-login-name) "trace") "~/my-test-life" (concat "~/" life-repo)))
           stag-org-roam-directory (expand-file-name "orgnotes/roam" (concat "~/" life-repo))
           stag-org-roam-db-location "~/.emacs.d/local-files/org-roam.db"
           stag-bbdb-file (expand-file-name "orgnotes/bbdb/big-brother-database" (concat "~/" life-repo))
