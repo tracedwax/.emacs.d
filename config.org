@@ -1346,27 +1346,15 @@ Alerts on on-p0 > 5, bells-ringing > 10, on-deck > 5."
                       (when (member "bells_ringing" tags) (cl-incf n-bell))
                       (when (member "on_deck" tags) (cl-incf n-deck)))))
                 nil nil))))))
-      (if (> n-p0 5)
-          (push (cons "🚨🚨 P0"
-                       (format " *** WARNING: %d p0 items — remove %d *** 🚨🚨" n-p0 (- n-p0 5)))
-                warnings)
-        (push (cons "🚨🚨 P0"
-                     " [Drop everything to do these] 🚨🚨")
-              warnings))
-      (if (> n-bell 10)
-          (push (cons "🔔🔔 Bells Ringing"
-                       (format " *** WARNING: %d bells-ringing items — remove %d *** 🔔🔔" n-bell (- n-bell 10)))
-                warnings)
-        (push (cons "🔔🔔 Bells Ringing"
-                     " [keeps coming up as must do next] 🔔🔔")
-              warnings))
-      (if (> n-deck 5)
-          (push (cons "🥎 🥎 On Deck"
-                       (format " *** WARNING: %d on-deck items — remove %d *** 🥎🥎" n-deck (- n-deck 5)))
-                warnings)
-        (push (cons "🥎 🥎 On Deck"
-                     " [next up after the bells are quiet] 🥎🥎")
-              warnings))
+      (push (cons "🚨🚨 P0"
+                   " [Drop everything to do these] 🚨🚨")
+            warnings)
+      (push (cons "🔔🔔 Bells Ringing"
+                   " [keeps coming up as must do next] 🔔🔔")
+            warnings)
+      (push (cons "🥎 🥎 On Deck"
+                   " [next up after the bells are quiet] 🥎🥎")
+            warnings)
       warnings))
 
   ;;; ——— Ordered View: Buffer-local state ———
