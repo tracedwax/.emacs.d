@@ -2708,7 +2708,7 @@ and should not appear in the engage view."
                                  (org-agenda-skip-function (lambda () (tdw/skip-unless-project-tier "p0")))
                                  (org-agenda-sorting-strategy '(category-keep))))))
 
-                    ;; 0c. Daily Habits (non-ritual habits: weekly plan, etc.)
+                    ;; 0c. Daily Habits (habits not in `tdw--ritual-habits')
                     ((native . (agenda ""
                                 ((org-agenda-overriding-header "📋 Daily Habits")
                                  (org-agenda-span 1)
