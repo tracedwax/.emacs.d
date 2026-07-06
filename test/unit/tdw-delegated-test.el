@@ -182,5 +182,22 @@
   (assert-nil (string-match-p "Completed delegation"
                               (tdw-delegated-test--agenda))))
 
+;;;; Wiring guards: config.org must consume the shared, tested definition.
+
+(defun tdw-delegated-test--config ()
+  (with-temp-buffer
+    (insert-file-contents (expand-file-name "~/.emacs.d/config.org"))
+    (buffer-string)))
+
+(deftest delegated/config-uses-shared-blocks ()
+  "The view splices tdw-delegated-agenda-blocks (no inline copy to drift)."
+  (assert-true (string-match-p "tdw-delegated-agenda-blocks"
+                               (tdw-delegated-test--config))))
+
+(deftest delegated/config-inline-dsl-blocks-gone ()
+  "The broken (type . delegated) DSL blocks are gone from config.org."
+  (assert-nil (string-match-p "(type . delegated)"
+                              (tdw-delegated-test--config))))
+
 (provide 'tdw-delegated-test)
 ;;; tdw-delegated-test.el ends here
