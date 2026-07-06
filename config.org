@@ -2279,7 +2279,7 @@ Mirrors what `tdw/skip-unless-unestimated' shows in the Unestimated view block."
     "Return an `org-agenda-prefix-format' alist rendering CHAIN padded to WIDTH.
 CHAIN is the prefix-element list as a string literal, e.g. \"(urg-imp \\\" — \\\")\".
 Replaces the per-block prefix-format string that was duplicated across views."
-    `((tags . ,(format " %%i %%-%d:(org-gtd-agenda--resolve-prefix-chain '%s %d) " width chain width))))
+    `((tags . ,(format " %%l %%-%d:(org-gtd-agenda--resolve-prefix-chain '%s %d) " width chain width))))
 
   (defun tdw-someday-priority-view (&optional keys)
     "Someday/Maybe items — mirrors Unordered View layout (minus habits/delegated/tickler).
