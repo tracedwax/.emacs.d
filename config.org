@@ -2547,12 +2547,12 @@ non-nil when its heading names one of `tdw--ritual-habits'."
   (defun tdw/skip-unless-daily-ritual-habit ()
     "Skip unless this is an undone daily ritual habit."
     (let ((info (tdw--undone-ritual-habit-p)))
-      (if (and (car info) (cdr info)) nil (outline-next-heading))))
+      (if (and (car info) (cdr info)) nil (org-entry-end-position))))
 
   (defun tdw/skip-unless-other-habit ()
     "Skip unless this is an undone habit that is NOT a daily ritual."
     (let ((info (tdw--undone-ritual-habit-p)))
-      (if (and (car info) (not (cdr info))) nil (outline-next-heading))))
+      (if (and (car info) (not (cdr info))) nil (org-entry-end-position))))
 
   (defun tdw/skip-unless-tickler-due ()
     "Skip unless this is an incubated item scheduled for today or earlier."
