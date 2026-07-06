@@ -2796,6 +2796,103 @@ and should not appear in the engage view."
                                  (org-agenda-skip-function 'tdw/skip-non-actionable-in-toggl)))))
                     ))) (or keys "u"))))))
 #+END_SRC
+** Org-gtd cross-repo routing (tgl tags)
+
+Route each clarified task into the context repo named by its =tgl_= tag instead of
+letting it pile up in the default =org-gtd-directory=. The =tgl_= tag is already on
+the heading when the refile runs (=org-gtd-organize-hooks= fires first), so a
+=:around= advice on =org-gtd-refile--do= looks the tag up in the shared routing
+table (=tgl-repo-routing.json=, written on the thecleverone account) and let-binds
+=org-gtd-directory= to that repo's GTD dir for the duration of the refile. Missing
+tag, unknown tag, or absent target dir warns and falls through to the default: the
+LLM workflows add tags separately, so this must never hard-fail a clarify.
+
+#+BEGIN_SRC emacs-lisp
+  (require 'json)
+  ;; Valueless (defvar org-gtd-directory) is only file-locally special; the
+  ;; refile advice needs a GLOBALLY special var so its let-binding is dynamic
+  ;; even before org-gtd's defcustom loads. A valued defvar after the setq at
+  ;; the top of this file preserves the value and marks it special everywhere.
+  (defvar org-gtd-directory nil
+    "Root dir for org-gtd files. Declared here for the tgl routing advice;
+org-gtd's own defcustom takes over when the package loads.")
+
+  (defvar tdw/tgl-routing-file "~/my-venndoor-life/outputs/tags/tgl-repo-routing.json"
+    "JSON routing table mapping tgl_ tags to context-repo GTD dirs.")
+
+  (defvar tdw/tgl-routing--cache nil
+    "Parsed routing table: alist of (TAG-STRING . ENTRY-ALIST).")
+
+  (defvar tdw/tgl-routing--cache-mtime nil
+    "Mtime of `tdw/tgl-routing-file' when `tdw/tgl-routing--cache' was filled.")
+
+  (defun tdw/tgl-routing--localize-path (path)
+    "Rewrite PATH's /Users/<someone>/ prefix to the current user's home.
+gtd_dir values in the routing JSON carry the home dir of whichever
+account wrote them."
+    (if (string-match "\\`/Users/[^/]+/" path)
+        (concat (expand-file-name "~/") (substring path (match-end 0)))
+      path))
+
+  (defun tdw/tgl-routing-table ()
+    "Return the routing table, re-reading the JSON when its mtime changes.
+nil when the routing file is missing or unreadable."
+    (let ((file (expand-file-name tdw/tgl-routing-file)))
+      (when (file-readable-p file)
+        (let ((mtime (file-attribute-modification-time (file-attributes file))))
+          (unless (and tdw/tgl-routing--cache
+                       (equal mtime tdw/tgl-routing--cache-mtime))
+            (setq tdw/tgl-routing--cache
+                  (let ((json-object-type 'alist)
+                        (json-key-type 'string)
+                        (json-array-type 'list))
+                    (json-read-file file))
+                  tdw/tgl-routing--cache-mtime mtime))
+          tdw/tgl-routing--cache))))
+
+  (defun tdw/tgl-routing-gtd-dir (tag)
+    "Localized gtd_dir for TAG from the routing table, or nil."
+    (when-let* ((table (tdw/tgl-routing-table))
+                (entry (cdr (assoc tag table)))
+                (dir (cdr (assoc "gtd_dir" entry))))
+      (tdw/tgl-routing--localize-path dir)))
+
+  (defun tdw/get-tgl-tag-from-heading ()
+    "First tgl_ tag on the heading at point, or nil."
+    (seq-find (lambda (tag) (string-prefix-p "tgl_" tag))
+              (org-get-tags)))
+
+  (defun tdw/refile-to-context-repo (orig-fn type refile-target-element)
+    "Around advice on `org-gtd-refile--do': refile into the tgl_-tagged repo.
+Let-binds `org-gtd-directory' to the routing entry's gtd_dir so the
+auto-refile target (`org-gtd-refile-to-any-target' is t) resolves inside
+the correct context repo."
+    (let* ((tag (ignore-errors
+                  (save-excursion
+                    (org-back-to-heading t)
+                    (tdw/get-tgl-tag-from-heading))))
+           (dir (and tag (tdw/tgl-routing-gtd-dir tag))))
+      (cond
+       ((null tag)
+        (display-warning 'tdw-tgl-routing
+                         "Heading has no tgl_ tag; refiling to default org-gtd-directory")
+        (funcall orig-fn type refile-target-element))
+       ((null dir)
+        (display-warning 'tdw-tgl-routing
+                         (format "Tag %s has no routing entry; refiling to default" tag))
+        (funcall orig-fn type refile-target-element))
+       ((not (file-directory-p dir))
+        (display-warning 'tdw-tgl-routing
+                         (format "Routing target %s for %s missing on disk; refiling to default"
+                                 dir tag))
+        (funcall orig-fn type refile-target-element))
+       (t
+        (let ((org-gtd-directory dir))
+          (funcall orig-fn type refile-target-element))))))
+
+  (with-eval-after-load 'org-gtd-refile
+    (advice-add 'org-gtd-refile--do :around #'tdw/refile-to-context-repo))
+#+END_SRC
 ** Diary
 #+BEGIN_SRC emacs-lisp
 (setq diary-file (concat org-directory "diary-file.org"))
