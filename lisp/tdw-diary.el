@@ -60,6 +60,12 @@ SCHEDULED tasks out."
     (org-agenda-start-day nil)
     (org-agenda-include-diary nil)
     (org-agenda-start-with-log-mode t)
+    ;; start-with-log-mode is copied into org-agenda-show-log only when
+    ;; org-agenda-mode initializes a buffer; block/series agendas run the
+    ;; mode once BEFORE per-block option bindings, so without show-log
+    ;; here the production diary block drops every clock line while
+    ;; standalone rendering keeps them.
+    (org-agenda-show-log t)
     (org-agenda-log-mode-items '(clock))
     (org-agenda-files ',files)
     (org-agenda-entry-types '(:timestamp))
