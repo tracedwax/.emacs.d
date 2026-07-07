@@ -57,6 +57,10 @@ SCHEDULED: <2026-07-03 Fri>
 <2026-07-03 Fri>
 ** NEXT Timed timestamp canary
 <2026-07-03 Fri 14:00-14:30>
+** DONE Done task with closed clock
+:LOGBOOK:
+CLOCK: [2026-07-03 Fri 10:00]--[2026-07-03 Fri 10:30] =>  0:30
+:END:
 ")
 
 (defvar tdw-diary-test--agenda-cache nil
@@ -92,6 +96,15 @@ SCHEDULED: <2026-07-03 Fri>
 (deftest diary/shows-open-clock ()
   "A still-running clock renders as a log line."
   (assert-true (string-match-p "Task with open clock" (tdw-diary-test--agenda))))
+
+(deftest diary/shows-clock-under-done-task ()
+  "A CLOCK line under a DONE-state headline must still render.
+`tdw/skip-done-or-canceled-globally' in config.org skips DONE/CNCL
+entries in every agenda view, but Today's Diary must keep CLOCK log
+lines regardless of the parent task's TODO state: the 2026-07-07
+regression that silently dropped 2:30 of logged time for a DONE task."
+  (assert-true (string-match-p "Done task with closed clock"
+                               (tdw-diary-test--agenda))))
 
 (deftest diary/never-shows-scheduled-tasks ()
   "The leak that once resurrected timesheet.org."
