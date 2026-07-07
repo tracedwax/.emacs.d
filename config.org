@@ -1246,14 +1246,17 @@ A 20- or 25-minute meeting is really a 30-minute meeting."
     "Return (RITUAL-TOTAL SPENT-TOTAL REMAINING-TOTAL) as H:MM strings.
 RITUAL-TOTAL sums the effort of the Daily Rituals habits (see
 `tdw--ritual-habits').  SPENT-TOTAL sums today's past calendar meetings
-(each rounded up to the next 15 minutes).  REMAINING-TOTAL sums today's
-future calendar meetings (rounded up to 15 minutes) plus non-ritual
-habits still due.  Habits already completed today and DNS calendar
-blocks are excluded."
+(each rounded up to the next 15 minutes) PLUS today's closed CLOCK
+entries (raw minutes, not rounded: the quarter-hour rounding rule is
+specific to calendar meetings).  REMAINING-TOTAL sums today's future
+calendar meetings (rounded up to 15 minutes) plus non-ritual habits
+still due.  Habits already completed today and DNS calendar blocks are
+excluded."
     (let ((ritual 0)
           (cal-past 0)
           (cal-future 0)
           (habit 0)
+          (clocked 0)
           (now (current-time))
           (today-start (encode-time 0 0 0
                                     (decoded-time-day (decode-time))
@@ -1316,10 +1319,13 @@ blocks are excluded."
                             (if is-ritual
                                 (setq ritual (+ ritual effort))
                               (setq habit (+ habit effort))))))))))
-                nil nil))))))
+                nil nil)
+               ;; Today's closed CLOCK entries: raw minutes, no quarter-hour
+               ;; rounding (that rule is specific to calendar meetings).
+               (setq clocked (+ clocked (or (org-clock-sum today-start today-end) 0))))))))
       (let ((fmt #'tdw/format-minutes))
         (list (funcall fmt ritual)
-              (funcall fmt cal-past)
+              (funcall fmt (+ cal-past clocked))
               (funcall fmt (+ cal-future habit))))))
 
   ;;; ——— Ordered View: Capacity warnings ———
