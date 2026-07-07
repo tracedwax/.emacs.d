@@ -64,7 +64,13 @@ SCHEDULED tasks out."
     (org-agenda-log-mode-items '(clock))
     (org-agenda-files ',files)
     (org-agenda-entry-types '(:timestamp))
-    (org-agenda-skip-function #'tdw-diary-skip-non-gcal-timestamps)))
+    (org-agenda-skip-function #'tdw-diary-skip-non-gcal-timestamps)
+    ;; `org-agenda-skip-function-global' (config.org) skips DONE/CNCL entries
+    ;; in every OTHER view, but Today's Diary must keep CLOCK lines regardless
+    ;; of the parent task's TODO state.  `org-agenda-skip' ORs the global and
+    ;; per-block skip functions, so the global one must be neutralized here,
+    ;; not folded into the per-block skip function above.
+    (org-agenda-skip-function-global nil)))
 
 (defun tdw-diary-build-agenda (files &optional day)
   "Build the Today's Diary agenda for FILES (on DAY) and return its text.
