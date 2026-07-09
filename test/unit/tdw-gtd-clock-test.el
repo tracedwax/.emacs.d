@@ -53,6 +53,27 @@
        (progn (tdw-gtd-parse-duration "banana") nil)
      (error t))))
 
+;;;; tdw-gtd--format-clock-line
+
+(deftest gtd-clock/format-right-aligns-single-digit-hour ()
+  "Real org-gtd-tasks.org data (via thecleverone) shows the H:MM field is
+right-aligned to width 2 on the hour, not always exactly two literal
+spaces: a 1-digit hour keeps the extra space (\"=>  0:30\"), a 2-digit
+hour doesn't (\"=> 11:00\") - the format string must pad the hour to
+width 2, not hardcode two spaces before a bare %d."
+  (assert-equal
+   "CLOCK: [2026-06-01 Mon 21:00]--[2026-06-01 Mon 21:30] =>  0:30"
+   (tdw-gtd--format-clock-line (encode-time 0 0 21 1 6 2026)
+                                (encode-time 0 30 21 1 6 2026)
+                                30)))
+
+(deftest gtd-clock/format-does-not-double-space-two-digit-hour ()
+  (assert-equal
+   "CLOCK: [2026-06-13 Sat 08:00]--[2026-06-13 Sat 19:00] => 11:00"
+   (tdw-gtd--format-clock-line (encode-time 0 0 8 13 6 2026)
+                                (encode-time 0 0 19 13 6 2026)
+                                660)))
+
 ;;;; tdw-gtd--replace-logbook-clock (pure string transform)
 
 (deftest gtd-clock/consolidates-single-entry ()
@@ -96,6 +117,35 @@ CLOCK: [2026-07-03 Fri 08:00]--[2026-07-03 Fri 08:40] =>  0:40
     (let ((result (tdw-gtd--replace-logbook-clock text 15)))
       (assert-equal 1 (cl-count-if (lambda (line) (string-prefix-p "CLOCK:" (string-trim line)))
                                     (split-string result "\n"))))))
+
+(deftest gtd-clock/consolidates-entry-spanning-midnight ()
+  "Real data (via thecleverone): a CLOCK entry can start one calendar day
+and end just after midnight the next. Proper date arithmetic (not naive
+same-day string math) must carry the day rollover correctly."
+  (let ((text "\
+** NEXT Some task                                    :tgl_foo:
+:LOGBOOK:
+CLOCK: [2026-06-04 Thu 23:30]--[2026-06-05 Fri 00:00] =>  0:30
+:END:
+"))
+    (assert-true
+     (string-match-p
+      "CLOCK: \\[2026-06-04 Thu 23:45\\]--\\[2026-06-05 Fri 00:00\\] =>  0:15"
+      (tdw-gtd--replace-logbook-clock text 15)))))
+
+(deftest gtd-clock/consolidates-to-a-two-digit-hour-duration ()
+  "Real data (via thecleverone): an all-day block totaling 11:00 - the
+consolidated line must right-align correctly, not double-space."
+  (let ((text "\
+** NEXT Some task                                    :tgl_foo:
+:LOGBOOK:
+CLOCK: [2026-06-13 Sat 08:00]--[2026-06-13 Sat 19:00] => 11:00
+:END:
+"))
+    (assert-true
+     (string-match-p
+      "CLOCK: \\[2026-06-13 Sat 08:00\\]--\\[2026-06-13 Sat 19:00\\] => 11:00"
+      (tdw-gtd--replace-logbook-clock text 660)))))
 
 (deftest gtd-clock/creates-logbook-when-absent-using-now-time ()
   (let* ((text "\
