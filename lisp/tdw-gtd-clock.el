@@ -48,9 +48,12 @@ format here is always exactly this one shape."
     (error "tdw-gtd--parse-org-timestamp: unparseable timestamp %S" bracketed)))
 
 (defun tdw-gtd--format-clock-line (start-time end-time minutes)
-  "Format a consolidated CLOCK line, matching org's own two-space
-convention before the H:MM total (as seen throughout org-gtd-tasks.org)."
-  (format "CLOCK: %s--%s =>  %d:%02d"
+  "Format a consolidated CLOCK line, matching org's own right-aligned
+H:MM convention (as seen throughout org-gtd-tasks.org): the hour field
+is padded to width 2, so a 1-digit hour gets an extra space (\"=>  0:30\")
+and a 2-digit hour doesn't (\"=> 11:00\") - NOT always exactly two
+literal spaces before a bare hour digit."
+  (format "CLOCK: %s--%s => %2d:%02d"
           (format-time-string "[%Y-%m-%d %a %H:%M]" start-time)
           (format-time-string "[%Y-%m-%d %a %H:%M]" end-time)
           (/ minutes 60)
