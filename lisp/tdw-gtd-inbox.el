@@ -11,6 +11,7 @@
 ;;; Code:
 
 (require 'time-date)
+(require 'tdw-gtd-tags)
 
 (defun tdw-gtd-next-friday-from (time)
   "Return a time value for the next Friday on-or-after TIME's date.
@@ -55,6 +56,48 @@ rather than reverting from disk. Returns the text of the entry written."
       (insert entry)
       (save-buffer))
     entry))
+
+(defun tdw-gtd--format-inbox-task (title tag deadline-time now-time delegate-to)
+  "Format one org-gtd-tasks.org Inbox entry, same shape as
+`tdw-gtd-add-inbox-item' plus TAG appended to the headline and an
+optional DELEGATE-TO body line."
+  (format "* TODO %s :%s:\n:PROPERTIES:\n:ORG_GTD: Inbox\n:END:\nDEADLINE: %s\n%s%s\n"
+          title tag
+          (tdw-gtd--format-deadline deadline-time)
+          (if delegate-to (format "Delegated to: %s\n" delegate-to) "")
+          (tdw-gtd--format-capture-timestamp now-time)))
+
+(defun tdw-gtd-file-tasks-to-inbox (tasks &optional now-time tasks-file)
+  "Append TASKS to org-gtd-tasks.org's Inbox (default: org-gtd-tasks.org
+under `org-gtd-directory') in ONE save - the batch-filing counterpart to
+`tdw-gtd-add-inbox-item' for already-groomed action items (e.g. from a
+30-second-summary file), which target org-gtd-tasks.org directly rather
+than the separate inbox.org staging file.
+
+TASKS is a list of plists, each with:
+  :title       (required) the action text.
+  :tag         a tgl_* tag; guessed via `tdw-gtd-guess-tag' from :title if omitted.
+  :deadline    a time value; defaults to the next Friday on-or-after NOW-TIME if omitted.
+  :delegate-to a name; adds a \"Delegated to: NAME\" body line if given.
+
+Returns the number of tasks filed."
+  (let* ((now (or now-time (current-time)))
+         (file (or tasks-file (expand-file-name "org-gtd-tasks.org" org-gtd-directory)))
+         (entries (mapconcat
+                   (lambda (task)
+                     (let* ((title (plist-get task :title))
+                            (tag (or (plist-get task :tag) (tdw-gtd-guess-tag title)))
+                            (deadline (or (plist-get task :deadline)
+                                          (tdw-gtd-next-friday-from now)))
+                            (delegate-to (plist-get task :delegate-to)))
+                       (tdw-gtd--format-inbox-task title tag deadline now delegate-to)))
+                   tasks "")))
+    (with-current-buffer (find-file-noselect file)
+      (goto-char (point-max))
+      (unless (bobp) (unless (bolp) (insert "\n")))
+      (insert entries)
+      (save-buffer))
+    (length tasks)))
 
 (provide 'tdw-gtd-inbox)
 ;;; tdw-gtd-inbox.el ends here
