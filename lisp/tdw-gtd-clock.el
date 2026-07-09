@@ -114,6 +114,55 @@ of them still open)."
         (setq pos next-pos)))
     latest))
 
+(defun tdw-gtd--clock-entries-in (text)
+  "Return a list of plists for every CLOCK line in TEXT, each with
+:beg/:end (bounds of the line's content, excluding the newline and any
+leading indentation), :start/:stop (time values; :stop nil if open)."
+  (let ((entries nil) (pos 0))
+    (while (string-match
+            "^[ \t]*\\(CLOCK: \\(\\[[^]]+\\]\\)\\(?:--\\(\\[[^]]+\\]\\)[^\n]*\\)?\\)[ \t]*$"
+            text pos)
+      (let ((beg (match-beginning 1))
+            (end (match-end 1))
+            (start-bracket (match-string 2 text))
+            (stop-bracket (match-string 3 text))
+            (next-pos (match-end 0)))
+        (push (list :beg beg :end end
+                    :start (tdw-gtd--parse-org-timestamp start-bracket)
+                    :stop (and stop-bracket
+                               (tdw-gtd--parse-org-timestamp stop-bracket)))
+              entries)
+        (setq pos next-pos)))
+    (nreverse entries)))
+
+(defun tdw-gtd--select-clock-entry (text selector &optional now)
+  "Select ONE CLOCK entry in TEXT and return its (BEG . END) bounds.
+SELECTOR nil: the open (running) entry if there is one, else the entry
+with the latest start. Otherwise SELECTOR is a start-time string (any
+form `tdw-gtd-parse-clock-time' accepts, date defaulting to NOW's day)
+that must equal an entry's clock-in time. Signals `user-error' listing
+every entry when nothing matches, or when TEXT has no CLOCK lines."
+  (let ((entries (tdw-gtd--clock-entries-in text)))
+    (unless entries
+      (user-error "tdw-gtd--select-clock-entry: task has no CLOCK entries"))
+    (let ((chosen
+           (if selector
+               (let ((want (tdw-gtd-parse-clock-time selector now)))
+                 (cl-find-if (lambda (e) (time-equal-p want (plist-get e :start)))
+                             entries))
+             (or (cl-find-if (lambda (e) (null (plist-get e :stop))) entries)
+                 (car (sort (copy-sequence entries)
+                            (lambda (a b) (time-less-p (plist-get b :start)
+                                                        (plist-get a :start)))))))))
+      (unless chosen
+        (user-error "tdw-gtd--select-clock-entry: no entry starts at %S - entries: %s"
+                    selector
+                    (mapconcat (lambda (e)
+                                 (format-time-string "[%Y-%m-%d %a %H:%M]"
+                                                     (plist-get e :start)))
+                               entries ", ")))
+      (cons (plist-get chosen :beg) (plist-get chosen :end)))))
+
 (defun tdw-gtd--replace-logbook-clock (text minutes &optional now-time)
   "Return TEXT (a headline plus whatever follows it) with its :LOGBOOK:
 CLOCK entries consolidated into ONE entry totaling MINUTES. Ends at the
