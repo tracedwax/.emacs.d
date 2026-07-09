@@ -278,6 +278,46 @@ CLOCK: [2026-07-03 Fri 08:45]--[2026-07-03 Fri 09:25] =>  0:40
          (progn (tdw-gtd-adjust-timer "Nonexistent task" "30m") nil)
        (error t)))))
 
+;;;; tdw-gtd-parse-clock-time
+
+(defvar tdw-gtd-clock-test--now (encode-time 0 0 12 9 7 2026)
+  "Fixed \"now\" (2026-07-09 Thu 12:00) so date-defaulting tests are deterministic.")
+
+(deftest gtd-clock/parse-clock-time-military-hhmm ()
+  (assert-equal (encode-time 0 0 10 9 7 2026)
+                (tdw-gtd-parse-clock-time "1000" tdw-gtd-clock-test--now)))
+
+(deftest gtd-clock/parse-clock-time-colon-form ()
+  (assert-equal (encode-time 0 30 11 9 7 2026)
+                (tdw-gtd-parse-clock-time "11:30" tdw-gtd-clock-test--now)))
+
+(deftest gtd-clock/parse-clock-time-am-pm ()
+  (assert-equal (encode-time 0 0 10 9 7 2026)
+                (tdw-gtd-parse-clock-time "10am" tdw-gtd-clock-test--now))
+  (assert-equal (encode-time 0 30 22 9 7 2026)
+                (tdw-gtd-parse-clock-time "10:30pm" tdw-gtd-clock-test--now)))
+
+(deftest gtd-clock/parse-clock-time-noon-and-midnight-pm-am ()
+  (assert-equal (encode-time 0 0 12 9 7 2026)
+                (tdw-gtd-parse-clock-time "12pm" tdw-gtd-clock-test--now))
+  (assert-equal (encode-time 0 0 0 9 7 2026)
+                (tdw-gtd-parse-clock-time "12am" tdw-gtd-clock-test--now)))
+
+(deftest gtd-clock/parse-clock-time-with-explicit-date ()
+  (assert-equal (encode-time 0 0 10 8 7 2026)
+                (tdw-gtd-parse-clock-time "2026-07-08 1000" tdw-gtd-clock-test--now)))
+
+(deftest gtd-clock/parse-clock-time-short-military ()
+  "A 3-digit hhmm like \"930\" means 09:30."
+  (assert-equal (encode-time 0 30 9 9 7 2026)
+                (tdw-gtd-parse-clock-time "930" tdw-gtd-clock-test--now)))
+
+(deftest gtd-clock/parse-clock-time-rejects-garbage ()
+  (assert-true
+   (condition-case nil
+       (progn (tdw-gtd-parse-clock-time "banana" tdw-gtd-clock-test--now) nil)
+     (error t))))
+
 ;;;; Wiring guard: config.org must actually load this module.
 
 (defun tdw-gtd-clock-test--config ()
