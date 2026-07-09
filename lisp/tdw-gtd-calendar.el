@@ -1,17 +1,16 @@
 ;;; tdw-gtd-calendar.el --- Deterministic calendar sync -*- lexical-binding: t; -*-
 
-;; Deterministic sync from Google Calendar event data (as returned by
-;; `gws calendar events list', a standard Google Calendar API v3 response:
-;; each event's start/end is either an RFC3339 datetime or a bare
-;; YYYY-MM-DD date for an all-day event) into gcal.org, matching the
-;; Today's Diary convention already pinned in tdw-diary-test.el. The
-;; actual `gws' call stays outside this module - the model just needs to
-;; pass the JSON-derived (TITLE START END) triples straight through, not
-;; do any date math itself.
+;; Deterministic sync from Google Calendar event data into gcal.org,
+;; matching the Today's Diary convention already pinned in
+;; tdw-diary-test.el. `tdw-gtd-sync-calendar' takes the raw JSON string
+;; `gws calendar events list --format json' already produces - the model
+;; passes it straight through, no elisp list construction and no date
+;; math of its own.
 
 ;;; Code:
 
 (require 'iso8601)
+(require 'json)
 
 (defun tdw-gtd--parse-event-time (time-string)
   "Parse TIME-STRING - an RFC3339 datetime (e.g.
@@ -55,7 +54,7 @@ whose timestamp date is DATE-STRING (\"YYYY-MM-DD\") removed."
         (setq pos block-end)))
     (concat result (substring content pos))))
 
-(defun tdw-gtd-sync-calendar (events &optional date calendar-file)
+(defun tdw-gtd--sync-calendar-events (events &optional date calendar-file)
   "Replace all calendar entries for DATE (a time value, default: today)
 in CALENDAR-FILE (default: gcal.org under `org-gtd-directory') with
 EVENTS - a list of (TITLE START END) triples, START/END as RFC3339
@@ -63,7 +62,8 @@ datetime strings or plain YYYY-MM-DD date strings (all-day), END may be
 nil. Idempotent per day: re-running with fresh EVENTS for the same DATE
 reflects exactly what's in EVENTS - a meeting that's been cancelled
 since the last sync does not survive. Entries for OTHER dates are
-untouched. Returns the number of events written."
+untouched. Returns the number of events written. Private: the calling
+model uses the public `tdw-gtd-sync-calendar' (raw JSON) instead."
   (let* ((date-string (format-time-string "%Y-%m-%d" (or date (current-time))))
          (file (or calendar-file (expand-file-name "gcal.org" org-gtd-directory))))
     (with-current-buffer (find-file-noselect file)
@@ -82,6 +82,43 @@ untouched. Returns the number of events written."
         (insert entries)
         (save-buffer)
         (length events)))))
+
+(defun tdw-gtd--parse-events-json (json-string)
+  "Parse JSON-STRING - a raw Google Calendar API v3 events.list response,
+e.g. the output of `gws calendar events list --format json' - into a
+list of (TITLE START END) triples. Ignores an all-day event's end.date
+entirely (Google's end.date is EXCLUSIVE - the day AFTER the event even
+for a single-day all-day event - so it is never a valid time-range end);
+an all-day event's END is always nil in the result."
+  (let* ((json-object-type 'alist)
+         (json-key-type 'string)
+         (json-array-type 'list)
+         (parsed (json-read-from-string json-string))
+         (items (cdr (assoc "items" parsed))))
+    (mapcar
+     (lambda (event)
+       (let* ((title (or (cdr (assoc "summary" event)) "(untitled event)"))
+              (start-obj (cdr (assoc "start" event)))
+              (start-datetime (cdr (assoc "dateTime" start-obj)))
+              (start-date (cdr (assoc "date" start-obj)))
+              (all-day (and start-date (not start-datetime)))
+              (end-obj (cdr (assoc "end" event)))
+              (end-datetime (cdr (assoc "dateTime" end-obj))))
+         (list title
+               (or start-datetime start-date)
+               (unless all-day end-datetime))))
+     items)))
+
+(defun tdw-gtd-sync-calendar (events-json &optional date calendar-file)
+  "Replace all calendar entries for DATE (a time value, default: today)
+in CALENDAR-FILE (default: gcal.org under `org-gtd-directory') with the
+events in EVENTS-JSON - the raw JSON string from a Google Calendar API
+v3 events.list response (e.g. `gws calendar events list --format json').
+Pass that output straight through, unmodified: no elisp list
+construction, no date parsing, no reformatting. Idempotent per day - see
+`tdw-gtd--sync-calendar-events'. Returns the number of events written."
+  (tdw-gtd--sync-calendar-events
+   (tdw-gtd--parse-events-json events-json) date calendar-file))
 
 (provide 'tdw-gtd-calendar)
 ;;; tdw-gtd-calendar.el ends here
