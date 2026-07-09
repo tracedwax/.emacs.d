@@ -108,7 +108,7 @@ not a UTC-forced comparison that would drift with the runner's timezone."
 
 (deftest gtd-calendar/sync-writes-fresh-events-for-the-target-date ()
   (tdw-gtd-calendar-test--with-fixture gcal-file "* Calendar\n"
-    (tdw-gtd-sync-calendar
+    (tdw-gtd--sync-calendar-events
      '(("Standup" "2026-07-09T09:00:00-04:00" "2026-07-09T09:15:00-04:00"))
      (tdw-gtd--parse-event-time "2026-07-09"))
     (assert-true (string-match-p "Standup" (tdw-gtd-calendar-test--file-contents gcal-file)))))
@@ -125,7 +125,7 @@ in EVENTS (e.g. a cancelled meeting) must not survive the sync."
 :END:
 <2026-07-09 Thu 14:00-14:30>
 "
-    (tdw-gtd-sync-calendar
+    (tdw-gtd--sync-calendar-events
      '(("Standup" "2026-07-09T09:00:00-04:00" "2026-07-09T09:15:00-04:00"))
      (tdw-gtd--parse-event-time "2026-07-09"))
     (let ((contents (tdw-gtd-calendar-test--file-contents gcal-file)))
@@ -142,7 +142,7 @@ in EVENTS (e.g. a cancelled meeting) must not survive the sync."
 :END:
 <2026-07-08 Wed 10:00-10:30>
 "
-    (tdw-gtd-sync-calendar
+    (tdw-gtd--sync-calendar-events
      '(("Standup" "2026-07-09T09:00:00-04:00" "2026-07-09T09:15:00-04:00"))
      (tdw-gtd--parse-event-time "2026-07-09"))
     (assert-true (string-match-p "Yesterday's meeting"
@@ -150,7 +150,7 @@ in EVENTS (e.g. a cancelled meeting) must not survive the sync."
 
 (deftest gtd-calendar/sync-handles-multiple-events ()
   (tdw-gtd-calendar-test--with-fixture gcal-file "* Calendar\n"
-    (tdw-gtd-sync-calendar
+    (tdw-gtd--sync-calendar-events
      '(("Standup" "2026-07-09T09:00:00-04:00" "2026-07-09T09:15:00-04:00")
        ("Lunch" "2026-07-09T12:00:00-04:00" "2026-07-09T13:00:00-04:00")
        ("Company holiday" "2026-07-09" nil))
@@ -159,6 +159,43 @@ in EVENTS (e.g. a cancelled meeting) must not survive the sync."
       (assert-true (string-match-p "Standup" contents))
       (assert-true (string-match-p "Lunch" contents))
       (assert-true (string-match-p "Company holiday" contents)))))
+
+;;;; tdw-gtd--parse-events-json (pure transform of a raw Calendar API response)
+
+(deftest gtd-calendar/parses-json-timed-event ()
+  (assert-equal
+   '(("Standup" "2026-07-09T09:00:00-04:00" "2026-07-09T09:15:00-04:00"))
+   (tdw-gtd--parse-events-json
+    "{\"items\": [{\"summary\": \"Standup\", \"start\": {\"dateTime\": \"2026-07-09T09:00:00-04:00\"}, \"end\": {\"dateTime\": \"2026-07-09T09:15:00-04:00\"}}]}")))
+
+(deftest gtd-calendar/parses-json-all-day-event-ignoring-exclusive-end-date ()
+  "Google's all-day end.date is EXCLUSIVE (the day AFTER the event, even
+for a 1-day event) - must not be treated as a time-range end. The parsed
+triple's END must be nil for any all-day event, regardless of what
+end.date says, so the formatter shows a bare date, not a bogus range."
+  (assert-equal
+   '(("Company holiday" "2026-07-09" nil))
+   (tdw-gtd--parse-events-json
+    "{\"items\": [{\"summary\": \"Company holiday\", \"start\": {\"date\": \"2026-07-09\"}, \"end\": {\"date\": \"2026-07-10\"}}]}")))
+
+(deftest gtd-calendar/parses-json-multiple-events ()
+  (assert-equal 2
+                (length (tdw-gtd--parse-events-json
+                         "{\"items\": [{\"summary\": \"A\", \"start\": {\"dateTime\": \"2026-07-09T09:00:00-04:00\"}, \"end\": {\"dateTime\": \"2026-07-09T09:15:00-04:00\"}}, {\"summary\": \"B\", \"start\": {\"dateTime\": \"2026-07-09T10:00:00-04:00\"}, \"end\": {\"dateTime\": \"2026-07-09T10:15:00-04:00\"}}]}"))))
+
+(deftest gtd-calendar/parses-json-empty-items ()
+  (assert-nil (tdw-gtd--parse-events-json "{\"items\": []}")))
+
+;;;; tdw-gtd-sync-calendar (public entry point: raw gws JSON straight through)
+
+(deftest gtd-calendar/public-sync-calendar-accepts-raw-gws-json ()
+  "The model passes gws's raw --format json output straight through - no
+elisp list construction, no date math, no reformatting."
+  (tdw-gtd-calendar-test--with-fixture gcal-file "* Calendar\n"
+    (tdw-gtd-sync-calendar
+     "{\"items\": [{\"summary\": \"Standup\", \"start\": {\"dateTime\": \"2026-07-09T09:00:00-04:00\"}, \"end\": {\"dateTime\": \"2026-07-09T09:15:00-04:00\"}}]}"
+     (tdw-gtd--parse-event-time "2026-07-09"))
+    (assert-true (string-match-p "Standup" (tdw-gtd-calendar-test--file-contents gcal-file)))))
 
 ;;;; Wiring guard: config.org must actually load this module.
 
