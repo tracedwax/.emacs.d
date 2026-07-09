@@ -318,6 +318,68 @@ CLOCK: [2026-07-03 Fri 08:45]--[2026-07-03 Fri 09:25] =>  0:40
        (progn (tdw-gtd-parse-clock-time "banana" tdw-gtd-clock-test--now) nil)
      (error t))))
 
+;;;; tdw-gtd--select-clock-entry
+
+(defvar tdw-gtd-clock-test--multi-entry-text "\
+** NEXT Some task                                    :tgl_foo:
+:LOGBOOK:
+CLOCK: [2026-07-09 Thu 08:00]--[2026-07-09 Thu 08:40] =>  0:40
+CLOCK: [2026-07-08 Wed 10:00]--[2026-07-08 Wed 10:30] =>  0:30
+CLOCK: [2026-07-09 Thu 10:00]--[2026-07-09 Thu 10:20] =>  0:20
+:END:
+"
+  "Three closed chunks, out of order, with a same-clock-time entry on another day.")
+
+(defun tdw-gtd-clock-test--selected-line (text selector)
+  (let ((bounds (tdw-gtd--select-clock-entry text selector tdw-gtd-clock-test--now)))
+    (substring text (car bounds) (cdr bounds))))
+
+(deftest gtd-clock/select-defaults-to-latest-closed-entry ()
+  "No selector, no open clock: pick the entry with the latest start."
+  (assert-equal
+   "CLOCK: [2026-07-09 Thu 10:00]--[2026-07-09 Thu 10:20] =>  0:20"
+   (tdw-gtd-clock-test--selected-line tdw-gtd-clock-test--multi-entry-text nil)))
+
+(deftest gtd-clock/select-defaults-to-open-entry-when-running ()
+  (let ((text "\
+** NEXT Some task                                    :tgl_foo:
+:LOGBOOK:
+CLOCK: [2026-07-09 Thu 11:00]
+CLOCK: [2026-07-09 Thu 08:00]--[2026-07-09 Thu 08:40] =>  0:40
+:END:
+"))
+    (assert-equal "CLOCK: [2026-07-09 Thu 11:00]"
+                  (tdw-gtd-clock-test--selected-line text nil))))
+
+(deftest gtd-clock/select-by-start-time-defaults-to-today ()
+  "\"1000\" on 2026-07-09 picks the Thu 10:00 entry, not Wed's 10:00."
+  (assert-equal
+   "CLOCK: [2026-07-09 Thu 10:00]--[2026-07-09 Thu 10:20] =>  0:20"
+   (tdw-gtd-clock-test--selected-line tdw-gtd-clock-test--multi-entry-text "1000")))
+
+(deftest gtd-clock/select-by-start-time-with-explicit-date ()
+  (assert-equal
+   "CLOCK: [2026-07-08 Wed 10:00]--[2026-07-08 Wed 10:30] =>  0:30"
+   (tdw-gtd-clock-test--selected-line tdw-gtd-clock-test--multi-entry-text
+                                      "2026-07-08 1000")))
+
+(deftest gtd-clock/select-no-match-error-lists-candidates ()
+  (let ((err (condition-case e
+                 (progn (tdw-gtd--select-clock-entry
+                         tdw-gtd-clock-test--multi-entry-text "1400"
+                         tdw-gtd-clock-test--now)
+                        nil)
+               (error (cadr e)))))
+    (assert-true err)
+    (assert-true (string-match-p "2026-07-09 Thu 10:00" err))))
+
+(deftest gtd-clock/select-errors-when-no-clock-entries-at-all ()
+  (let ((text "** NEXT Fresh task\n:LOGBOOK:\n:END:\n"))
+    (assert-true
+     (condition-case nil
+         (progn (tdw-gtd--select-clock-entry text nil tdw-gtd-clock-test--now) nil)
+       (error t)))))
+
 ;;;; Wiring guard: config.org must actually load this module.
 
 (defun tdw-gtd-clock-test--config ()
