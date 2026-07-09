@@ -53,7 +53,6 @@ I set a [[*Bookmarks][bookmark]] with =C-x r m= and I can get back here with =C-
 (require 'tdw-gtd-inbox)
 (require 'tdw-gtd-clock)
 (require 'tdw-gtd-tags)
-(require 'tdw-gtd-calendar)
 #+END_SRC
 ** Themes
 #+BEGIN_SRC emacs-lisp
