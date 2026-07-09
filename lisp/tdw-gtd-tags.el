@@ -112,7 +112,7 @@ heading tagged by this call, in file order."
     (with-current-buffer (find-file-noselect file)
       (goto-char (point-min))
       (while (re-search-forward
-              "^\\* \\(.*\\)\n[ \t]*:PROPERTIES:\n\\(?:.*\n\\)*?[ \t]*:END:\n[ \t]*<\\([0-9-]+\\)[^>]*>"
+              "^\\* \\(.*\\)\n[ \t]*:PROPERTIES:\n\\(?:[^*\n].*\n\\)*?[ \t]*:END:\n[ \t]*<\\([0-9-]+\\)[^>]*>"
               nil t)
         (let ((heading-text (match-string 1))
               (event-date (match-string 2))
