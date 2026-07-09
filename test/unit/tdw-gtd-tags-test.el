@@ -125,16 +125,28 @@ keyword list, not a spurious keyword-match against the tag's own name
     (insert-file-contents file)
     (buffer-string)))
 
+;; Fixture format confirmed against a real (redacted) gcal.org via
+;; thecleverone (OACP msg-...-9134): top-level "*" heading (NOT "**"),
+;; 2-space-indented :PROPERTIES: drawer with :CATEGORY:/:ORG_GTD:/:UID:/
+;; :Effort: fields (gcal-to-org.py's real output), two-bracket timestamp
+;; range "<date time>--<time>", not the single-bracket "<date t-t>" this
+;; suite originally guessed at.
+
 (deftest gtd-tags/guess-calendar-tags-tags-an-untagged-meeting ()
   (tdw-gtd-tags-test--with-fixture-table
     (tdw-gtd-tags-test--with-calendar-fixture gcal-file
         "\
-* Calendar
-** Call with Globex Corp about renewal
-:PROPERTIES:
-:ORG_GTD:  Calendar
-:END:
-<2026-07-09 Thu 09:00-09:30>
+#+TITLE: Google Calendar
+#+FILETAGS: :gcal:
+
+* Call with Globex Corp about renewal
+  :PROPERTIES:
+  :CATEGORY: GCal
+  :ORG_GTD: Calendar
+  :UID: abc123@google.com
+  :Effort:   0:30
+  :END:
+  <2026-07-09 Thu 09:00>--<09:30>
 "
       (tdw-gtd-guess-calendar-tags (tdw-gtd-tags-test--date 9 7 2026))
       (assert-true (string-match-p ":tgl_globex_corp:"
@@ -144,12 +156,14 @@ keyword list, not a spurious keyword-match against the tag's own name
   (tdw-gtd-tags-test--with-fixture-table
     (tdw-gtd-tags-test--with-calendar-fixture gcal-file
         "\
-* Calendar
-** Call with Globex Corp about renewal :tgl_barefoot_internal_sales:
-:PROPERTIES:
-:ORG_GTD:  Calendar
-:END:
-<2026-07-09 Thu 09:00-09:30>
+* Call with Globex Corp about renewal  :tgl_barefoot_internal_sales:
+  :PROPERTIES:
+  :CATEGORY: GCal
+  :ORG_GTD: Calendar
+  :UID: abc123@google.com
+  :Effort:   0:30
+  :END:
+  <2026-07-09 Thu 09:00>--<09:30>
 "
       (tdw-gtd-guess-calendar-tags (tdw-gtd-tags-test--date 9 7 2026))
       (let ((contents (tdw-gtd-tags-test--file-contents gcal-file)))
@@ -161,12 +175,14 @@ keyword list, not a spurious keyword-match against the tag's own name
   (tdw-gtd-tags-test--with-fixture-table
     (tdw-gtd-tags-test--with-calendar-fixture gcal-file
         "\
-* Calendar
-** Call with Globex Corp about renewal
-:PROPERTIES:
-:ORG_GTD:  Calendar
-:END:
-<2026-07-08 Wed 09:00-09:30>
+* Call with Globex Corp about renewal
+  :PROPERTIES:
+  :CATEGORY: GCal
+  :ORG_GTD: Calendar
+  :UID: abc123@google.com
+  :Effort:   0:30
+  :END:
+  <2026-07-08 Wed 09:00>--<09:30>
 "
       (tdw-gtd-guess-calendar-tags (tdw-gtd-tags-test--date 9 7 2026))
       (assert-nil (string-match-p ":tgl_globex_corp:"
@@ -176,17 +192,22 @@ keyword list, not a spurious keyword-match against the tag's own name
   (tdw-gtd-tags-test--with-fixture-table
     (tdw-gtd-tags-test--with-calendar-fixture gcal-file
         "\
-* Calendar
-** Call with Globex Corp about renewal
-:PROPERTIES:
-:ORG_GTD:  Calendar
-:END:
-<2026-07-09 Thu 09:00-09:30>
-** Daily standup
-:PROPERTIES:
-:ORG_GTD:  Calendar
-:END:
-<2026-07-09 Thu 09:30-09:45>
+* Call with Globex Corp about renewal
+  :PROPERTIES:
+  :CATEGORY: GCal
+  :ORG_GTD: Calendar
+  :UID: abc123@google.com
+  :Effort:   0:30
+  :END:
+  <2026-07-09 Thu 09:00>--<09:30>
+* Daily standup
+  :PROPERTIES:
+  :CATEGORY: GCal
+  :ORG_GTD: Calendar
+  :UID: def456@google.com
+  :Effort:   0:15
+  :END:
+  <2026-07-09 Thu 09:30>--<09:45>
 "
       (let ((report (tdw-gtd-guess-calendar-tags (tdw-gtd-tags-test--date 9 7 2026))))
         (assert-equal 2 (length report))
@@ -195,8 +216,25 @@ keyword list, not a spurious keyword-match against the tag's own name
 
 (deftest gtd-tags/guess-calendar-tags-returns-empty-when-nothing-untagged ()
   (tdw-gtd-tags-test--with-fixture-table
-    (tdw-gtd-tags-test--with-calendar-fixture gcal-file "* Calendar\n"
+    (tdw-gtd-tags-test--with-calendar-fixture gcal-file "#+TITLE: Google Calendar\n"
       (assert-nil (tdw-gtd-guess-calendar-tags (tdw-gtd-tags-test--date 9 7 2026))))))
+
+(deftest gtd-tags/guess-calendar-tags-handles-all-day-single-bracket-timestamp ()
+  "All-day entries (gcal-to-org.py) format as a single bracket, no range."
+  (tdw-gtd-tags-test--with-fixture-table
+    (tdw-gtd-tags-test--with-calendar-fixture gcal-file
+        "\
+* Company holiday
+  :PROPERTIES:
+  :CATEGORY: GCal
+  :ORG_GTD: Calendar
+  :UID: ghi789@google.com
+  :END:
+  <2026-07-09 Thu>
+"
+      (tdw-gtd-guess-calendar-tags (tdw-gtd-tags-test--date 9 7 2026))
+      (assert-true (string-match-p ":tgl_barefoot_internal_sales:"
+                                    (tdw-gtd-tags-test--file-contents gcal-file))))))
 
 ;;;; Wiring guard: config.org must actually load this module.
 
