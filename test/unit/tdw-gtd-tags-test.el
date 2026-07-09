@@ -18,6 +18,10 @@
 (e-unit-initialize)
 (require 'tdw-gtd-tags)
 
+(defun tdw-gtd-tags-test--date (day month year)
+  "Return a time value for YEAR-MONTH-DAY at midnight, local time."
+  (encode-time 0 0 0 day month year))
+
 (defconst tdw-gtd-tags-test--fixture-json "\
 {
   \"tgl_barefoot_internal_sales\": {\"end_user_customer\": null},
@@ -98,6 +102,101 @@ keyword list, not a spurious keyword-match against the tag's own name
   (tdw-gtd-tags-test--with-fixture-table
     (assert-equal "tgl_barefoot_internal_sales"
                   (tdw-gtd-guess-tag "Completely unrelated random text"))))
+
+;;;; tdw-gtd-guess-calendar-tags (batch wrapper: scans + tags a whole day)
+
+(defmacro tdw-gtd-tags-test--with-calendar-fixture (var content &rest body)
+  "Bind VAR to a temp gcal.org path containing CONTENT, with
+`org-gtd-directory' let-bound to its parent, run BODY, then clean up."
+  (declare (indent 2))
+  `(let* ((dir (make-temp-file "tdw-gtd-tags-test" t))
+          (org-gtd-directory dir)
+          (,var (expand-file-name "gcal.org" dir)))
+     (unwind-protect
+         (progn
+           (with-temp-file ,var (insert ,content))
+           ,@body)
+       (let ((buf (find-buffer-visiting ,var)))
+         (when buf (kill-buffer buf)))
+       (delete-directory dir t))))
+
+(defun tdw-gtd-tags-test--file-contents (file)
+  (with-temp-buffer
+    (insert-file-contents file)
+    (buffer-string)))
+
+(deftest gtd-tags/guess-calendar-tags-tags-an-untagged-meeting ()
+  (tdw-gtd-tags-test--with-fixture-table
+    (tdw-gtd-tags-test--with-calendar-fixture gcal-file
+        "\
+* Calendar
+** Call with Globex Corp about renewal
+:PROPERTIES:
+:ORG_GTD:  Calendar
+:END:
+<2026-07-09 Thu 09:00-09:30>
+"
+      (tdw-gtd-guess-calendar-tags (tdw-gtd-tags-test--date 9 7 2026))
+      (assert-true (string-match-p ":tgl_globex_corp:"
+                                    (tdw-gtd-tags-test--file-contents gcal-file))))))
+
+(deftest gtd-tags/guess-calendar-tags-skips-already-tagged-meeting ()
+  (tdw-gtd-tags-test--with-fixture-table
+    (tdw-gtd-tags-test--with-calendar-fixture gcal-file
+        "\
+* Calendar
+** Call with Globex Corp about renewal :tgl_barefoot_internal_sales:
+:PROPERTIES:
+:ORG_GTD:  Calendar
+:END:
+<2026-07-09 Thu 09:00-09:30>
+"
+      (tdw-gtd-guess-calendar-tags (tdw-gtd-tags-test--date 9 7 2026))
+      (let ((contents (tdw-gtd-tags-test--file-contents gcal-file)))
+        ;; still the ORIGINAL tag, not overwritten by a guessed one
+        (assert-true (string-match-p ":tgl_barefoot_internal_sales:" contents))
+        (assert-nil (string-match-p ":tgl_globex_corp:" contents))))))
+
+(deftest gtd-tags/guess-calendar-tags-only-affects-the-target-date ()
+  (tdw-gtd-tags-test--with-fixture-table
+    (tdw-gtd-tags-test--with-calendar-fixture gcal-file
+        "\
+* Calendar
+** Call with Globex Corp about renewal
+:PROPERTIES:
+:ORG_GTD:  Calendar
+:END:
+<2026-07-08 Wed 09:00-09:30>
+"
+      (tdw-gtd-guess-calendar-tags (tdw-gtd-tags-test--date 9 7 2026))
+      (assert-nil (string-match-p ":tgl_globex_corp:"
+                                   (tdw-gtd-tags-test--file-contents gcal-file))))))
+
+(deftest gtd-tags/guess-calendar-tags-returns-a-title-tag-report ()
+  (tdw-gtd-tags-test--with-fixture-table
+    (tdw-gtd-tags-test--with-calendar-fixture gcal-file
+        "\
+* Calendar
+** Call with Globex Corp about renewal
+:PROPERTIES:
+:ORG_GTD:  Calendar
+:END:
+<2026-07-09 Thu 09:00-09:30>
+** Daily standup
+:PROPERTIES:
+:ORG_GTD:  Calendar
+:END:
+<2026-07-09 Thu 09:30-09:45>
+"
+      (let ((report (tdw-gtd-guess-calendar-tags (tdw-gtd-tags-test--date 9 7 2026))))
+        (assert-equal 2 (length report))
+        (assert-equal "tgl_globex_corp" (cdr (assoc "Call with Globex Corp about renewal" report)))
+        (assert-equal "tgl_barefoot_internal_sales" (cdr (assoc "Daily standup" report)))))))
+
+(deftest gtd-tags/guess-calendar-tags-returns-empty-when-nothing-untagged ()
+  (tdw-gtd-tags-test--with-fixture-table
+    (tdw-gtd-tags-test--with-calendar-fixture gcal-file "* Calendar\n"
+      (assert-nil (tdw-gtd-guess-calendar-tags (tdw-gtd-tags-test--date 9 7 2026))))))
 
 ;;;; Wiring guard: config.org must actually load this module.
 
