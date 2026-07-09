@@ -34,6 +34,43 @@ unit). Signals `user-error' if DURATION-STRING matches none of these."
            (if minutes (string-to-number minutes) 0))))
      (t (user-error "tdw-gtd-parse-duration: unparseable duration %S" duration-string)))))
 
+(defun tdw-gtd-parse-clock-time (time-string &optional now)
+  "Parse TIME-STRING into a time value on the day it names.
+Accepts military hhmm (\"1000\", \"930\") - the primary form - plus
+\"H:MM\", \"10am\", \"10:30pm\", each optionally preceded by an ISO date
+(\"2026-07-08 1000\"). Without a date the day defaults to NOW's (default:
+today). Signals `user-error' on anything else."
+  (let* ((s (downcase (string-trim time-string)))
+         (day (decode-time (or now (current-time))))
+         hour minute)
+    (when (string-match "\\`\\([0-9]\\{4\\}\\)-\\([0-9]\\{2\\}\\)-\\([0-9]\\{2\\}\\)[ \t]+" s)
+      (setq day (list 0 0 0
+                      (string-to-number (match-string 3 s))
+                      (string-to-number (match-string 2 s))
+                      (string-to-number (match-string 1 s))
+                      nil nil (nth 8 day))
+            s (substring s (match-end 0))))
+    (cond
+     ;; H:MM or HH:MM, optional am/pm
+     ((string-match "\\`\\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)[ \t]*\\(am\\|pm\\)?\\'" s)
+      (setq hour (string-to-number (match-string 1 s))
+            minute (string-to-number (match-string 2 s))))
+     ;; bare hour with am/pm: "10am"
+     ((string-match "\\`\\([0-9]\\{1,2\\}\\)[ \t]*\\(am\\|pm\\)\\'" s)
+      (setq hour (string-to-number (match-string 1 s))
+            minute 0))
+     ;; military hhmm / hmm: "1000", "930"
+     ((string-match "\\`\\([0-9]\\{3,4\\}\\)\\'" s)
+      (let ((n (string-to-number (match-string 1 s))))
+        (setq hour (/ n 100) minute (% n 100))))
+     (t (user-error "tdw-gtd-parse-clock-time: unparseable time %S" time-string)))
+    (let ((ampm (and (string-match "\\(am\\|pm\\)\\'" s) (match-string 1 s))))
+      (cond ((and (equal ampm "pm") (< hour 12)) (setq hour (+ hour 12)))
+            ((and (equal ampm "am") (= hour 12)) (setq hour 0))))
+    (unless (and (<= 0 hour 23) (<= 0 minute 59))
+      (user-error "tdw-gtd-parse-clock-time: invalid time %S" time-string))
+    (encode-time 0 minute hour (nth 3 day) (nth 4 day) (nth 5 day))))
+
 (defun tdw-gtd--parse-org-timestamp (bracketed)
   "Parse a bracketed org timestamp like \"[2026-07-03 Fri 09:25]\" into a
 time value. Self-contained rather than using org's own parser, since the
