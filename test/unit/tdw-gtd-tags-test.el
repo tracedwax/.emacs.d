@@ -219,6 +219,34 @@ keyword list, not a spurious keyword-match against the tag's own name
     (tdw-gtd-tags-test--with-calendar-fixture gcal-file "#+TITLE: Google Calendar\n"
       (assert-nil (tdw-gtd-guess-calendar-tags (tdw-gtd-tags-test--date 9 7 2026))))))
 
+(deftest gtd-tags/guess-calendar-tags-does-not-leak-across-a-container-heading ()
+  "A level-1 container heading with its own :PROPERTIES: drawer (no
+timestamp) must not let the lazy drawer-match skip past a SIBLING
+heading into that sibling's timestamp - caught live: this shape
+mistagged the container using a child entry's date/heading text.
+Real gcal-to-org.py output is flat (no such container), but the regex
+must not silently misbehave if one exists."
+  (tdw-gtd-tags-test--with-fixture-table
+    (tdw-gtd-tags-test--with-calendar-fixture gcal-file
+        "\
+* Calendar
+:PROPERTIES:
+:ORG_GTD_REFILE: Calendar
+:END:
+* Team standup
+  :PROPERTIES:
+  :CATEGORY: GCal
+  :ORG_GTD: Calendar
+  :END:
+  <2026-07-09 Thu 09:30>--<09:45>
+"
+      (let ((report (tdw-gtd-guess-calendar-tags (tdw-gtd-tags-test--date 9 7 2026))))
+        ;; exactly one tag written - the real "Team standup" entry
+        (assert-equal 1 (length report))
+        (assert-nil (assoc "Calendar" report)))
+      (assert-nil (string-match-p "\\* Calendar :"
+                                   (tdw-gtd-tags-test--file-contents gcal-file))))))
+
 (deftest gtd-tags/guess-calendar-tags-handles-all-day-single-bracket-timestamp ()
   "All-day entries (gcal-to-org.py) format as a single bracket, no range."
   (tdw-gtd-tags-test--with-fixture-table
