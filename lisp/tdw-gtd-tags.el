@@ -91,5 +91,42 @@ if nothing matches at all. Never invents a tag outside these sources."
         (tdw-gtd-tags--category-default text)
         "tgl_barefoot_internal_sales")))
 
+(defun tdw-gtd--heading-has-tgl-tag-p (heading-line)
+  "Non-nil if HEADING-LINE already carries a tgl_* tag."
+  (string-match-p ":tgl_[a-zA-Z0-9_]+:" heading-line))
+
+(defun tdw-gtd--append-tag-to-heading (heading-line tag)
+  "Return HEADING-LINE with TAG appended as an org tag."
+  (format "%s :%s:" (string-trim-right heading-line) tag))
+
+(defun tdw-gtd-guess-calendar-tags (&optional date calendar-file)
+  "For every UNTAGGED meeting heading on DATE (a time value, default:
+today) in CALENDAR-FILE (default: gcal.org under `org-gtd-directory'),
+guess its tgl_* tag via `tdw-gtd-guess-tag' and write it onto the
+heading. A heading that already has a tgl_* tag is left completely
+alone - never overwritten. Returns an alist of (TITLE . TAG) for every
+heading tagged by this call, in file order."
+  (let* ((date-string (format-time-string "%Y-%m-%d" (or date (current-time))))
+         (file (or calendar-file (expand-file-name "gcal.org" org-gtd-directory)))
+         (report nil))
+    (with-current-buffer (find-file-noselect file)
+      (goto-char (point-min))
+      (while (re-search-forward
+              "^\\*\\* \\(.*\\)\n:PROPERTIES:\n\\(?:.*\n\\)*?:END:\n<\\([0-9-]+\\)[^>]*>"
+              nil t)
+        (let ((heading-text (match-string 1))
+              (event-date (match-string 2))
+              (heading-beg (match-beginning 1))
+              (heading-end (match-end 1)))
+          (when (and (string-equal event-date date-string)
+                     (not (tdw-gtd--heading-has-tgl-tag-p heading-text)))
+            (let ((tag (tdw-gtd-guess-tag heading-text)))
+              (goto-char heading-beg)
+              (delete-region heading-beg heading-end)
+              (insert (tdw-gtd--append-tag-to-heading heading-text tag))
+              (push (cons heading-text tag) report)))))
+      (save-buffer))
+    (nreverse report)))
+
 (provide 'tdw-gtd-tags)
 ;;; tdw-gtd-tags.el ends here
