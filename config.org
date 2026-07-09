@@ -50,6 +50,7 @@ I set a [[*Bookmarks][bookmark]] with =C-x r m= and I can get back here with =C-
 (add-to-list 'load-path "~/.emacs.d/lisp")
 (require 'tdw-diary)
 (require 'tdw-delegated)
+(require 'tdw-gtd-inbox)
 #+END_SRC
 ** Themes
 #+BEGIN_SRC emacs-lisp
