@@ -249,6 +249,68 @@ line, if zero or more than one headline matches - never guesses."
                       (point-max)))))
         (cons beg end))))))
 
+(defun tdw-gtd--parse-end-spec (end-spec start-time now)
+  "Resolve END-SPEC to a time value: a wall-clock time string, or a
+duration (\"45m\", \"1h\") added to START-TIME. Tries the time forms
+first; anything only `tdw-gtd-parse-duration' accepts is a duration."
+  (condition-case nil
+      (tdw-gtd-parse-clock-time end-spec now)
+    (error (time-add start-time
+                     (seconds-to-time
+                      (* 60 (tdw-gtd-parse-duration end-spec)))))))
+
+(defun tdw-gtd--edit-clock-in-text (text selector new-start new-end &optional now)
+  "Return TEXT with ONE selected CLOCK entry edited; all others untouched.
+SELECTOR picks the entry per `tdw-gtd--select-clock-entry'. NEW-START and
+NEW-END are time strings (`tdw-gtd-parse-clock-time' forms); NEW-END may
+instead be a duration (\"45m\") meaning start + duration. Omitted ends
+keep their current value; a new start on an OPEN entry leaves it open;
+giving NEW-END closes an open entry. At least one of NEW-START/NEW-END is
+required."
+  (unless (or new-start new-end)
+    (user-error "tdw-gtd--edit-clock-in-text: give a new start, end, or duration"))
+  (let* ((bounds (tdw-gtd--select-clock-entry text selector now))
+         (line (substring text (car bounds) (cdr bounds)))
+         (entries (tdw-gtd--clock-entries-in line))
+         (entry (car entries))
+         (old-start (plist-get entry :start))
+         (old-stop (plist-get entry :stop))
+         (start-time (if new-start (tdw-gtd-parse-clock-time new-start now) old-start))
+         (end-time (cond (new-end (tdw-gtd--parse-end-spec new-end start-time now))
+                         (old-stop old-stop)
+                         (t nil)))
+         (new-line
+          (if end-time
+              (tdw-gtd--format-clock-line
+               start-time end-time
+               (max 0 (round (/ (float-time (time-subtract end-time start-time)) 60))))
+            (format "CLOCK: %s"
+                    (format-time-string "[%Y-%m-%d %a %H:%M]" start-time)))))
+    (concat (substring text 0 (car bounds))
+            new-line
+            (substring text (cdr bounds)))))
+
+(defun tdw-gtd-edit-clock (title-substring &optional selector new-start new-end now)
+  "Edit ONE CLOCK entry of the task whose headline contains
+TITLE-SUBSTRING (case-insensitive), in org-gtd-tasks.org via the live
+`org-gtd-directory'. SELECTOR is nil (open entry, else latest) or the
+entry's existing start time (\"1000\", \"2026-07-08 1000\"). NEW-START
+and NEW-END are the new times; NEW-END may be a duration (\"45m\") kept
+from the start. Other CLOCK entries are never touched. Returns the
+updated headline+logbook text."
+  (let ((tasks-file (expand-file-name "org-gtd-tasks.org" org-gtd-directory)))
+    (with-current-buffer (find-file-noselect tasks-file)
+      (let* ((bounds (tdw-gtd--headline-bounds title-substring))
+             (beg (car bounds))
+             (end (cdr bounds))
+             (text (buffer-substring-no-properties beg end))
+             (updated (tdw-gtd--edit-clock-in-text text selector new-start new-end now)))
+        (goto-char beg)
+        (delete-region beg end)
+        (insert updated)
+        (save-buffer)
+        updated))))
+
 (defun tdw-gtd-adjust-timer (title-substring duration-string &optional new-tag now-time)
   "Consolidate the CLOCK entries of the task whose headline contains
 TITLE-SUBSTRING (case-insensitive) into one entry totaling
