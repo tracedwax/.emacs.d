@@ -380,6 +380,117 @@ CLOCK: [2026-07-09 Thu 08:00]--[2026-07-09 Thu 08:40] =>  0:40
          (progn (tdw-gtd--select-clock-entry text nil tdw-gtd-clock-test--now) nil)
        (error t)))))
 
+;;;; tdw-gtd--edit-clock-in-text (pure string transform)
+
+(deftest gtd-clock/edit-new-start-on-open-clock-stays-open ()
+  (let ((text "\
+** NEXT Some task                                    :tgl_foo:
+:LOGBOOK:
+CLOCK: [2026-07-09 Thu 10:00]
+:END:
+"))
+    (assert-true
+     (string-match-p
+      "CLOCK: \\[2026-07-09 Thu 11:00\\]\n"
+      (tdw-gtd--edit-clock-in-text text nil "1100" nil tdw-gtd-clock-test--now)))))
+
+(deftest gtd-clock/edit-new-start-on-closed-entry-keeps-end ()
+  (let ((text "\
+** NEXT Some task                                    :tgl_foo:
+:LOGBOOK:
+CLOCK: [2026-07-09 Thu 10:00]--[2026-07-09 Thu 10:30] =>  0:30
+:END:
+"))
+    (assert-true
+     (string-match-p
+      "CLOCK: \\[2026-07-09 Thu 10:15\\]--\\[2026-07-09 Thu 10:30\\] =>  0:15"
+      (tdw-gtd--edit-clock-in-text text nil "1015" nil tdw-gtd-clock-test--now)))))
+
+(deftest gtd-clock/edit-full-range-closes-open-clock ()
+  (let ((text "\
+** NEXT Some task                                    :tgl_foo:
+:LOGBOOK:
+CLOCK: [2026-07-09 Thu 10:00]
+:END:
+"))
+    (assert-true
+     (string-match-p
+      "CLOCK: \\[2026-07-09 Thu 11:00\\]--\\[2026-07-09 Thu 11:30\\] =>  0:30"
+      (tdw-gtd--edit-clock-in-text text nil "1100" "1130" tdw-gtd-clock-test--now)))))
+
+(deftest gtd-clock/edit-end-only-keeps-start ()
+  (let ((text "\
+** NEXT Some task                                    :tgl_foo:
+:LOGBOOK:
+CLOCK: [2026-07-09 Thu 10:00]--[2026-07-09 Thu 10:30] =>  0:30
+:END:
+"))
+    (assert-true
+     (string-match-p
+      "CLOCK: \\[2026-07-09 Thu 10:00\\]--\\[2026-07-09 Thu 11:00\\] =>  1:00"
+      (tdw-gtd--edit-clock-in-text text nil nil "1100" tdw-gtd-clock-test--now)))))
+
+(deftest gtd-clock/edit-duration-keeps-start-moves-end ()
+  "\"45m\" in the end slot means start + 45 minutes."
+  (let ((text "\
+** NEXT Some task                                    :tgl_foo:
+:LOGBOOK:
+CLOCK: [2026-07-09 Thu 10:00]--[2026-07-09 Thu 10:30] =>  0:30
+:END:
+"))
+    (assert-true
+     (string-match-p
+      "CLOCK: \\[2026-07-09 Thu 10:00\\]--\\[2026-07-09 Thu 10:45\\] =>  0:45"
+      (tdw-gtd--edit-clock-in-text text nil nil "45m" tdw-gtd-clock-test--now)))))
+
+(deftest gtd-clock/edit-by-selector-leaves-other-entries-untouched ()
+  (let* ((result (tdw-gtd--edit-clock-in-text
+                  tdw-gtd-clock-test--multi-entry-text
+                  "1000" "1100" "1130" tdw-gtd-clock-test--now)))
+    (assert-true (string-match-p
+                  "CLOCK: \\[2026-07-09 Thu 11:00\\]--\\[2026-07-09 Thu 11:30\\] =>  0:30"
+                  result))
+    (assert-true (string-match-p
+                  "CLOCK: \\[2026-07-09 Thu 08:00\\]--\\[2026-07-09 Thu 08:40\\] =>  0:40"
+                  result))
+    (assert-true (string-match-p
+                  "CLOCK: \\[2026-07-08 Wed 10:00\\]--\\[2026-07-08 Wed 10:30\\] =>  0:30"
+                  result))))
+
+(deftest gtd-clock/edit-errors-without-new-start-or-end ()
+  (assert-true
+   (condition-case nil
+       (progn (tdw-gtd--edit-clock-in-text
+               tdw-gtd-clock-test--multi-entry-text nil nil nil
+               tdw-gtd-clock-test--now)
+              nil)
+     (error t))))
+
+;;;; tdw-gtd-edit-clock (integration: real file + org-gtd-directory)
+
+(deftest gtd-clock/edit-clock-edits-the-matched-task-in-file ()
+  (tdw-gtd-clock-test--with-tasks-fixture tasks-file
+      "\
+* Actions
+** NEXT Meeting prep                                  :tgl_orbit:
+:LOGBOOK:
+CLOCK: [2026-07-09 Thu 10:00]--[2026-07-09 Thu 10:30] =>  0:30
+CLOCK: [2026-07-09 Thu 08:00]--[2026-07-09 Thu 08:40] =>  0:40
+:END:
+** NEXT Some other task                               :tgl_orbit:
+:LOGBOOK:
+:END:
+"
+    (tdw-gtd-edit-clock "Meeting prep" "1000" "1100" "1130"
+                        tdw-gtd-clock-test--now)
+    (let ((contents (tdw-gtd-clock-test--file-contents tasks-file)))
+      (assert-true (string-match-p
+                    "CLOCK: \\[2026-07-09 Thu 11:00\\]--\\[2026-07-09 Thu 11:30\\] =>  0:30"
+                    contents))
+      (assert-true (string-match-p
+                    "CLOCK: \\[2026-07-09 Thu 08:00\\]--\\[2026-07-09 Thu 08:40\\] =>  0:40"
+                    contents)))))
+
 ;;;; Wiring guard: config.org must actually load this module.
 
 (defun tdw-gtd-clock-test--config ()
