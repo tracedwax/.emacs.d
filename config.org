@@ -427,7 +427,10 @@ avy is kinda badass.
     :config
     (claude-code-ide-emacs-tools-setup)
     :custom
-    (claude-code-ide-cli-path "/Users/thecleverone/.local/share/mise/installs/node/20.19.2/bin/claude"))
+    (claude-code-ide-cli-path
+     (if (string= (user-login-name) "thecleverone")
+         "/Users/thecleverone/.local/share/mise/installs/node/20.19.2/bin/claude"
+       "/Users/trace/.local/share/mise/installs/node/lts/bin/claude")))
 #+end_src
 * Engines
 
