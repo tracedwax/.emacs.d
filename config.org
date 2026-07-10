@@ -704,7 +704,38 @@ Tag inheritance respects the `my/org-gtd-inherit-tags' customization variable."
       (my/org-gtd-inherit--prompt-for-tags))))
 #+END_SRC
 ** Org-gtd
+Unified agenda-file discovery. One candidate list for BOTH accounts;
+per-account differences fall out of `file-exists-p' filtering (trace has
+no my-venndoor-life / my-google-life / venndoor-group repos, so those
+simply drop out there). my-test-life fixtures are test-only and never
+part of the live agenda. Extracted to a function so tests can drive it
+against a fixture HOME (see test/unit/agenda-files-test.el).
 #+BEGIN_SRC emacs-lisp
+  (defun tdw-agenda-files (&optional home)
+    "Return the list of existing org agenda files under HOME (default ~).
+Same candidate set on every account; nonexistent files are filtered out.
+Context repos are auto-discovered by wildcard, so new repos created by
+the manifest pipeline appear without config changes."
+    (let ((home (or home "~")))
+      (cl-flet ((in-home (path) (expand-file-name path home)))
+        (seq-filter
+         #'file-exists-p
+         (append
+          ;; Core life-repo files
+          ;; NOTE: my-venndoor-life no longer holds GTD tasks.
+          ;; All tasks route to context repos via tgl-repo-routing.json.
+          ;; gcal.org stays for calendar visibility.
+          (list (in-home "my-venndoor-life/orgnotes/gtd/gcal.org")
+                (in-home "my-bfc-life/orgnotes/gtd/gcal.org")
+                (in-home "my-google-life/orgnotes/gtd/org-gtd-tasks.org")
+                (in-home "my-bfc-life/orgnotes/gtd/org-gtd-tasks.org")
+                (in-home "my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))
+          ;; Per-customer context repos (auto-discovered)
+          (file-expand-wildcards
+           (in-home "workspace/non-oss/bfctrace/context-for-*/orgnotes/gtd/org-gtd-tasks.org"))
+          (file-expand-wildcards
+           (in-home "workspace/non-oss/venndoor-group/context-for-*/orgnotes/gtd/org-gtd-tasks.org")))))))
+
   (use-package org-gtd
     :after org ;; '(org org-ql)
     :demand t
@@ -724,24 +755,7 @@ Tag inheritance respects the `my/org-gtd-inherit-tags' customization variable."
     (org-gtd-agenda-property-list '("DELEGATED_TO"))
     (org-gtd-agenda-property-position 'where-it-fits)
     (org-gtd-directory stag-org-gtd-directory)
-    (org-agenda-files (seq-filter #'file-exists-p
-                                  (if (string= (user-login-name) "trace")
-                                      ;; trace: throwaway test fixtures ONLY (real task
-                                      ;; management lives on thecleverone).
-                                      (list (expand-file-name "orgnotes/gtd/org-gtd-tasks.org" "~/my-test-life")
-                                            (expand-file-name "orgnotes/gtd/gcal.org" "~/my-test-life"))
-                                    (append
-                                     ;; Core life-repo files
-                                     ;; NOTE: my-venndoor-life no longer holds GTD tasks.
-                                     ;; All tasks route to context repos via tgl-repo-routing.json.
-                                     ;; gcal.org stays here for calendar visibility.
-                                     (list (expand-file-name "orgnotes/gtd/gcal.org" "~/my-venndoor-life")
-                                           (expand-file-name "~/my-google-life/orgnotes/gtd/org-gtd-tasks.org")
-                                           (expand-file-name "~/my-bfc-life/orgnotes/gtd/org-gtd-tasks.org")
-                                           (expand-file-name "~/my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))
-                                     ;; Per-customer context repos (auto-discovered)
-                                     (file-expand-wildcards "~/workspace/non-oss/bfctrace/context-for-*/orgnotes/gtd/org-gtd-tasks.org")
-                                     (file-expand-wildcards "~/workspace/non-oss/venndoor-group/context-for-*/orgnotes/gtd/org-gtd-tasks.org")))))
+    (org-agenda-files (tdw-agenda-files))
     (org-edna-use-inheritance t)
     (org-gtd-refile-to-any-target t)
     ;; Inbox captures are stamped ORG_GTD=Inbox + TODO so they show in the
