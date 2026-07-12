@@ -71,4 +71,11 @@
   (assert-true (fboundp 'tdw-priority-view))
   (assert-true (commandp 'tdw-priority-view)))
 
+(deftest sanity-warnings/removed-globally ()
+  "The deprecated capacity-warning machinery is gone (no WIP-limit nags)."
+  (assert-nil (fboundp 'tdw/sanity-view-warnings))
+  ;; The header updater was renamed off the old \"sanity\" name.
+  (assert-true (fboundp 'tdw/update-view-headers))
+  (assert-nil (fboundp 'tdw/update-sanity-view-headers)))
+
 ;;; priority-view-test.el ends here
