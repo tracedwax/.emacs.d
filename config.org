@@ -2776,42 +2776,14 @@ parent brings in its * Actions tasks via `tdw/skip-unless-project-tier'."
          (prefix-width . 25)
          (prefix . ,uv-prefix-elements)
          (blocks . (
-                    ;; 0. Today's Diary: gcal.org meetings (past and future) +
-                    ;; CLOCK lines from every task file, and NOTHING else.
-                    ;; Semantics (entry types, log mode, skip function) live in
-                    ;; lisp/tdw-diary.el, pinned by tests/tdw-diary-test.el;
-                    ;; only display options are set here.
-                    ((native . (agenda ""
-                                (,@(tdw-diary-agenda-options
-                                    (cons (expand-file-name "gcal.org" stag-org-gtd-directory)
-                                          (tdw/all-tasks-files))
-                                    (format "🕐 Today's Diary (%s spent, %s remaining)" effort-spent effort-remaining))
-                                 (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
-                                 (org-agenda-time-grid '((daily today require-timed) () "" "now - - - - - - - - - - - - - - - - - - - - -"))
-                                 (org-agenda-prefix-format '((agenda . "  %i %-12:c%?-12t%-6e ")))
-                                 (org-agenda-sorting-strategy '(time-up category-keep))))))
+                    ;; 0. Today's Diary + 0a. Daily Rituals + 0b. P0.
+                    ;; Built by the shared builders (see above); the Priority
+                    ;; View reuses the same three so they cannot drift.
+                    ,(tdw/diary-block (format "🕐 Today's Diary (%s spent, %s remaining)" effort-spent effort-remaining))
 
-                    ;; 0a. Daily Rituals
-                    ((native . (agenda ""
-                                ((org-agenda-overriding-header ,(format "⏰ Daily Rituals (%s)" effort-ritual))
-                                 (org-agenda-span 1)
-                                 (org-agenda-start-day nil)
-                                 (org-agenda-include-diary nil)
-                                 (org-agenda-entry-types '(:scheduled))
-                                 (org-agenda-todo-keyword-format "")
-                                 (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
-                                 (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
-                                 (org-agenda-sorting-strategy '(category-keep))
-                                 (org-agenda-skip-function 'tdw/skip-unless-daily-ritual-habit)))))
+                    ,(tdw/ritual-block (format "⏰ Daily Rituals (%s)" effort-ritual))
 
-                    ;; 0b. P0  (whole project unit: a tiered parent pulls in its tasks)
-                    ((native . (tags
-                                "LEVEL>0+ORG_GTD={Projects\\|Actions}"
-                                ((org-agenda-overriding-header ,(format "🚨🚨 P0 (%s)" effort-p0))
-                                 (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format ',(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")"))
-                                 (org-agenda-skip-function (lambda () (tdw/skip-unless-project-tier "p0")))
-                                 (org-agenda-sorting-strategy '(category-keep))))))
+                    ,(tdw/tier-block (format "🚨🚨 P0 (%s)" effort-p0) "p0")
 
                     ;; 0c. Daily Habits (habits not in `tdw--ritual-habits')
                     ((native . (agenda ""
@@ -2826,41 +2798,16 @@ parent brings in its * Actions tasks via `tdw/skip-unless-project-tier'."
                                  (org-agenda-sorting-strategy '(category-keep))
                                  (org-agenda-skip-function 'tdw/skip-unless-other-habit)))))
 
-                    ;; 1b. Bells Ringing  (whole project unit: a tiered parent pulls in its tasks)
-                    ((native . (tags
-                                "LEVEL>0+ORG_GTD={Projects\\|Actions}"
-                                ((org-agenda-overriding-header ,(format "🔔🔔 Bells Ringing (%s)" effort-bell))
-                                 (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format ',(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")"))
-                                 (org-agenda-skip-function (lambda () (tdw/skip-unless-project-tier "bells_ringing")))
-                                 (org-agenda-sorting-strategy '(category-keep))))))
+                    ;; 1b-1e. Bells Ringing / On Deck / Recently Considered / Paused.
+                    ;; Whole project units (a tiered parent pulls in its tasks),
+                    ;; all built by the shared tier-block builder.
+                    ,(tdw/tier-block (format "🔔🔔 Bells Ringing (%s)" effort-bell) "bells_ringing")
 
-                    ;; 1c. On Deck  (whole project unit: a tiered parent pulls in its tasks)
-                    ((native . (tags
-                                "LEVEL>0+ORG_GTD={Projects\\|Actions}"
-                                ((org-agenda-overriding-header ,(format "🥎 🥎 On Deck (%s)" effort-deck))
-                                 (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format ',(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")"))
-                                 (org-agenda-skip-function (lambda () (tdw/skip-unless-project-tier "on_deck")))
-                                 (org-agenda-sorting-strategy '(category-keep))))))
+                    ,(tdw/tier-block (format "🥎 🥎 On Deck (%s)" effort-deck) "on_deck")
 
-                    ;; 1d. Recently Considered  (whole project unit: a tiered parent pulls in its tasks)
-                    ((native . (tags
-                                "LEVEL>0+ORG_GTD={Projects\\|Actions}"
-                                ((org-agenda-overriding-header ,(format "💭 💭 Recently Considered (%s)" effort-considered))
-                                 (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format ',(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")"))
-                                 (org-agenda-skip-function (lambda () (tdw/skip-unless-project-tier "recently_considered")))
-                                 (org-agenda-sorting-strategy '(category-keep))))))
+                    ,(tdw/tier-block (format "💭 💭 Recently Considered (%s)" effort-considered) "recently_considered")
 
-                    ;; 1e. Paused  (whole project unit: a tiered parent pulls in its tasks)
-                    ((native . (tags
-                                "LEVEL>0+ORG_GTD={Projects\\|Actions}"
-                                ((org-agenda-overriding-header ,(format "🕐 Paused (%s)" effort-paused))
-                                 (org-agenda-todo-keyword-format "")
-                                 (org-agenda-prefix-format ',(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")"))
-                                 (org-agenda-skip-function (lambda () (tdw/skip-unless-project-tier "paused")))
-                                 (org-agenda-sorting-strategy '(category-keep))))))
+                    ,(tdw/tier-block (format "🕐 Paused (%s)" effort-paused) "paused")
 
                     ;; 3. Delegated: Overdue / Due Today / Due After Today.
                     ;; Native blocks from lisp/tdw-delegated.el, pinned by
