@@ -714,30 +714,63 @@ simply drop out there). my-test-life fixtures are test-only and never
 part of the live agenda. Extracted to a function so tests can drive it
 against a fixture HOME (see test/unit/agenda-files-test.el).
 #+BEGIN_SRC emacs-lisp
+  (defun tdw--routing-manifest-gtd-files (home)
+    "Return org-gtd-tasks.org candidates declared in tgl-repo-routing.json.
+Reads BOTH accounts' manifests when present under HOME
+(my-bfc-life = non-vendored, my-venndoor-life = vendored; the _meta entry
+says consumers must check both). gtd_dir values are thecleverone-local
+absolute paths; they are re-rooted onto HOME so the same manifest works on
+every account. Missing manifests and unreadable JSON yield nil."
+    (let (files)
+      (dolist (manifest (list (expand-file-name "my-bfc-life/outputs/tags/tgl-repo-routing.json" home)
+                              (expand-file-name "my-venndoor-life/outputs/tags/tgl-repo-routing.json" home)))
+        (when (file-readable-p manifest)
+          (let ((json (ignore-errors
+                        (with-temp-buffer
+                          (insert-file-contents manifest)
+                          (json-parse-buffer :object-type 'alist)))))
+            (dolist (entry json)
+              (unless (eq (car entry) '_meta)
+                (let ((gtd-dir (alist-get 'gtd_dir (cdr entry))))
+                  (when (stringp gtd-dir)
+                    (push (expand-file-name
+                           "org-gtd-tasks.org"
+                           (replace-regexp-in-string
+                            "\\`/Users/[^/]+/" (file-name-as-directory (expand-file-name home))
+                            gtd-dir))
+                          files))))))))
+      (nreverse files)))
+
   (defun tdw-agenda-files (&optional home)
     "Return the list of existing org agenda files under HOME (default ~).
-Same candidate set on every account; nonexistent files are filtered out.
-Context repos are auto-discovered by wildcard, so new repos created by
-the manifest pipeline appear without config changes."
+Same candidate set on every account; nonexistent files are filtered out
+(that filter IS the account switch: vendored repos simply do not exist on
+trace). Context repos come from tgl-repo-routing.json (both accounts'
+manifests, re-rooted onto HOME) PLUS the wildcard backstop, deduplicated:
+manifest-declared repos can live at nonstandard paths, while repos on disk
+that predate their manifest entry must not vanish from views."
     (let ((home (or home "~")))
       (cl-flet ((in-home (path) (expand-file-name path home)))
         (seq-filter
          #'file-exists-p
-         (append
-          ;; Core life-repo files
-          ;; NOTE: my-venndoor-life no longer holds GTD tasks.
-          ;; All tasks route to context repos via tgl-repo-routing.json.
-          ;; gcal.org stays for calendar visibility.
-          (list (in-home "my-venndoor-life/orgnotes/gtd/gcal.org")
-                (in-home "my-bfc-life/orgnotes/gtd/gcal.org")
-                (in-home "my-google-life/orgnotes/gtd/org-gtd-tasks.org")
-                (in-home "my-bfc-life/orgnotes/gtd/org-gtd-tasks.org")
-                (in-home "my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))
-          ;; Per-customer context repos (auto-discovered)
-          (file-expand-wildcards
-           (in-home "workspace/non-oss/bfctrace/context-for-*/orgnotes/gtd/org-gtd-tasks.org"))
-          (file-expand-wildcards
-           (in-home "workspace/non-oss/venndoor-group/context-for-*/orgnotes/gtd/org-gtd-tasks.org")))))))
+         (delete-dups
+          (append
+           ;; Core life-repo files
+           ;; NOTE: my-venndoor-life no longer holds GTD tasks.
+           ;; All tasks route to context repos via tgl-repo-routing.json.
+           ;; gcal.org stays for calendar visibility.
+           (list (in-home "my-venndoor-life/orgnotes/gtd/gcal.org")
+                 (in-home "my-bfc-life/orgnotes/gtd/gcal.org")
+                 (in-home "my-google-life/orgnotes/gtd/org-gtd-tasks.org")
+                 (in-home "my-bfc-life/orgnotes/gtd/org-gtd-tasks.org")
+                 (in-home "my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))
+           ;; Per-customer context repos: manifest-declared first...
+           (tdw--routing-manifest-gtd-files home)
+           ;; ...then the wildcard backstop for unmanifested repos on disk.
+           (file-expand-wildcards
+            (in-home "workspace/non-oss/bfctrace/context-for-*/orgnotes/gtd/org-gtd-tasks.org"))
+           (file-expand-wildcards
+            (in-home "workspace/non-oss/venndoor-group/context-for-*/orgnotes/gtd/org-gtd-tasks.org"))))))))
 
   (use-package org-gtd
     :after org ;; '(org org-ql)

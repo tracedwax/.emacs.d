@@ -32,6 +32,7 @@ manifest-driven, not wildcard-driven."
                  "my-personal-life/orgnotes/gtd/org-gtd-tasks.org"
                  "workspace/non-oss/bfctrace/context-for-purdue/orgnotes/gtd/org-gtd-tasks.org"
                  "workspace/non-oss/bfctrace/context-for-rogue/orgnotes/gtd/org-gtd-tasks.org"
+                 "workspace/non-oss/othergroup/context-for-offpath/orgnotes/gtd/org-gtd-tasks.org"
                  "my-test-life/orgnotes/gtd/org-gtd-tasks.org"))
       (let ((path (expand-file-name f home)))
         (make-directory (file-name-directory path) t)
