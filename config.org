@@ -834,6 +834,7 @@ that predate their manifest entry must not vanish from views."
      ("C-c d p" . org-gtd-process-inbox)
      ("C-c d n" . org-gtd-show-all-next)
      ("C-c d s" . org-gtd-show-stuck-projects)
+     ("C-c d 0" . tdw-priority-view)
      ("C-c d S" . tdw-someday-priority-view)
      ("C-c d u" . tdw-unordered-view)
      ("C-c d i" . tdw-inbox-view)
@@ -1470,6 +1471,7 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
            (spec (cond ((equal key "i") '("Inbox" . "📥"))
                        ((equal key "S") '("Someday" . "💤"))
                        ((equal key "u") '("Unordered" . "📋"))
+                       ((equal key "0") '("Priority" . "🚨"))
                        ((equal key "g") '("Ordered" . "🎯"))))
            (inhibit-read-only t))
       (when spec
@@ -1504,11 +1506,22 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
                   (re-search-forward "🕐 Paused" nil t)
                   (re-search-forward "🪨🪨 Big Rocks" nil t))
           (pcase-let ((`(,total ,effort-p0 ,effort-bell ,effort-deck ,_effort-other ,_n-unest ,effort-considered ,effort-paused) (tdw/effort-totals-by-tier)))
-            ;; Render the prominent 2-line banner for the 4 banner-able views
-            ;; (Inbox / Someday / Unordered / Ordered, incl. the initial
-            ;; "GTD Engage View" name). Replaces the old per-view title rewrites
-            ;; and relabels the effort line to "Total Estimated Effort:".
-            (tdw/render-view-banner total)
+            ;; Render the prominent 2-line banner for the banner-able views
+            ;; (Inbox / Someday / Unordered / Ordered / Priority). Replaces the
+            ;; old per-view title rewrites and relabels the effort line to
+            ;; "Total Estimated Effort:".  The Priority View (key "0") shows
+            ;; only its three visible sections, so its banner counts just those
+            ;; (diary remaining + ritual + p0), not the all-tier grand total.
+            (let* ((bname (buffer-name))
+                   (bkey (and (string-match "\\*Org Agenda(\\(.+\\))\\*" bname)
+                              (match-string 1 bname)))
+                   (banner-total
+                    (if (equal bkey "0")
+                        (pcase-let ((`(,eff-ritual ,_eff-spent ,eff-remaining)
+                                     (tdw/schedule-effort-totals)))
+                          (tdw/priority-view-total eff-remaining eff-ritual effort-p0))
+                      total)))
+              (tdw/render-view-banner banner-total))
             ;; Section-header effort totals — skipped for Inbox ("i") and
             ;; Someday ("S"), which are effort-free views.
             (let* ((bn (buffer-name))
