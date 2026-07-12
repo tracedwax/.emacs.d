@@ -30,4 +30,25 @@
   "All-zero sections total 0:00."
   (assert-equal "0:00" (tdw/priority-view-total "0:00" "0:00" "0:00")))
 
+(deftest tier-block/matches-inlined-p0-form ()
+  "`tdw/tier-block' returns the exact native block the views inlined by hand."
+  (let ((expected
+         `((native . (tags
+                      "LEVEL>0+ORG_GTD={Projects\\|Actions}"
+                      ((org-agenda-overriding-header "🚨🚨 P0 (2:00)")
+                       (org-agenda-todo-keyword-format "")
+                       (org-agenda-prefix-format
+                        (quote ,(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")")))
+                       (org-agenda-skip-function
+                        (lambda () (tdw/skip-unless-project-tier "p0")))
+                       (org-agenda-sorting-strategy (quote (category-keep)))))))))
+    (assert-equal expected (tdw/tier-block "🚨🚨 P0 (2:00)" "p0"))))
+
+(deftest tier-block/parameterizes-header-and-tier ()
+  "Header string and tier key flow through to the right slots."
+  (let ((blk (tdw/tier-block "🔔🔔 Bells Ringing (1:30)" "bells_ringing")))
+    (assert-equal "🔔🔔 Bells Ringing (1:30)"
+                  (cadr (assq 'org-agenda-overriding-header
+                              (nth 2 (cdr (assq 'native blk))))))))
+
 ;;; priority-view-test.el ends here
