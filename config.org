@@ -1111,6 +1111,15 @@ SOMEDAY/NEXT/CNCL visual markers."
     "Format MINUTES as an H:MM string (e.g. 90 -> \"1:30\")."
     (format "%d:%02d" (/ minutes 60) (% minutes 60)))
 
+  (defun tdw/priority-view-total (remaining ritual p0)
+    "Return the Priority View banner total as an H:MM string.
+Sums the three visible sections only: diary REMAINING, RITUAL, and P0,
+each an H:MM (or bare-minute) string.  Unlike the Unordered View banner
+(a grand total across all tiers), this matches what is on screen."
+    (tdw/format-minutes (+ (tdw/effort-string-to-minutes remaining)
+                           (tdw/effort-string-to-minutes ritual)
+                           (tdw/effort-string-to-minutes p0))))
+
   (defun tdw/subtree-remaining-effort-minutes ()
     "Sum effort of current entry and all its children in minutes.
 Children in a DONE or CNCL state are excluded — finished work is not
