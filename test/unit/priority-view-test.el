@@ -51,4 +51,24 @@
                   (cadr (assq 'org-agenda-overriding-header
                               (nth 2 (cdr (assq 'native blk))))))))
 
+(deftest priority-view-blocks/three-sections-in-order ()
+  "Priority View = diary, then rituals, then P0 tier block, in that order."
+  (let* ((blocks (tdw/priority-view-blocks "🕐 Diary" "⏰ Rituals" "🚨🚨 P0 (2:00)"))
+         (headers (mapcar (lambda (blk)
+                            (let ((form (cdr (assq 'native blk))))
+                              (cadr (assq 'org-agenda-overriding-header
+                                          (nth 2 form)))))
+                          blocks)))
+    (assert-equal 3 (length blocks))
+    ;; Diary's header comes from tdw-diary-agenda-options, so just check the
+    ;; last two headers and that block 3 is the P0 tier block.
+    (assert-equal "⏰ Rituals" (nth 1 headers))
+    (assert-equal "🚨🚨 P0 (2:00)" (nth 2 headers))
+    (assert-equal (tdw/tier-block "🚨🚨 P0 (2:00)" "p0") (nth 2 blocks))))
+
+(deftest priority-view/is-defined-and-interactive ()
+  "`tdw-priority-view' is a defined interactive command."
+  (assert-true (fboundp 'tdw-priority-view))
+  (assert-true (commandp 'tdw-priority-view)))
+
 ;;; priority-view-test.el ends here
