@@ -227,5 +227,87 @@ parent, run BODY."
   (assert-true (string-match-p "(require 'tdw-gtd-inbox)"
                                 (tdw-gtd-inbox-test--config))))
 
+;;;; tdw-gtd-move-someday-to-inbox-in-file
+
+(defconst tdw-gtd-inbox-test--someday-fixture
+  "* Incubate
+:PROPERTIES:
+:ORG_GTD_REFILE: Someday
+:END:
+** Read a book                            :tgl_personal:
+DEADLINE: <2026-07-15 Wed>
+:PROPERTIES:
+:ORG_GTD:  Someday
+:ID:       someday-book
+:END:
+** TODO Try the ramen place               :tgl_personal:
+:PROPERTIES:
+:ORG_GTD:  Someday
+:ID:       someday-ramen
+:END:
+* Actions
+** NEXT Ship the thing                    :tgl_orbit:
+:PROPERTIES:
+:ORG_GTD:  Actions
+:END:
+"
+  "Two Someday entries (one without a TODO keyword) plus one Actions entry.")
+
+(deftest gtd-inbox/move-someday-remarks-property-in-place ()
+  "Every ORG_GTD Someday entry becomes ORG_GTD Inbox, same file."
+  (let ((file (make-temp-file "someday-test" nil ".org"
+                              tdw-gtd-inbox-test--someday-fixture)))
+    (unwind-protect
+        (progn
+          (tdw-gtd-move-someday-to-inbox-in-file file)
+          (let ((contents (tdw-gtd-inbox-test--file-contents file)))
+            (assert-nil (string-match-p ":ORG_GTD: +Someday" contents))
+            (assert-equal 2 (with-temp-buffer
+                              (insert contents)
+                              (count-matches ":ORG_GTD: +Inbox" (point-min) (point-max))))))
+      (delete-file file))))
+
+(deftest gtd-inbox/move-someday-returns-count ()
+  (let ((file (make-temp-file "someday-test" nil ".org"
+                              tdw-gtd-inbox-test--someday-fixture)))
+    (unwind-protect
+        (assert-equal 2 (tdw-gtd-move-someday-to-inbox-in-file file))
+      (delete-file file))))
+
+(deftest gtd-inbox/move-someday-adds-todo-keyword-when-missing ()
+  "An Inbox entry needs a TODO keyword to surface in views; keywordless
+Someday entries gain TODO, existing keywords are preserved."
+  (let ((file (make-temp-file "someday-test" nil ".org"
+                              tdw-gtd-inbox-test--someday-fixture)))
+    (unwind-protect
+        (progn
+          (tdw-gtd-move-someday-to-inbox-in-file file)
+          (let ((contents (tdw-gtd-inbox-test--file-contents file)))
+            (assert-true (string-match-p "\\*\\* TODO Read a book" contents))
+            (assert-true (string-match-p "\\*\\* TODO Try the ramen place" contents))))
+      (delete-file file))))
+
+(deftest gtd-inbox/move-someday-leaves-other-entries-alone ()
+  (let ((file (make-temp-file "someday-test" nil ".org"
+                              tdw-gtd-inbox-test--someday-fixture)))
+    (unwind-protect
+        (progn
+          (tdw-gtd-move-someday-to-inbox-in-file file)
+          (let ((contents (tdw-gtd-inbox-test--file-contents file)))
+            (assert-true (string-match-p "\\*\\* NEXT Ship the thing" contents))
+            (assert-true (string-match-p ":ORG_GTD: +Actions" contents))))
+      (delete-file file))))
+
+(deftest gtd-inbox/move-someday-no-someday-is-noop ()
+  (let ((file (make-temp-file "someday-test" nil ".org" "* Actions
+** NEXT X
+:PROPERTIES:
+:ORG_GTD:  Actions
+:END:
+")))
+    (unwind-protect
+        (assert-equal 0 (tdw-gtd-move-someday-to-inbox-in-file file))
+      (delete-file file))))
+
 (provide 'tdw-gtd-inbox-test)
 ;;; tdw-gtd-inbox-test.el ends here
