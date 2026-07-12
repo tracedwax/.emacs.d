@@ -2854,6 +2854,38 @@ parent brings in its * Actions tasks via `tdw/skip-unless-project-tier'."
                                  (org-agenda-sorting-strategy '(category-keep))
                                  (org-agenda-skip-function 'tdw/skip-non-actionable-in-toggl)))))
                     ))) (or keys "u"))))))
+
+  (defun tdw/priority-view-blocks (diary-header ritual-header p0-header)
+    "Return the Priority View block list: diary, rituals, P0, in order.
+Reuses the same builders as the Unordered View so the two cannot drift."
+    (list (tdw/diary-block diary-header)
+          (tdw/ritual-block ritual-header)
+          (tdw/tier-block p0-header "p0")))
+
+  (defun tdw-priority-view (&optional keys)
+    "Focused view: only Today's Diary, Daily Rituals, and P0.  Bound to C-c d 0.
+The banner total counts just the three visible sections (diary remaining +
+ritual + p0), not the all-tier grand total the Unordered View shows."
+    (interactive)
+    (when-let ((buf (get-buffer "*Org Agenda(0)*"))) (kill-buffer buf))
+    ;; Not an Unordered View: keep priority-cookie stripping / warnings off.
+    (setq tdw--is-unordered-view nil)
+    (pcase-let ((`(,_total ,effort-p0 ,_bell ,_deck ,_other ,_unest ,_considered ,_paused) (tdw/effort-totals-by-tier))
+                (`(,effort-ritual ,effort-spent ,effort-remaining) (tdw/schedule-effort-totals)))
+      (let ((org-agenda-todo-keyword-format "")
+            (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
+            ;; P0's whole-project-unit pull needs the tier table bound.
+            (tdw/--current-project-tier-table (tdw/--scan-project-tier-table)))
+        (org-gtd-view-show
+         `((name . ,(format "🚨 Priority View — Total Effort: %s"
+                            (tdw/priority-view-total effort-remaining effort-ritual effort-p0)))
+           (prefix-width . 25)
+           (prefix . (effort " " urg-imp " — "))
+           (blocks . ,(tdw/priority-view-blocks
+                       (format "🕐 Today's Diary (%s spent, %s remaining)" effort-spent effort-remaining)
+                       (format "⏰ Daily Rituals (%s)" effort-ritual)
+                       (format "🚨🚨 P0 (%s)" effort-p0))))
+         (or keys "0")))))
 #+END_SRC
 ** Org-gtd cross-repo routing (tgl tags)
 
