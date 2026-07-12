@@ -65,11 +65,13 @@ A task captured on a Friday shouldn't default to being due immediately."
 ;;;; tdw-gtd-add-inbox-item
 
 (defmacro tdw-gtd-inbox-test--with-fixture (var &rest body)
-  "Bind VAR to a temp inbox.org path, `org-gtd-directory' to its parent, run BODY."
+  "Bind VAR to a temp org-gtd-tasks.org path, `org-gtd-directory' to its
+parent, run BODY. inbox.org is dead: single captures land in
+org-gtd-tasks.org too (ORG_GTD: Inbox entries), one federated file per repo."
   (declare (indent 1))
   `(let* ((dir (make-temp-file "tdw-gtd-inbox-test" t))
           (org-gtd-directory dir)
-          (,var (expand-file-name "inbox.org" dir)))
+          (,var (expand-file-name "org-gtd-tasks.org" dir)))
      (unwind-protect
          (progn
            (with-temp-file ,var (insert ""))
