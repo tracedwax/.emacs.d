@@ -2702,6 +2702,55 @@ and should not appear in the engage view."
     (unless (org-get-todo-state)
       (org-entry-end-position)))
 
+  ;;; ——— Shared agenda-block builders ———
+  ;; The Diary, Rituals, and tier blocks are identical across the Unordered
+  ;; View and the Priority View.  These builders are the single source of
+  ;; truth; both views splice their return values so they cannot drift.
+  ;; Pinned by test/unit/priority-view-test.el.
+
+  (defun tdw/diary-block (header)
+    "Return the Today's Diary native agenda block with HEADER.
+Shows gcal.org meetings (past and future) plus CLOCK lines from every task
+file, and nothing else.  Diary semantics live in `tdw-diary-agenda-options'
+(lisp/tdw-diary.el); only display options are set here."
+    `((native . (agenda ""
+                 (,@(tdw-diary-agenda-options
+                     (cons (expand-file-name "gcal.org" stag-org-gtd-directory)
+                           (tdw/all-tasks-files))
+                     header)
+                  (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
+                  (org-agenda-time-grid '((daily today require-timed) () "" "now - - - - - - - - - - - - - - - - - - - - -"))
+                  (org-agenda-prefix-format '((agenda . "  %i %-12:c%?-12t%-6e ")))
+                  (org-agenda-sorting-strategy '(time-up category-keep)))))))
+
+  (defun tdw/ritual-block (header)
+    "Return the Daily Rituals native agenda block with HEADER.
+Shows only today's scheduled ritual habits (`tdw/skip-unless-daily-ritual-habit')."
+    `((native . (agenda ""
+                 ((org-agenda-overriding-header ,header)
+                  (org-agenda-span 1)
+                  (org-agenda-start-day nil)
+                  (org-agenda-include-diary nil)
+                  (org-agenda-entry-types '(:scheduled))
+                  (org-agenda-todo-keyword-format "")
+                  (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)
+                  (org-agenda-prefix-format '((agenda . " %i %-25:(org-gtd-agenda--resolve-prefix-chain '(effort \" \" urg-imp \" — \") 25) ")))
+                  (org-agenda-sorting-strategy '(category-keep))
+                  (org-agenda-skip-function 'tdw/skip-unless-daily-ritual-habit))))))
+
+  (defun tdw/tier-block (header tier)
+    "Return a native tags block for project-tier TIER with HEADER.
+TIER is a tier tag string (\"p0\", \"bells_ringing\", \"on_deck\",
+\"recently_considered\", \"paused\").  Pulls whole project units: a tiered
+parent brings in its * Actions tasks via `tdw/skip-unless-project-tier'."
+    `((native . (tags
+                 "LEVEL>0+ORG_GTD={Projects\\|Actions}"
+                 ((org-agenda-overriding-header ,header)
+                  (org-agenda-todo-keyword-format "")
+                  (org-agenda-prefix-format ',(tdw/tier-prefix-format 25 "(effort \" \" urg-imp \" — \")"))
+                  (org-agenda-skip-function (lambda () (tdw/skip-unless-project-tier ,tier)))
+                  (org-agenda-sorting-strategy '(category-keep)))))))
+
   (defun tdw-unordered-view (&optional keys)
     "Like Ordered View but without score annotations, priority cookies, or custom sorting."
     (interactive)
