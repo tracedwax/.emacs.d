@@ -1391,40 +1391,10 @@ excluded."
               (funcall fmt (+ cal-past clocked))
               (funcall fmt (+ cal-future habit))))))
 
-  ;;; ——— Ordered View: Capacity warnings ———
-
-  (defun tdw/sanity-view-warnings ()
-    "Return alist of (SECTION . WARNING-STRING) for capacity violations.
-Alerts on on-p0 > 5, bells-ringing > 10, on-deck > 5."
-    (let ((n-p0 0)
-          (n-bell 0)
-          (n-deck 0)
-          (warnings nil))
-      (dolist (file (org-agenda-files))
-        (let ((expanded-file (expand-file-name file)))
-          (when (file-exists-p expanded-file)
-            (with-current-buffer (find-file-noselect expanded-file)
-              (org-with-wide-buffer
-               (goto-char (point-min))
-               (org-map-entries
-                (lambda ()
-                  (let ((todo (org-get-todo-state))
-                        (tags (org-get-tags nil t)))
-                    (when (member todo '("NEXT" "TODO"))
-                      (when (member "p0" tags) (cl-incf n-p0))
-                      (when (member "bells_ringing" tags) (cl-incf n-bell))
-                      (when (member "on_deck" tags) (cl-incf n-deck)))))
-                nil nil))))))
-      (push (cons "🚨🚨 P0"
-                   " [Drop everything to do these] 🚨🚨")
-            warnings)
-      (push (cons "🔔🔔 Bells Ringing"
-                   " [keeps coming up as must do next] 🔔🔔")
-            warnings)
-      (push (cons "🥎 🥎 On Deck"
-                   " [next up after the bells are quiet] 🥎🥎")
-            warnings)
-      warnings))
+  ;; Capacity ("sanity") warnings were removed 2026-07-12: WIP limits are a
+  ;; future addition, and being told how many items are allowed per tier was
+  ;; unwanted.  The header updater below only renders the banner + effort
+  ;; totals now.
 
   ;;; ——— Ordered View: Buffer-local state ———
 
@@ -1488,8 +1458,8 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
         (insert (tdw/format-view-banner (car spec) (cdr spec) total nil)
                 "\n"))))
 
-  (defun tdw/update-sanity-view-headers ()
-    "Update headers in the current agenda buffer with fresh effort totals and warnings."
+  (defun tdw/update-view-headers ()
+    "Update headers in the current agenda buffer with fresh banner + effort totals."
     (let ((inhibit-read-only t))
       (save-excursion
         (goto-char (point-min))
@@ -1577,13 +1547,6 @@ rather than searching for title text.  Idempotent: strips a prior banner first."
             (while (re-search-forward " +:[a-zA-Z0-9_:]+: *$" nil t)
               (unless (string-match-p ":tgl_" (match-string 0))
                 (replace-match "")))
-            ;; Inject capacity warnings
-            (let ((warnings (tdw/sanity-view-warnings)))
-              (dolist (w warnings)
-                (goto-char (point-min))
-                (when (re-search-forward (regexp-quote (car w)) nil t)
-                  (end-of-line)
-                  (insert (cdr w)))))
             ;; Strip priority cookies [#X] in Unordered View only
             (when tdw--is-unordered-view
               (goto-char (point-min))
@@ -2012,7 +1975,7 @@ true running clock across files and processes."
               (insert (propertize line 'face 'org-agenda-clocking))))))))
 
   (add-hook 'org-agenda-finalize-hook #'tdw/strip-tag-separators)
-  (add-hook 'org-agenda-finalize-hook #'tdw/update-sanity-view-headers)
+  (add-hook 'org-agenda-finalize-hook #'tdw/update-view-headers)
   (add-hook 'org-agenda-finalize-hook #'tdw/insert-tgl-subheaders)
   (add-hook 'org-agenda-finalize-hook #'tdw/check-missing-tag-sections)
   (add-hook 'org-agenda-finalize-hook #'tdw/reset-agenda-hscroll)
