@@ -101,5 +101,26 @@ Returns the number of tasks filed."
       (save-buffer))
     (length tasks)))
 
+(defun tdw-gtd-move-someday-to-inbox-in-file (file)
+  "Re-mark every ORG_GTD Someday entry in FILE as Inbox, in place.
+No refile, no cross-repo moves: Inbox membership is the ORG_GTD property,
+so views pick the entries up wherever they live. Keywordless headings gain
+TODO (an Inbox entry needs a todo keyword to surface in views); existing
+keywords are preserved. Returns the number of entries re-marked."
+  (let ((count 0))
+    (with-current-buffer (find-file-noselect file)
+      (org-mode)
+      (org-map-entries
+       (lambda ()
+         (when (string= (string-trim (or (org-entry-get (point) "ORG_GTD") ""))
+                        "Someday")
+           (org-entry-put (point) "ORG_GTD" "Inbox")
+           (unless (org-get-todo-state)
+             (org-todo "TODO"))
+           (setq count (1+ count))))
+       nil 'file)
+      (save-buffer))
+    count))
+
 (provide 'tdw-gtd-inbox)
 ;;; tdw-gtd-inbox.el ends here
