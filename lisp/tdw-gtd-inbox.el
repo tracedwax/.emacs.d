@@ -38,14 +38,16 @@ due - \"following Friday\" means the next one, not necessarily today."
 (defun tdw-gtd-add-inbox-item (title &optional deadline-time now-time)
   "Append a TODO entry for TITLE to the GTD inbox file.
 DEADLINE-TIME defaults to the next Friday on-or-after NOW-TIME (which
-defaults to the current time). Resolves the inbox file via the live
-`org-gtd-directory' rather than a hardcoded path, so this works
-correctly under any account's config. Operates on the file's existing
-buffer if one is open (preserving any unrelated unsaved edits in it)
-rather than reverting from disk. Returns the text of the entry written."
+defaults to the current time). Appends to org-gtd-tasks.org (NOT the dead
+inbox.org staging file: every repo has ONE federated tasks file and Inbox
+membership is the ORG_GTD property, not a separate file), resolved via the
+live `org-gtd-directory' so this works under any account's config.
+Operates on the file's existing buffer if one is open (preserving any
+unrelated unsaved edits in it) rather than reverting from disk. Returns
+the text of the entry written."
   (let* ((now (or now-time (current-time)))
          (deadline (or deadline-time (tdw-gtd-next-friday-from now)))
-         (inbox-file (expand-file-name "inbox.org" org-gtd-directory))
+         (inbox-file (expand-file-name "org-gtd-tasks.org" org-gtd-directory))
          (entry (format "* TODO %s\n:PROPERTIES:\n:ORG_GTD: Inbox\n:END:\nDEADLINE: %s\n%s\n"
                          title
                          (tdw-gtd--format-deadline deadline)
