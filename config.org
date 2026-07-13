@@ -42,6 +42,9 @@ I set a [[*Bookmarks][bookmark]] with =C-x r m= and I can get back here with =C-
           ))
   ;; CRITICAL: Set org-gtd-directory here so it is defined BEFORE custom-file loads org-gtd-mode
   (setq org-gtd-directory stag-org-gtd-directory)
+  ;; No interlock files: a stale .#lock makes daemon writes hang forever at an
+  ;; unanswerable "steal this lock?" prompt (2026-07-13 gtd freeze). Sole writer.
+  (setq create-lockfiles nil)
 #+end_src
 ** Packages (without package management)
 #+BEGIN_SRC emacs-lisp
