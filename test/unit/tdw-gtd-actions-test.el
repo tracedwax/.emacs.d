@@ -29,10 +29,14 @@
 
 (defmacro tdw-gtd-actions-test--with-fixture (var initial &rest body)
   "Bind VAR to a temp org-gtd-tasks.org seeded with INITIAL,
-`org-gtd-directory' to its parent, run BODY."
+`org-gtd-directory' to its parent, run BODY. Empties the routing-table
+candidates so no test can resolve a tag against the REAL routing table
+and write into a real repo (which happened on first run: tgl_no_project
+routed 6 test entries into my-personal-life)."
   (declare (indent 2))
   `(let* ((dir (make-temp-file "tdw-gtd-actions-test" t))
           (org-gtd-directory dir)
+          (tdw-gtd-tags-routing-candidates nil)
           (,var (expand-file-name "org-gtd-tasks.org" dir)))
      (unwind-protect
          (progn
