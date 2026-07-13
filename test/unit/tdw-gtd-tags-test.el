@@ -264,6 +264,54 @@ must not silently misbehave if one exists."
       (assert-true (string-match-p ":tgl_barefoot_internal_sales:"
                                     (tdw-gtd-tags-test--file-contents gcal-file))))))
 
+;;;; tdw-gtd-tags-gtd-dir-for-tag (routing a tag to its context repo GTD dir)
+
+(defconst tdw-gtd-tags-test--routing-json "\
+{
+  \"_meta\": {\"default_path\": null},
+  \"tgl_acme_widgets\": {
+    \"end_user_customer\": \"Acme Widgets\",
+    \"gtd_dir\": \"/Users/thecleverone/workspace/non-oss/bfctrace/context-for-acme/orgnotes/gtd\"
+  },
+  \"tgl_no_dir\": {\"end_user_customer\": null, \"gtd_dir\": null}
+}
+")
+
+(defmacro tdw-gtd-tags-test--with-routing-table (&rest body)
+  "Run BODY with the candidates pointed at a gtd_dir-bearing fixture table."
+  (declare (indent 0))
+  `(let* ((file (make-temp-file "tdw-gtd-tags-test" nil ".json")))
+     (unwind-protect
+         (progn
+           (with-temp-file file (insert tdw-gtd-tags-test--routing-json))
+           (let ((tdw-gtd-tags-routing-candidates (list file)))
+             ,@body))
+       (delete-file file))))
+
+(deftest gtd-tags/gtd-dir-remaps-thecleverone-home-to-current-account ()
+  "The routing JSON hardcodes thecleverone's home dir; the resolver must
+remap that prefix onto the running account's home so the same table works
+on both accounts."
+  (tdw-gtd-tags-test--with-routing-table
+    (assert-equal
+     (expand-file-name "~/workspace/non-oss/bfctrace/context-for-acme/orgnotes/gtd")
+     (tdw-gtd-tags-gtd-dir-for-tag "tgl_acme_widgets"))))
+
+(deftest gtd-tags/gtd-dir-nil-for-unrouted-tag ()
+  "A tag absent from the routing table has no context repo dir - callers
+fall back to `org-gtd-directory'."
+  (tdw-gtd-tags-test--with-routing-table
+    (assert-nil (tdw-gtd-tags-gtd-dir-for-tag "tgl_admin"))))
+
+(deftest gtd-tags/gtd-dir-nil-when-entry-has-null-gtd-dir ()
+  (tdw-gtd-tags-test--with-routing-table
+    (assert-nil (tdw-gtd-tags-gtd-dir-for-tag "tgl_no_dir"))))
+
+(deftest gtd-tags/gtd-dir-nil-for-meta-key ()
+  "The _meta bookkeeping entry must never resolve as a tag."
+  (tdw-gtd-tags-test--with-routing-table
+    (assert-nil (tdw-gtd-tags-gtd-dir-for-tag "_meta"))))
+
 ;;;; Wiring guard: config.org must actually load this module.
 
 (defun tdw-gtd-tags-test--config ()
