@@ -2887,8 +2887,20 @@ LLM workflows add tags separately, so this must never hard-fail a clarify.
     "Root dir for org-gtd files. Declared here for the tgl routing advice;
 org-gtd's own defcustom takes over when the package loads.")
 
-  (defvar tdw/tgl-routing-file "~/my-venndoor-life/outputs/tags/tgl-repo-routing.json"
-    "JSON routing table mapping tgl_ tags to context-repo GTD dirs.")
+  (defvar tdw/tgl-routing-file-candidates
+    '("~/my-venndoor-life/outputs/tags/tgl-repo-routing.json"   ; thecleverone
+      "~/my-bfc-life/outputs/tags/tgl-repo-routing.json")       ; trace
+    "Per-account candidate paths for the tgl routing table.")
+
+  (defvar tdw/tgl-routing-file nil
+    "Explicit routing-table path override. When nil, resolve per account
+from `tdw/tgl-routing-file-candidates'.")
+
+  (defun tdw/tgl-routing-resolved-file ()
+    "The override when set, else the first readable per-account candidate."
+    (or tdw/tgl-routing-file
+        (seq-find (lambda (f) (file-readable-p (expand-file-name f)))
+                  tdw/tgl-routing-file-candidates)))
 
   (defvar tdw/tgl-routing--cache nil
     "Parsed routing table: alist of (TAG-STRING . ENTRY-ALIST).")
@@ -2906,9 +2918,10 @@ account wrote them."
 
   (defun tdw/tgl-routing-table ()
     "Return the routing table, re-reading the JSON when its mtime changes.
-nil when the routing file is missing or unreadable."
-    (let ((file (expand-file-name tdw/tgl-routing-file)))
-      (when (file-readable-p file)
+nil when no candidate routing file is readable on this account."
+    (let ((file (and (tdw/tgl-routing-resolved-file)
+                     (expand-file-name (tdw/tgl-routing-resolved-file)))))
+      (when (and file (file-readable-p file))
         (let ((mtime (file-attribute-modification-time (file-attributes file))))
           (unless (and tdw/tgl-routing--cache
                        (equal mtime tdw/tgl-routing--cache-mtime))
