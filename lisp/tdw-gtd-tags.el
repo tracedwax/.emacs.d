@@ -91,6 +91,20 @@ if nothing matches at all. Never invents a tag outside these sources."
         (tdw-gtd-tags--category-default text)
         "tgl_barefoot_internal_sales")))
 
+(defun tdw-gtd-tags-gtd-dir-for-tag (tag)
+  "Return TAG's context repo GTD dir from the routing table, or nil.
+The routing JSON's gtd_dir values are hardcoded to thecleverone's home
+dir; remap that prefix onto the running account's home so the same table
+resolves on either account. Returns nil for unrouted tags, entries with
+a null gtd_dir, and the _meta bookkeeping key - callers fall back to
+`org-gtd-directory'."
+  (unless (string-prefix-p "_" tag)
+    (let* ((entry (cdr (assoc tag (tdw-gtd-tags--routing-table))))
+           (dir (cdr (assoc "gtd_dir" entry))))
+      (when (stringp dir)
+        (expand-file-name
+         (replace-regexp-in-string "\\`/Users/[^/]+/" "~/" dir))))))
+
 (defun tdw-gtd--heading-has-tgl-tag-p (heading-line)
   "Non-nil if HEADING-LINE already carries a tgl_* tag."
   (string-match-p ":tgl_[a-zA-Z0-9_]+:" heading-line))
