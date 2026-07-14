@@ -47,11 +47,20 @@ manifest-driven, not wildcard-driven."
        nil manifest))
     home))
 
-(deftest agenda-files/includes-bfc-life-tasks ()
+(deftest agenda-files/includes-bfc-life-gcal ()
   (let* ((home (agenda-files-test--make-home))
          (files (tdw-agenda-files home)))
-    (assert-true (member (expand-file-name "my-bfc-life/orgnotes/gtd/org-gtd-tasks.org" home)
+    (assert-true (member (expand-file-name "my-bfc-life/orgnotes/gtd/gcal.org" home)
                          files))))
+
+(deftest agenda-files/excludes-bfc-life-tasks-file ()
+  "my-bfc-life must NEVER have an org-gtd-tasks.org (2026-07-14 decision):
+all tasks live in tgl-routed context repos. Even if the file exists on
+disk, it is not an agenda candidate."
+  (let* ((home (agenda-files-test--make-home))
+         (files (tdw-agenda-files home)))
+    (assert-nil (member (expand-file-name "my-bfc-life/orgnotes/gtd/org-gtd-tasks.org" home)
+                        files))))
 
 (deftest agenda-files/discovers-manifest-declared-repos ()
   "A repo declared in tgl-repo-routing.json (with its thecleverone-local
