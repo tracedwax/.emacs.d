@@ -11,7 +11,7 @@
 ;;   - Same candidate list on every account: no user-login-name branch.
 ;;   - Auto-discovers context repos via wildcards under
 ;;     workspace/non-oss/bfctrace/ and workspace/non-oss/venndoor-group/.
-;;   - my-test-life fixtures are NOT part of the live agenda.
+;;   - some-unrelated-repo fixtures are NOT part of the live agenda.
 ;;
 ;; Uses e-unit (deftest, assert-true, assert-nil).
 
@@ -33,7 +33,7 @@ manifest-driven, not wildcard-driven."
                  "workspace/non-oss/bfctrace/context-for-purdue/orgnotes/gtd/org-gtd-tasks.org"
                  "workspace/non-oss/bfctrace/context-for-rogue/orgnotes/gtd/org-gtd-tasks.org"
                  "workspace/non-oss/othergroup/context-for-offpath/orgnotes/gtd/org-gtd-tasks.org"
-                 "my-test-life/orgnotes/gtd/org-gtd-tasks.org"))
+                 "some-unrelated-repo/orgnotes/gtd/org-gtd-tasks.org"))
       (let ((path (expand-file-name f home)))
         (make-directory (file-name-directory path) t)
         (write-region "" nil path)))
@@ -119,10 +119,10 @@ discovery must actually read tgl-repo-routing.json, not just glob."
                          files))))
 
 (deftest agenda-files/excludes-test-life-fixtures ()
-  "my-test-life fixtures never appear in the live agenda."
+  "some-unrelated-repo fixtures never appear in the live agenda."
   (let* ((home (agenda-files-test--make-home))
          (files (tdw-agenda-files home)))
-    (assert-nil (member (expand-file-name "my-test-life/orgnotes/gtd/org-gtd-tasks.org" home)
+    (assert-nil (member (expand-file-name "some-unrelated-repo/orgnotes/gtd/org-gtd-tasks.org" home)
                         files))))
 
 (deftest agenda-files/filters-nonexistent-files ()

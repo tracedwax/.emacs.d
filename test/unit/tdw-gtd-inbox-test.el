@@ -146,7 +146,7 @@ the exact example in .agent/workflows/add-to-inbox.md."
       (assert-true (string-match-p "2026-02-20" result)))))
 
 ;;;; Mandatory-tag routing: NO default inbox, ever (2026-07-14).
-;; Captures kept landing in the default org-gtd-directory (my-test-life on
+;; Captures kept landing in the default org-gtd-directory (the now-dead default on
 ;; trace), eating real tasks. Every capture MUST carry a tgl_ tag and MUST
 ;; route to that tag's context repo via the routing manifest.
 

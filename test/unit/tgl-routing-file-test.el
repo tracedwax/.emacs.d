@@ -6,7 +6,7 @@
 ;; thecleverone-only path ~/my-venndoor-life/..., which does not exist on
 ;; the trace account.  The routing table silently read as nil, so every
 ;; clarified task fell through to the default org-gtd-directory
-;; (my-test-life on trace) instead of its tgl_ tag's context repo.
+;; (the account default, now removed) instead of its tgl_ tag's context repo.
 ;;
 ;; The fix resolves the routing file from per-account candidates; the
 ;; resolved file must be readable on WHICHEVER account runs this test.
