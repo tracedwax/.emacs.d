@@ -17,6 +17,7 @@
 ;;; Code:
 
 (require 'e-unit)
+(require 'cl-lib)
 (e-unit-initialize)
 (require 'tdw-gtd-inbox)
 
@@ -65,18 +66,26 @@ A task captured on a Friday shouldn't default to being due immediately."
 ;;;; tdw-gtd-add-inbox-item
 
 (defmacro tdw-gtd-inbox-test--with-fixture (var &rest body)
-  "Bind VAR to a temp org-gtd-tasks.org path, `org-gtd-directory' to its
-parent, run BODY. inbox.org is dead: single captures land in
-org-gtd-tasks.org too (ORG_GTD: Inbox entries), one federated file per repo."
+  "Bind VAR to a temp org-gtd-tasks.org path inside a fake context repo,
+stub `tdw/tgl-routing-gtd-dir' so tag \"tgl_test\" resolves to that repo,
+and bind `org-gtd-directory' to an UNRELATED dir to prove routing never
+falls back to it. There is NO default inbox: every capture routes by its
+tgl_ tag through the routing manifest."
   (declare (indent 1))
   `(let* ((dir (make-temp-file "tdw-gtd-inbox-test" t))
-          (org-gtd-directory dir)
+          (decoy (make-temp-file "tdw-gtd-inbox-decoy" t))
+          (org-gtd-directory decoy)
           (,var (expand-file-name "org-gtd-tasks.org" dir)))
-     (unwind-protect
-         (progn
-           (with-temp-file ,var (insert ""))
-           ,@body)
-       (delete-directory dir t))))
+     (cl-letf (((symbol-function 'tdw/tgl-routing-gtd-dir)
+                (lambda (tag) (when (string= tag "tgl_test") dir))))
+       (unwind-protect
+           (progn
+             (with-temp-file ,var (insert ""))
+             ,@body)
+         (let ((buf (find-buffer-visiting ,var)))
+           (when buf (kill-buffer buf)))
+         (delete-directory dir t)
+         (delete-directory decoy t)))))
 
 (defun tdw-gtd-inbox-test--file-contents (file)
   (with-temp-buffer
@@ -88,28 +97,28 @@ org-gtd-tasks.org too (ORG_GTD: Inbox entries), one federated file per repo."
 usual org ordering), followed by a bare capture timestamp - pinned against
 the exact example in .agent/workflows/add-to-inbox.md."
   (tdw-gtd-inbox-test--with-fixture inbox-file
-    (tdw-gtd-add-inbox-item "Buy milk"
+    (tdw-gtd-add-inbox-item "Buy milk :tgl_test:"
                              (tdw-gtd-inbox-test--date 20 2 2026)
                              (tdw-gtd-inbox-test--date 15 2 2026))
     (assert-true
      (string-match-p
-      "\\* TODO Buy milk\n:PROPERTIES:\n:ORG_GTD: Inbox\n:END:\nDEADLINE: <2026-02-20 Fri>\n\\[2026-02-15 Sun [0-9][0-9]:[0-9][0-9]\\]"
+      "\\* TODO Buy milk :tgl_test:\n:PROPERTIES:\n:ORG_GTD: Inbox\n:END:\nDEADLINE: <2026-02-20 Fri>\n\\[2026-02-15 Sun [0-9][0-9]:[0-9][0-9]\\]"
       (tdw-gtd-inbox-test--file-contents inbox-file)))))
 
 (deftest gtd-inbox/deadline-defaults-to-next-friday-of-now ()
   "Omitting the deadline arg defaults to `tdw-gtd-next-friday-from' of NOW."
   (tdw-gtd-inbox-test--with-fixture inbox-file
-    (tdw-gtd-add-inbox-item "Buy milk" nil (tdw-gtd-inbox-test--date 15 2 2026))
+    (tdw-gtd-add-inbox-item "Buy milk :tgl_test:" nil (tdw-gtd-inbox-test--date 15 2 2026))
     (assert-true (string-match-p "DEADLINE: <2026-02-20 Fri>"
                                   (tdw-gtd-inbox-test--file-contents inbox-file)))))
 
 (deftest gtd-inbox/appends-without-clobbering-existing-content ()
   "A second item lands after the first, not overwriting it."
   (tdw-gtd-inbox-test--with-fixture inbox-file
-    (tdw-gtd-add-inbox-item "First item"
+    (tdw-gtd-add-inbox-item "First item :tgl_test:"
                              (tdw-gtd-inbox-test--date 20 2 2026)
                              (tdw-gtd-inbox-test--date 15 2 2026))
-    (tdw-gtd-add-inbox-item "Second item"
+    (tdw-gtd-add-inbox-item "Second item :tgl_test:"
                              (tdw-gtd-inbox-test--date 20 2 2026)
                              (tdw-gtd-inbox-test--date 15 2 2026))
     (let ((contents (tdw-gtd-inbox-test--file-contents inbox-file)))
@@ -117,9 +126,9 @@ the exact example in .agent/workflows/add-to-inbox.md."
       (assert-true (string-match-p "Second item" contents)))))
 
 (deftest gtd-inbox/works-with-no-optional-args ()
-  "Real usage passes only a title; must produce a well-formed entry."
+  "Real usage passes only a tagged title; must produce a well-formed entry."
   (tdw-gtd-inbox-test--with-fixture inbox-file
-    (tdw-gtd-add-inbox-item "Buy milk")
+    (tdw-gtd-add-inbox-item "Buy milk :tgl_test:")
     (let ((contents (tdw-gtd-inbox-test--file-contents inbox-file)))
       (assert-true (string-match-p "\\* TODO Buy milk" contents))
       (assert-true (string-match-p
@@ -130,11 +139,45 @@ the exact example in .agent/workflows/add-to-inbox.md."
   "Returns the text it wrote, so a calling skill can report it back."
   (tdw-gtd-inbox-test--with-fixture inbox-file
     (let ((result (tdw-gtd-add-inbox-item
-                    "Buy milk"
+                    "Buy milk :tgl_test:"
                     (tdw-gtd-inbox-test--date 20 2 2026)
                     (tdw-gtd-inbox-test--date 15 2 2026))))
       (assert-true (string-match-p "Buy milk" result))
       (assert-true (string-match-p "2026-02-20" result)))))
+
+;;;; Mandatory-tag routing: NO default inbox, ever (2026-07-14).
+;; Captures kept landing in the default org-gtd-directory (my-test-life on
+;; trace), eating real tasks. Every capture MUST carry a tgl_ tag and MUST
+;; route to that tag's context repo via the routing manifest.
+
+(deftest gtd-inbox/add-item-without-tgl-tag-errors ()
+  "A tagless title signals an error instead of filing anywhere."
+  (tdw-gtd-inbox-test--with-fixture inbox-file
+    (assert-true (condition-case nil
+                     (progn (tdw-gtd-add-inbox-item "Buy milk") nil)
+                   (error t)))
+    (assert-equal "" (tdw-gtd-inbox-test--file-contents inbox-file))))
+
+(deftest gtd-inbox/add-item-with-unknown-tag-errors ()
+  "A tag the routing manifest does not know signals an error."
+  (tdw-gtd-inbox-test--with-fixture inbox-file
+    (assert-true (condition-case nil
+                     (progn (tdw-gtd-add-inbox-item "Buy milk :tgl_nonexistent:") nil)
+                   (error t)))))
+
+(deftest gtd-inbox/add-item-routes-by-tag-not-org-gtd-directory ()
+  "The entry lands in the tag's repo, and NOTHING lands in org-gtd-directory."
+  (tdw-gtd-inbox-test--with-fixture inbox-file
+    (tdw-gtd-add-inbox-item "Buy milk :tgl_test:")
+    (assert-true (string-match-p "Buy milk" (tdw-gtd-inbox-test--file-contents inbox-file)))
+    (assert-nil (file-exists-p (expand-file-name "org-gtd-tasks.org" org-gtd-directory)))))
+
+(deftest gtd-inbox/add-item-accepts-extra-tags-after-tgl-tag ()
+  "Titles like \"X :tgl_test:p0:\" route by the tgl_ tag."
+  (tdw-gtd-inbox-test--with-fixture inbox-file
+    (tdw-gtd-add-inbox-item "Buy milk :tgl_test:p0:")
+    (assert-true (string-match-p "Buy milk :tgl_test:p0:"
+                                  (tdw-gtd-inbox-test--file-contents inbox-file)))))
 
 ;;;; tdw-gtd-file-tasks-to-inbox (batch: groomed 30ss action items -> org-gtd-tasks.org)
 
