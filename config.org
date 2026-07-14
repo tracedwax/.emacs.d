@@ -27,12 +27,15 @@ I set a [[*Bookmarks][bookmark]] with =C-x r m= and I can get back here with =C-
           stag-easy-hugo-root "~/src/projects/trevoke.github.io"
           stag-org-reveal-root "/home/stag/mnt/internal/src/vendor/reveal.js"
           stag-org-directory (expand-file-name "orgnotes/" (concat "~/" life-repo))
-          ;; trace uses the throwaway test fixtures (~/my-test-life) for GTD;
-          ;; thecleverone: org-gtd-directory stays on my-venndoor-life as a
-          ;; transient inbox staging area (thecleverone-only, not shared with
-          ;; Claude or any external agent). No permanent tasks live here —
-          ;; all tasks route to per-customer context repos via tgl-repo-routing.json.
-          stag-org-gtd-directory (expand-file-name "orgnotes/gtd" (if (string= (user-login-name) "trace") "~/my-test-life" (concat "~/" life-repo)))
+          ;; org-gtd engine home only, NEVER a filing target: every capture
+          ;; routes by its mandatory :tgl_*: tag through tgl-repo-routing.json
+          ;; (tdw-gtd-add-inbox-item errors on tagless titles; no default inbox).
+          ;; trace: context-for-bfc-internal; thecleverone: context-for-google-related.
+          stag-org-gtd-directory (expand-file-name
+                                  "orgnotes/gtd"
+                                  (if (string= (user-login-name) "trace")
+                                      "~/workspace/non-oss/bfctrace/context-for-bfc-internal"
+                                    "~/workspace/non-oss/venndoor-group/context-for-google-related"))
           stag-org-roam-directory (expand-file-name "orgnotes/roam" (concat "~/" life-repo))
           stag-org-roam-db-location "~/.emacs.d/local-files/org-roam.db"
           stag-bbdb-file (expand-file-name "orgnotes/bbdb/big-brother-database" (concat "~/" life-repo))
@@ -714,8 +717,8 @@ Tag inheritance respects the `my/org-gtd-inherit-tags' customization variable."
 Unified agenda-file discovery. One candidate list for BOTH accounts;
 per-account differences fall out of `file-exists-p' filtering (trace has
 no my-venndoor-life / my-google-life / venndoor-group repos, so those
-simply drop out there). my-test-life fixtures are test-only and never
-part of the live agenda. Extracted to a function so tests can drive it
+simply drop out there). Only manifest-declared repos and life repos are
+ever part of the live agenda. Extracted to a function so tests can drive it
 against a fixture HOME (see test/unit/agenda-files-test.el).
 #+BEGIN_SRC emacs-lisp
   (defun tdw--routing-manifest-gtd-files (home)
