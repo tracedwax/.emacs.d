@@ -23,23 +23,20 @@ trace's accessible my-bfc-life copy, so tag-guessing works on either
 account without touching that existing (in-production, refiling-critical)
 variable.")
 
-(defun tdw-gtd-tags--routing-file ()
-  "First existing candidate from `tdw-gtd-tags-routing-candidates', or nil."
-  (seq-find #'file-readable-p
-            (mapcar #'expand-file-name tdw-gtd-tags-routing-candidates)))
-
 (defun tdw-gtd-tags--routing-table ()
-  "Return the routing table (alist of tag-string -> entry-alist), freshly
-parsed from `tdw-gtd-tags--routing-file', or nil if none exists. Not
-cached: called infrequently (interactive capture/tagging), and caching
-would risk stale data leaking across the account-dependent candidate
-files this tries in order."
-  (let ((file (tdw-gtd-tags--routing-file)))
-    (when file
-      (let ((json-object-type 'alist)
-            (json-key-type 'string)
-            (json-array-type 'list))
-        (json-read-file file)))))
+  "Return the routing table (alist of tag-string -> entry-alist) by reading
+and merging all readable candidate routing files. Not cached: called
+infrequently (interactive capture/tagging), and caching would risk stale
+data leaking across the account-dependent candidate files this tries."
+  (let ((json-object-type 'alist)
+        (json-key-type 'string)
+        (json-array-type 'list)
+        (merged nil))
+    (dolist (candidate tdw-gtd-tags-routing-candidates)
+      (let ((file (expand-file-name candidate)))
+        (when (file-readable-p file)
+          (setq merged (append merged (json-read-file file))))))
+    merged))
 
 (defconst tdw-gtd-tags--category-keywords
   '(("tgl_non_billable_travel" "flight" "flights" "hotel" "airport" "travel" "commute")

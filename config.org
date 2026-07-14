@@ -2933,21 +2933,26 @@ account wrote them."
       path))
 
   (defun tdw/tgl-routing-table ()
-    "Return the routing table, re-reading the JSON when its mtime changes.
-nil when no candidate routing file is readable on this account."
-    (let ((file (and (tdw/tgl-routing-resolved-file)
-                     (expand-file-name (tdw/tgl-routing-resolved-file)))))
-      (when (and file (file-readable-p file))
-        (let ((mtime (file-attribute-modification-time (file-attributes file))))
-          (unless (and tdw/tgl-routing--cache
-                       (equal mtime tdw/tgl-routing--cache-mtime))
-            (setq tdw/tgl-routing--cache
-                  (let ((json-object-type 'alist)
-                        (json-key-type 'string)
-                        (json-array-type 'list))
-                    (json-read-file file))
-                  tdw/tgl-routing--cache-mtime mtime))
-          tdw/tgl-routing--cache))))
+    "Return the merged routing table, re-reading JSONs when their mtimes change."
+    (let* ((files (if tdw/tgl-routing-file
+                      (list (expand-file-name tdw/tgl-routing-file))
+                    (cl-loop for f in tdw/tgl-routing-file-candidates
+                             for path = (expand-file-name f)
+                             when (file-readable-p path)
+                             collect path)))
+           (mtimes (mapcar (lambda (f) (and (file-readable-p f) (file-attribute-modification-time (file-attributes f)))) files)))
+      (unless (and tdw/tgl-routing--cache
+                   (equal mtimes tdw/tgl-routing--cache-mtime))
+        (let ((json-object-type 'alist)
+              (json-key-type 'string)
+              (json-array-type 'list)
+              (merged nil))
+          (dolist (f files)
+            (when (file-readable-p f)
+              (setq merged (append merged (json-read-file f)))))
+          (setq tdw/tgl-routing--cache merged
+                tdw/tgl-routing--cache-mtime mtimes)))
+      tdw/tgl-routing--cache))
 
   (defun tdw/tgl-routing-gtd-dir (tag)
     "Localized gtd_dir for TAG from the routing table, or nil."
