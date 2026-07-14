@@ -35,19 +35,37 @@ due - \"following Friday\" means the next one, not necessarily today."
   "Format TIME as a bare org timestamp, e.g. \"[2026-07-09 Thu 14:30]\"."
   (format-time-string "[%Y-%m-%d %a %H:%M]" time))
 
+(defun tdw-gtd--title-tgl-tag (title)
+  "Return the tgl_ tag in TITLE's trailing org tag group, or nil.
+Matches titles like \"X :tgl_foo:\" and \"X :tgl_foo:p0:\"."
+  (when (string-match ":\\(tgl_[a-z0-9_]+\\)[a-z0-9_:]*:" title)
+    (match-string 1 title)))
+
+(defun tdw-gtd--routed-inbox-file (title)
+  "Resolve TITLE's tgl_ tag to its context repo's org-gtd-tasks.org.
+There is NO default inbox: a tagless TITLE, or a tag unknown to the
+routing manifest, signals an error instead of filing anywhere."
+  (let ((tag (tdw-gtd--title-tgl-tag title)))
+    (unless tag
+      (error "No tgl_ tag in %S: every inbox item MUST carry a :tgl_*: tag (no default inbox)" title))
+    (let ((dir (tdw/tgl-routing-gtd-dir tag)))
+      (unless dir
+        (error "Tag %s not found in the tgl routing manifest" tag))
+      (expand-file-name "org-gtd-tasks.org" dir))))
+
 (defun tdw-gtd-add-inbox-item (title &optional deadline-time now-time)
-  "Append a TODO entry for TITLE to the GTD inbox file.
-DEADLINE-TIME defaults to the next Friday on-or-after NOW-TIME (which
-defaults to the current time). Appends to org-gtd-tasks.org (NOT the dead
-inbox.org staging file: every repo has ONE federated tasks file and Inbox
-membership is the ORG_GTD property, not a separate file), resolved via the
-live `org-gtd-directory' so this works under any account's config.
-Operates on the file's existing buffer if one is open (preserving any
-unrelated unsaved edits in it) rather than reverting from disk. Returns
-the text of the entry written."
+  "Append a TODO entry for TITLE to its tgl_ tag's context repo inbox.
+TITLE must end with an org tag group containing a :tgl_*: tag; the tag is
+resolved through the routing manifest (`tdw/tgl-routing-gtd-dir') to that
+repo's org-gtd-tasks.org. There is NO default inbox: missing or unknown
+tags signal an error. DEADLINE-TIME defaults to the next Friday on-or-after
+NOW-TIME (which defaults to the current time). Inbox membership is the
+ORG_GTD property, not a separate file. Operates on the file's existing
+buffer if one is open (preserving any unrelated unsaved edits in it) rather
+than reverting from disk. Returns the text of the entry written."
   (let* ((now (or now-time (current-time)))
          (deadline (or deadline-time (tdw-gtd-next-friday-from now)))
-         (inbox-file (expand-file-name "org-gtd-tasks.org" org-gtd-directory))
+         (inbox-file (tdw-gtd--routed-inbox-file title))
          (entry (format "* TODO %s\n:PROPERTIES:\n:ORG_GTD: Inbox\n:END:\nDEADLINE: %s\n%s\n"
                          title
                          (tdw-gtd--format-deadline deadline)
