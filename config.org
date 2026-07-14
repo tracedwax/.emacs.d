@@ -2690,6 +2690,19 @@ and should not appear in the engage view."
   ;; truth; both views splice their return values so they cannot drift.
   ;; Pinned by test/unit/priority-view-test.el.
 
+  (defun tdw/gcal-file (&optional home)
+    "Return the calendar mirror gcal.org under HOME (default ~).
+Lives in the account's life repo (my-venndoor-life on thecleverone,
+my-bfc-life on trace), NEVER under `org-gtd-directory': context repos have
+no calendar, and a nonexistent agenda file makes org-agenda prompt
+[R]emove/[A]bort, killing every client frame. Falls back to the my-bfc-life
+path even if missing so callers always get a stable path."
+    (let ((home (or home "~")))
+      (or (seq-find #'file-exists-p
+                    (list (expand-file-name "my-venndoor-life/orgnotes/gtd/gcal.org" home)
+                          (expand-file-name "my-bfc-life/orgnotes/gtd/gcal.org" home)))
+          (expand-file-name "my-bfc-life/orgnotes/gtd/gcal.org" home))))
+
   (defun tdw/diary-block (header)
     "Return the Today's Diary native agenda block with HEADER.
 Shows gcal.org meetings (past and future) plus CLOCK lines from every task
@@ -2697,7 +2710,7 @@ file, and nothing else.  Diary semantics live in `tdw-diary-agenda-options'
 (lisp/tdw-diary.el); only display options are set here."
     `((native . (agenda ""
                  (,@(tdw-diary-agenda-options
-                     (cons (expand-file-name "gcal.org" stag-org-gtd-directory)
+                     (cons (tdw/gcal-file)
                            (tdw/all-tasks-files))
                      header)
                   (org-agenda-hide-tags-regexp tdw/hide-non-tgl-tags-regexp)

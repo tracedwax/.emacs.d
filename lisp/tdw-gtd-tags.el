@@ -115,13 +115,16 @@ a null gtd_dir, and the _meta bookkeeping key - callers fall back to
 
 (defun tdw-gtd-guess-calendar-tags (&optional date calendar-file)
   "For every UNTAGGED meeting heading on DATE (a time value, default:
-today) in CALENDAR-FILE (default: gcal.org under `org-gtd-directory'),
+today) in CALENDAR-FILE (default: the life repo's gcal.org via
+`tdw/gcal-file', falling back to gcal.org under `org-gtd-directory'),
 guess its tgl_* tag via `tdw-gtd-guess-tag' and write it onto the
 heading. A heading that already has a tgl_* tag is left completely
 alone - never overwritten. Returns an alist of (TITLE . TAG) for every
 heading tagged by this call, in file order."
   (let* ((date-string (format-time-string "%Y-%m-%d" (or date (current-time))))
-         (file (or calendar-file (expand-file-name "gcal.org" org-gtd-directory)))
+         (file (or calendar-file
+                   (and (fboundp 'tdw/gcal-file) (tdw/gcal-file))
+                   (expand-file-name "gcal.org" org-gtd-directory)))
          (report nil))
     (with-current-buffer (find-file-noselect file)
       (goto-char (point-min))

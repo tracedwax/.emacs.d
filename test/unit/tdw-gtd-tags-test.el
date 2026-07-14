@@ -112,13 +112,14 @@ keyword list, not a spurious keyword-match against the tag's own name
   `(let* ((dir (make-temp-file "tdw-gtd-tags-test" t))
           (org-gtd-directory dir)
           (,var (expand-file-name "gcal.org" dir)))
-     (unwind-protect
-         (progn
-           (with-temp-file ,var (insert ,content))
-           ,@body)
-       (let ((buf (find-buffer-visiting ,var)))
-         (when buf (kill-buffer buf)))
-       (delete-directory dir t))))
+     (cl-letf (((symbol-function 'tdw/gcal-file) (lambda (&optional _home) ,var)))
+       (unwind-protect
+           (progn
+             (with-temp-file ,var (insert ,content))
+             ,@body)
+         (let ((buf (find-buffer-visiting ,var)))
+           (when buf (kill-buffer buf)))
+         (delete-directory dir t)))))
 
 (defun tdw-gtd-tags-test--file-contents (file)
   (with-temp-buffer
