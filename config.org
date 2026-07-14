@@ -763,13 +763,12 @@ that predate their manifest entry must not vanish from views."
          (delete-dups
           (append
            ;; Core life-repo files
-           ;; NOTE: my-venndoor-life no longer holds GTD tasks.
+           ;; NOTE: my-venndoor-life and my-bfc-life hold NO GTD tasks.
            ;; All tasks route to context repos via tgl-repo-routing.json.
            ;; gcal.org stays for calendar visibility.
            (list (in-home "my-venndoor-life/orgnotes/gtd/gcal.org")
                  (in-home "my-bfc-life/orgnotes/gtd/gcal.org")
                  (in-home "my-google-life/orgnotes/gtd/org-gtd-tasks.org")
-                 (in-home "my-bfc-life/orgnotes/gtd/org-gtd-tasks.org")
                  (in-home "my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))
            ;; Per-customer context repos: manifest-declared first...
            (tdw--routing-manifest-gtd-files home)
