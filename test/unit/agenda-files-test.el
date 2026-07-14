@@ -134,6 +134,22 @@ discovery must actually read tgl-repo-routing.json, not just glob."
     (assert-nil (member (expand-file-name "some-unrelated-repo/orgnotes/gtd/org-gtd-tasks.org" home)
                         files))))
 
+(deftest gcal-file/resolves-to-existing-life-repo-gcal ()
+  "tdw/gcal-file returns the life repo's gcal.org, never a path under
+org-gtd-directory (context repos have no calendar; a nonexistent agenda
+file makes org-agenda prompt [R]emove/[A]bort and every ec frame dies)."
+  (let ((home (agenda-files-test--make-home)))
+    (assert-equal (expand-file-name "my-bfc-life/orgnotes/gtd/gcal.org" home)
+                  (tdw/gcal-file home))))
+
+(deftest gcal-file/prefers-venndoor-life-when-present ()
+  "On thecleverone, my-venndoor-life's gcal.org wins over my-bfc-life's."
+  (let* ((home (agenda-files-test--make-home))
+         (venndoor (expand-file-name "my-venndoor-life/orgnotes/gtd/gcal.org" home)))
+    (make-directory (file-name-directory venndoor) t)
+    (write-region "" nil venndoor)
+    (assert-equal venndoor (tdw/gcal-file home))))
+
 (deftest agenda-files/filters-nonexistent-files ()
   "Candidates that do not exist on this account are filtered out."
   (let* ((home (agenda-files-test--make-home))
