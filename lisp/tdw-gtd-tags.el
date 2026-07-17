@@ -13,7 +13,9 @@
 (require 'cl-lib)
 
 (defvar tdw-gtd-tags-routing-candidates
-  '("~/my-venndoor-life/outputs/tags/tgl-repo-routing.json"
+  '("~/workspace/non-oss/venndoor-group/my-venndoor-life/outputs/tags/tgl-repo-routing.json"
+    "~/workspace/non-oss/bfctrace/my-bfc-life/outputs/tags/tgl-repo-routing.json"
+    "~/my-venndoor-life/outputs/tags/tgl-repo-routing.json"
     "~/my-bfc-life/outputs/tags/tgl-repo-routing.json")
   "Candidate locations for the tgl tag routing table, tried in order.
 Deliberately independent of config.org's `tdw/tgl-routing-file', which is

@@ -22,7 +22,7 @@ I set a [[*Bookmarks][bookmark]] with =C-x r m= and I can get back here with =C-
   ;;; -*- lexical-binding: t; -*-
   (let ((life-repo (if (string= (user-login-name) "trace")
                        "my-personal-life"
-                     "my-venndoor-life")))
+                     "workspace/non-oss/venndoor-group/my-venndoor-life")))
     (setq stag-easy-hugo-basedir "~/src/projects/trevoke.github.io-source"
           stag-easy-hugo-root "~/src/projects/trevoke.github.io"
           stag-org-reveal-root "/home/stag/mnt/internal/src/vendor/reveal.js"
@@ -729,7 +729,9 @@ says consumers must check both). gtd_dir values are thecleverone-local
 absolute paths; they are re-rooted onto HOME so the same manifest works on
 every account. Missing manifests and unreadable JSON yield nil."
     (let (files)
-      (dolist (manifest (list (expand-file-name "my-bfc-life/outputs/tags/tgl-repo-routing.json" home)
+      (dolist (manifest (list (expand-file-name "workspace/non-oss/bfctrace/my-bfc-life/outputs/tags/tgl-repo-routing.json" home)
+                              (expand-file-name "workspace/non-oss/venndoor-group/my-venndoor-life/outputs/tags/tgl-repo-routing.json" home)
+                              (expand-file-name "my-bfc-life/outputs/tags/tgl-repo-routing.json" home)
                               (expand-file-name "my-venndoor-life/outputs/tags/tgl-repo-routing.json" home)))
         (when (file-readable-p manifest)
           (let ((json (ignore-errors
@@ -766,7 +768,9 @@ that predate their manifest entry must not vanish from views."
            ;; NOTE: my-venndoor-life and my-bfc-life hold NO GTD tasks.
            ;; All tasks route to context repos via tgl-repo-routing.json.
            ;; gcal.org stays for calendar visibility.
-           (list (in-home "my-venndoor-life/orgnotes/gtd/gcal.org")
+           (list (in-home "workspace/non-oss/venndoor-group/my-venndoor-life/orgnotes/gtd/gcal.org")
+                 (in-home "workspace/non-oss/bfctrace/my-bfc-life/orgnotes/gtd/gcal.org")
+                 (in-home "my-venndoor-life/orgnotes/gtd/gcal.org")
                  (in-home "my-bfc-life/orgnotes/gtd/gcal.org")
                  (in-home "my-google-life/orgnotes/gtd/org-gtd-tasks.org")
                  (in-home "my-personal-life/orgnotes/gtd/org-gtd-tasks.org"))
@@ -2699,7 +2703,9 @@ no calendar, and a nonexistent agenda file makes org-agenda prompt
 path even if missing so callers always get a stable path."
     (let ((home (or home "~")))
       (or (seq-find #'file-exists-p
-                    (list (expand-file-name "my-venndoor-life/orgnotes/gtd/gcal.org" home)
+                    (list (expand-file-name "workspace/non-oss/venndoor-group/my-venndoor-life/orgnotes/gtd/gcal.org" home)
+                          (expand-file-name "workspace/non-oss/bfctrace/my-bfc-life/orgnotes/gtd/gcal.org" home)
+                          (expand-file-name "my-venndoor-life/orgnotes/gtd/gcal.org" home)
                           (expand-file-name "my-bfc-life/orgnotes/gtd/gcal.org" home)))
           (expand-file-name "my-bfc-life/orgnotes/gtd/gcal.org" home))))
 
@@ -2904,7 +2910,9 @@ LLM workflows add tags separately, so this must never hard-fail a clarify.
 org-gtd's own defcustom takes over when the package loads.")
 
   (defvar tdw/tgl-routing-file-candidates
-    '("~/my-venndoor-life/outputs/tags/tgl-repo-routing.json"   ; thecleverone
+    '("~/workspace/non-oss/venndoor-group/my-venndoor-life/outputs/tags/tgl-repo-routing.json" ; thecleverone
+      "~/workspace/non-oss/bfctrace/my-bfc-life/outputs/tags/tgl-repo-routing.json"
+      "~/my-venndoor-life/outputs/tags/tgl-repo-routing.json"
       "~/my-bfc-life/outputs/tags/tgl-repo-routing.json")       ; trace
     "Per-account candidate paths for the tgl routing table.")
 
