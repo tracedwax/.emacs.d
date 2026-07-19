@@ -1857,6 +1857,19 @@ between heading text and tags remains.  This strips it."
         (while (re-search-forward " ::" nil t)
           (replace-match "")))))
 
+  (defun tdw/strip-variation-selectors ()
+    "Delete emoji/text variation selectors (U+FE0F, U+FE0E) from the buffer.
+Emacs counts them zero-width but iTerm2 gives them a screen cell, so any
+agenda line containing one (e.g. a gcal event title with ☕️) desyncs
+incremental terminal redraws: scrolling then duplicates lines such as
+the view banner.  Base characters still render as emoji without them."
+    (let ((inhibit-read-only t))
+      (save-excursion
+        (goto-char (point-min))
+        (while (re-search-forward "[\ufe0e\ufe0f]" nil t)
+          (replace-match ""))))
+    nil)
+
   (defun tdw/reset-agenda-hscroll ()
     "Reset horizontal scroll to 0 in the current agenda window.
 Prevents the '$' left-truncation display bug caused by accidental
@@ -1985,6 +1998,7 @@ true running clock across files and processes."
               (insert (propertize line 'face 'org-agenda-clocking))))))))
 
   (add-hook 'org-agenda-finalize-hook #'tdw/strip-tag-separators)
+  (add-hook 'org-agenda-finalize-hook #'tdw/strip-variation-selectors)
   (add-hook 'org-agenda-finalize-hook #'tdw/update-view-headers)
   (add-hook 'org-agenda-finalize-hook #'tdw/insert-tgl-subheaders)
   (add-hook 'org-agenda-finalize-hook #'tdw/check-missing-tag-sections)
