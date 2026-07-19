@@ -120,4 +120,33 @@
                  (tdw/format-view-banner "Inbox" "📥" "2:15"))))
     (assert-true (string-match-p "═" banner))))
 
+;;;; ——— tdw/strip-variation-selectors (operates on current buffer) ———
+
+(deftest scrubbers/strip-variation-selectors-removes-vs16 ()
+  "U+FE0F emoji variation selectors are deleted; base chars remain."
+  (with-temp-buffer
+    (insert "Meditation ☯️☕️ chat\n")
+    (tdw/strip-variation-selectors)
+    (assert-equal "Meditation ☯☕ chat\n" (buffer-string))))
+
+(deftest scrubbers/strip-variation-selectors-removes-vs15 ()
+  "U+FE0E text-presentation selectors are deleted too."
+  (with-temp-buffer
+    (insert "a☯︎b\n")
+    (tdw/strip-variation-selectors)
+    (assert-equal "a☯b\n" (buffer-string))))
+
+(deftest scrubbers/strip-variation-selectors-leaves-clean-text ()
+  "Text without variation selectors round-trips unchanged."
+  (with-temp-buffer
+    (insert "📋 UNORDERED VIEW ═══ ☕\n")
+    (tdw/strip-variation-selectors)
+    (assert-equal "📋 UNORDERED VIEW ═══ ☕\n" (buffer-string))))
+
+(deftest scrubbers/strip-variation-selectors-returns-nil ()
+  "Called for buffer side effects; returns nil."
+  (with-temp-buffer
+    (insert "x☕️\n")
+    (assert-nil (tdw/strip-variation-selectors))))
+
 ;;; render-scrubbers-test.el ends here
