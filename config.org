@@ -685,11 +685,11 @@ Handles buffer narrowing automatically."
 Only applies tags when inheritance is enabled via `my/org-gtd-inherit-tags'.
 Priority is intentionally NOT stamped: it inherits for display via org's own
 inheritance, and stamping it would make subtasks indistinguishable from tasks.
-Priority tier tags (`tdw--tier-tags') are stripped: a tier belongs to the
-project, not to every subtask under it."
+Tier tags DO propagate: tier agenda sections match subtasks by tag, so
+stripping them hides subtasks.  The tier ICON is suppressed for subtasks at
+render time instead (`org-gtd-agenda--resolve-tier')."
     (when-let ((tags (and my/org-gtd-inherit-tags
-                          (cl-remove-if (lambda (tag) (member tag tdw--tier-tags))
-                                        (plist-get metadata :tags)))))
+                          (plist-get metadata :tags))))
       (org-set-tags tags)))
 
   (defun my/org-gtd-inherit--prompt-for-tags ()
@@ -2269,15 +2269,19 @@ Overrides upstream cl-some (fallback) behavior with mapconcat (concatenation)."
 
   (defun org-gtd-agenda--resolve-tier ()
     "Return priority tier emoji string for the item at point.
-Shows only the tier emoji — no urgency/impact/score."
-    (let* ((tags (org-get-tags nil t))
+Shows only the tier emoji — no urgency/impact/score.  Project subtasks
+render no icon: the tier belongs to the project, not every child, even
+though subtasks carry the inherited tier tag for section matching."
+    (if (tdw/--project-subtask-p)
+        ""
+      (let* ((tags (org-get-tags nil t))
            (p0 (if (member "p0" tags) "🚨" ""))
            (bell (if (member "bells_ringing" tags) "🔔" ""))
            (deck (if (member "on_deck" tags) "🥎" ""))
            (considered (if (member "recently_considered" tags) "💭" ""))
            (paused (if (member "paused" tags) "🕐" "")))
-      (let ((result (concat p0 bell deck considered paused)))
-        (if (string-empty-p result) "" result))))
+        (let ((result (concat p0 bell deck considered paused)))
+          (if (string-empty-p result) "" result)))))
 
   (defun tdw/map-agenda-entries (fn)
     "Call FN with point at each heading across `org-agenda-files'."
