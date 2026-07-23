@@ -38,4 +38,23 @@
     (goto-char (point-min))
     (assert-true (and (member "foo" (org-get-tags)) t))))
 
+(deftest inherit-apply/drops-tier-tags ()
+  "Priority tier tags (on_deck etc.) must NOT be copied onto the subtask."
+  (inherit-test--on-heading "* TODO A subtask\n"
+    (my/org-gtd-inherit--apply-metadata
+     '(:priority nil :tags ("tgl_admin" "on_deck")))
+    (goto-char (point-min))
+    (let ((tags (org-get-tags)))
+      (assert-true (and (member "tgl_admin" tags) t))
+      (assert-nil (member "on_deck" tags)))))
+
+(deftest inherit-apply/drops-every-tier-tag ()
+  "Each tag in tdw--tier-tags is stripped before applying."
+  (inherit-test--on-heading "* TODO A subtask\n"
+    (my/org-gtd-inherit--apply-metadata
+     (list :priority nil :tags (cons "tgl_admin" (copy-sequence tdw--tier-tags))))
+    (goto-char (point-min))
+    (let ((tags (org-get-tags)))
+      (assert-equal '("tgl_admin") tags))))
+
 ;;; inherit-metadata-test.el ends here
