@@ -723,16 +723,14 @@ against a fixture HOME (see test/unit/agenda-files-test.el).
 #+BEGIN_SRC emacs-lisp
   (defun tdw--routing-manifest-gtd-files (home)
     "Return org-gtd-tasks.org candidates declared in tgl-repo-routing.json.
-Reads BOTH accounts' manifests when present under HOME
-(my-bfc-life = non-vendored, my-venndoor-life = vendored; the _meta entry
-says consumers must check both). gtd_dir values are thecleverone-local
-absolute paths; they are re-rooted onto HOME so the same manifest works on
-every account. Missing manifests and unreadable JSON yield nil."
+The SINGLE manifest lives in my-bfc-life (merged 2026-07-23; the old split
+my-venndoor-life copy is gone); the two candidates below are the per-account
+clone locations. gtd_dir values are thecleverone-local absolute paths; they
+are re-rooted onto HOME so the same manifest works on every account.
+Missing manifests and unreadable JSON yield nil."
     (let (files)
       (dolist (manifest (list (expand-file-name "workspace/non-oss/bfctrace/my-bfc-life/outputs/tags/tgl-repo-routing.json" home)
-                              (expand-file-name "workspace/non-oss/venndoor-group/my-venndoor-life/outputs/tags/tgl-repo-routing.json" home)
-                              (expand-file-name "my-bfc-life/outputs/tags/tgl-repo-routing.json" home)
-                              (expand-file-name "my-venndoor-life/outputs/tags/tgl-repo-routing.json" home)))
+                              (expand-file-name "my-bfc-life/outputs/tags/tgl-repo-routing.json" home)))
         (when (file-readable-p manifest)
           (let ((json (ignore-errors
                         (with-temp-buffer
@@ -2924,11 +2922,10 @@ LLM workflows add tags separately, so this must never hard-fail a clarify.
 org-gtd's own defcustom takes over when the package loads.")
 
   (defvar tdw/tgl-routing-file-candidates
-    '("~/workspace/non-oss/venndoor-group/my-venndoor-life/outputs/tags/tgl-repo-routing.json" ; thecleverone
-      "~/workspace/non-oss/bfctrace/my-bfc-life/outputs/tags/tgl-repo-routing.json"
-      "~/my-venndoor-life/outputs/tags/tgl-repo-routing.json"
+    '("~/workspace/non-oss/bfctrace/my-bfc-life/outputs/tags/tgl-repo-routing.json" ; thecleverone
       "~/my-bfc-life/outputs/tags/tgl-repo-routing.json")       ; trace
-    "Per-account candidate paths for the tgl routing table.")
+    "Per-account candidate paths for THE single routing table in my-bfc-life
+(merged 2026-07-23; the old split my-venndoor-life copy is gone).")
 
   (defvar tdw/tgl-routing-file nil
     "Explicit routing-table path override. When nil, resolve per account

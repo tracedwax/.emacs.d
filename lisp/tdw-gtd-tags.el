@@ -13,17 +13,13 @@
 (require 'cl-lib)
 
 (defvar tdw-gtd-tags-routing-candidates
-  '("~/workspace/non-oss/venndoor-group/my-venndoor-life/outputs/tags/tgl-repo-routing.json"
-    "~/workspace/non-oss/bfctrace/my-bfc-life/outputs/tags/tgl-repo-routing.json"
-    "~/my-venndoor-life/outputs/tags/tgl-repo-routing.json"
+  '("~/workspace/non-oss/bfctrace/my-bfc-life/outputs/tags/tgl-repo-routing.json"
     "~/my-bfc-life/outputs/tags/tgl-repo-routing.json")
-  "Candidate locations for the tgl tag routing table, tried in order.
-Deliberately independent of config.org's `tdw/tgl-routing-file', which is
-hardcoded to thecleverone's home dir and only resolves there - this list
-tries the authoritative venndoor-life copy first, falling back to
-trace's accessible my-bfc-life copy, so tag-guessing works on either
-account without touching that existing (in-production, refiling-critical)
-variable.")
+  "Candidate locations for THE single tgl tag routing table, which lives
+only in my-bfc-life (merged 2026-07-23; the old split my-venndoor-life
+copy is gone). The two entries cover each account's clone location:
+thecleverone's under ~/workspace/non-oss/bfctrace, trace's at
+~/my-bfc-life.")
 
 (defun tdw-gtd-tags--routing-table ()
   "Return the routing table (alist of tag-string -> entry-alist) by reading
