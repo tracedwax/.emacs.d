@@ -684,9 +684,12 @@ Handles buffer narrowing automatically."
     "Apply METADATA plist (:tags) to current heading.
 Only applies tags when inheritance is enabled via `my/org-gtd-inherit-tags'.
 Priority is intentionally NOT stamped: it inherits for display via org's own
-inheritance, and stamping it would make subtasks indistinguishable from tasks."
+inheritance, and stamping it would make subtasks indistinguishable from tasks.
+Priority tier tags (`tdw--tier-tags') are stripped: a tier belongs to the
+project, not to every subtask under it."
     (when-let ((tags (and my/org-gtd-inherit-tags
-                          (plist-get metadata :tags))))
+                          (cl-remove-if (lambda (tag) (member tag tdw--tier-tags))
+                                        (plist-get metadata :tags)))))
       (org-set-tags tags)))
 
   (defun my/org-gtd-inherit--prompt-for-tags ()
